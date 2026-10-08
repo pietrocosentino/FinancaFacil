@@ -157,7 +157,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) => NavigatorPopHandler(
-        onPop: () => _navigator.currentState?.maybePop(),
+        onPopWithResult: (result) => _navigator.currentState?.maybePop(result),
         child: Scaffold(
           body: Navigator(
               key: _navigator,
