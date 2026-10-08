@@ -237,7 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ValueListenableBuilder<ThemeMode>(
                 valueListenable: ReminderPreferences.themeMode,
                 builder: (_, mode, __) => DropdownButtonFormField<ThemeMode>(
-                    value: mode,
+                    initialValue: mode,
                     decoration: const InputDecoration(labelText: 'Aparência'),
                     items: const [
                       DropdownMenuItem(
