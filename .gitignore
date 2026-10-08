@@ -1,5 +1,6 @@
 # Flutter e Dart
 .dart_tool/
+node_modules/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages

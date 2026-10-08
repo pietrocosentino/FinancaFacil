@@ -24,6 +24,16 @@ jobs:
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v4
+      - name: Configurar Node para testes do banco
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/database/package-lock.json
+      - name: Instalar ferramentas de teste do banco
+        run: npm ci --prefix ../tools/database
+      - name: Testar importação no PostgreSQL local
+        run: npm test --prefix ../tools/database
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
