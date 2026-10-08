@@ -330,7 +330,7 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
                                       _alreadyConfirmed = value ?? false)),
                         if (_recurring) ...[
                           DropdownButtonFormField<int>(
-                            value: _dueDay,
+                            initialValue: _dueDay,
                             decoration: const InputDecoration(
                                 labelText: 'Dia de vencimento mensal'),
                             items: [
@@ -386,7 +386,7 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
                           ])
                         else
                           DropdownButtonFormField<String>(
-                              value: _categoryId,
+                              initialValue: _categoryId,
                               isExpanded: true,
                               decoration: const InputDecoration(
                                   labelText: 'Categoria',
