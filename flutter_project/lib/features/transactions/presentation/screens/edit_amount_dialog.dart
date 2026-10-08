@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/finance_utils.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../domain/finance_models.dart';
 
 class EditAmountDialog extends StatefulWidget {
@@ -8,8 +9,12 @@ class EditAmountDialog extends StatefulWidget {
       {super.key,
       required this.entry,
       required this.onSave,
-      this.onSaveFuture});
+      this.onSaveFuture,
+      this.futureFromMonth,
+      this.futureIncludesSelected = true});
   final FinanceEntry entry;
+  final DateTime? futureFromMonth;
+  final bool futureIncludesSelected;
   final Future<void> Function(double amount) onSave;
   final Future<void> Function(double amount)? onSaveFuture;
 
@@ -72,14 +77,20 @@ class _EditAmountDialogState extends State<EditAmountDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(widget.entry.description),
-                if (widget.entry.installment != null)
-                  Text(_future
-                      ? 'Afeta este mês e os próximos. Valores já confirmados serão preservados.'
-                      : 'Esta alteração afeta somente o mês selecionado.'),
+                const SizedBox(height: 8),
+                Text(_future
+                    ? 'Novo valor a partir de ${widget.futureFromMonth == null ? "este mês" : AppFormatters.monthYear.format(widget.futureFromMonth!)}. Outros valores já confirmados serão preservados.'
+                    : 'Altera somente este lançamento. ${widget.entry.isPaid ? (widget.entry.isIncome ? "Continuará como recebido." : "Continuará como pago.") : "A confirmação permanece pendente."}'),
                 if (widget.onSaveFuture != null)
                   SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Aplicar também aos próximos meses'),
+                      title: Text(widget.futureIncludesSelected
+                          ? 'Aplicar também aos próximos meses'
+                          : 'Alterar somente os próximos meses'),
+                      subtitle: widget.futureIncludesSelected
+                          ? null
+                          : const Text(
+                              'O lançamento selecionado mantém o valor atual.'),
                       value: _future,
                       onChanged: _saving
                           ? null

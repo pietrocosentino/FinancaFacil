@@ -80,6 +80,16 @@ void main() {
     expect(body['p_is_paid'], isNull);
     expect(body['p_amount'], 100);
   });
+  test('corrigir valor avulso confirmado envia somente amount e filtra dono',
+      () async {
+    backend.respond = (_) => http.Response('[{"id":"one"}]', 200,
+        headers: {'content-type': 'application/json'});
+    await repository.updateAmount('one', 3250.50);
+    final request = backend.requests.single;
+    expect(request.method, 'PATCH');
+    expect(request.url.queryParameters['user_id'], 'eq.owner');
+    expect(jsonDecode(request.body), {'amount': 3250.50});
+  });
   test('alteração futura envia mês e valor para a RPC específica', () async {
     backend.respond = (_) => http.Response('null', 200,
         headers: {'content-type': 'application/json'});
