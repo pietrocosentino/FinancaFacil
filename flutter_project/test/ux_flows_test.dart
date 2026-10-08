@@ -30,7 +30,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Descartar'));
     await tester.pumpAndSettle();
-    expect(find.text('pietro@example.com'), findsOneWidget);
+    expect(find.text('Dados pessoais'), findsOneWidget);
+    expect(find.text('pietro@example.com'), findsNothing);
     expect(tester.takeException(), isNull);
   });
   testWidgets('correção exige confirmação e devolve conta para pendente',

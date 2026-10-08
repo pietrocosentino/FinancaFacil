@@ -5,6 +5,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
 import '../../../../shared/widgets/month_picker.dart';
 import '../../data/finance_repository.dart';
+import '../../domain/amount_edit_scope.dart';
 import '../../domain/finance_models.dart';
 import 'add_transaction_screen.dart';
 import 'edit_amount_dialog.dart';
@@ -162,25 +163,32 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       .showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _editAmount(FinanceEntry entry) async {
-    if (_processing) return;
-    final saved = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => EditAmountDialog(
-        entry: entry,
-        onSave: (amount) => _repository.updateAmount(entry.id, amount),
-        onSaveFuture: entry.installment != null &&
-                !entry.isPaid &&
-                entry.dueDate != null &&
-                !DateTime(entry.dueDate!.year, entry.dueDate!.month).isBefore(
-                    DateTime(DateTime.now().year, DateTime.now().month))
-            ? (amount) => _repository.updateFutureAmount(entry.id, amount)
-            : null,
-      ),
-    );
-    if (saved == true && mounted) {
-      _message('Valor atualizado.');
-      _reload();
+    if (_processing || _reviewing) return;
+    final future = futureAmountTarget(entry, DateTime.now());
+    setState(() => _processing = true);
+    try {
+      final saved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => EditAmountDialog(
+          entry: entry,
+          futureFromMonth: future?.month,
+          futureIncludesSelected: future?.includesSelected ?? false,
+          onSave: (amount) => _repository.updateAmount(entry.id, amount),
+          onSaveFuture: future == null
+              ? null
+              : (amount) => _repository.updateFutureAmount(future.id, amount),
+        ),
+      );
+      if (saved == true && mounted) {
+        notifyFinanceChanged();
+        _message('Valor atualizado.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+        _reload();
+      }
     }
   }
 

@@ -58,7 +58,8 @@ void main() {
     expect(find.text('Finanças'), findsOneWidget);
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
-    expect(find.text('pietro@example.com'), findsOneWidget);
+    expect(find.text('Dados pessoais'), findsOneWidget);
+    expect(find.text('pietro@example.com'), findsNothing);
     expect(tester.takeException(), isNull);
   });
   testWidgets('recorrência sem fim envia uma regra sem quantidade de parcelas',
