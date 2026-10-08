@@ -11,6 +11,7 @@ import 'add_transaction_screen.dart';
 import 'edit_amount_dialog.dart';
 import 'finance_entry_card.dart';
 import 'recurrence_rules_screen.dart';
+import '../../../imports/presentation/import_screen.dart';
 
 enum _EntryFilter {
   all('Todas'),
@@ -291,6 +292,11 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                               _selectedIds.clear();
                             }))
             ]),
+            TextButton.icon(
+                onPressed: _processing ? null : () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => ImportScreen(finance: _repository))),
+                icon: const Icon(Icons.upload_file),
+                label: const Text('Importar planilha Excel')),
             TextButton.icon(
                 onPressed: _processing
                     ? null

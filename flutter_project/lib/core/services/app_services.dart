@@ -5,6 +5,7 @@ import '../../features/auth/data/auth_session_service.dart';
 import '../../features/notifications/data/reminder_service.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/transactions/data/finance_repository.dart';
+import '../../features/imports/data/import_repository.dart';
 
 /// Composição das implementações usadas em produção. Telas aceitam injeção em testes.
 abstract final class AppServices {
@@ -16,4 +17,6 @@ abstract final class AppServices {
       SupabaseProfileRepository(Supabase.instance.client);
   static FinanceRepository get finance =>
       SupabaseFinanceRepository(Supabase.instance.client);
+  static ImportRepository get imports =>
+      SupabaseImportRepository(Supabase.instance.client);
 }
