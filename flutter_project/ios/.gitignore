@@ -1,0 +1,10 @@
+**/[Gg]enerated.xcconfig
+**/flutter_export_environment.sh
+**/Flutter.framework
+**/Flutter.podspec
+**/Pods/
+**/.symlinks/
+**/profile/
+**/release/
+/Flutter/ephemeral/
+.DS_Store

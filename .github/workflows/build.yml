@@ -1,0 +1,128 @@
+name: Build FinançaFácil
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: financafacil-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Análise e testes
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter_project
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: stable
+          cache: true
+      - name: Instalar dependências do lockfile
+        run: flutter pub get --enforce-lockfile
+      - name: Verificar formatação
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analisar código
+        run: flutter analyze --fatal-infos
+      - name: Executar testes com cobertura
+        run: flutter test --coverage
+      - name: Disponibilizar cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: financafacil-test-coverage
+          path: flutter_project/coverage/lcov.info
+          if-no-files-found: error
+
+  build-android:
+    name: Build Android APK
+    needs: verify
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter_project
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: stable
+          cache: true
+      - name: Instalar dependências do lockfile
+        run: flutter pub get --enforce-lockfile
+      - name: Gerar ícones
+        run: dart run flutter_launcher_icons
+      - name: Preparar execução do Gradle
+        run: chmod +x android/gradlew
+      - name: Gerar APK
+        run: flutter build apk --release
+      - name: Disponibilizar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: financafacil-android-apk
+          path: flutter_project/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  build-ios:
+    name: Build iOS
+    needs: verify
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: flutter_project
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: stable
+          cache: true
+      - name: Instalar dependências do lockfile
+        run: flutter pub get --enforce-lockfile
+      - name: Gerar ícones
+        run: dart run flutter_launcher_icons
+      - name: Instalar dependências iOS
+        working-directory: flutter_project/ios
+        run: pod install
+      - name: Gerar iOS para dispositivo sem assinatura
+        run: flutter build ios --release --no-codesign
+      - name: Compactar iOS para dispositivo
+        working-directory: flutter_project/build/ios/iphoneos
+        run: zip -r FinancaFacil-iOS.zip Runner.app
+      - name: Disponibilizar iOS para dispositivo
+        uses: actions/upload-artifact@v4
+        with:
+          name: financafacil-ios-dispositivo
+          path: flutter_project/build/ios/iphoneos/FinancaFacil-iOS.zip
+          if-no-files-found: error
+      - name: Gerar iOS para simulador
+        run: flutter build ios --simulator --debug
+      - name: Compactar iOS para simulador
+        working-directory: flutter_project/build/ios/iphonesimulator
+        run: zip -r FinancaFacil-iOS-Simulador.zip Runner.app
+      - name: Disponibilizar iOS para simulador
+        uses: actions/upload-artifact@v4
+        with:
+          name: financafacil-ios-simulador
+          path: flutter_project/build/ios/iphonesimulator/FinancaFacil-iOS-Simulador.zip
+          if-no-files-found: error
