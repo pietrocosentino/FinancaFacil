@@ -386,6 +386,7 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
                           ])
                         else
                           DropdownButtonFormField<String>(
+                              key: ValueKey(_categoryId),
                               initialValue: _categoryId,
                               isExpanded: true,
                               decoration: const InputDecoration(

@@ -1,68 +1,52 @@
-# FinançaFácil — revisão 1.2.1+7
+# FinançaFácil — 1.3.0+8
 
-Aplicativo Flutter para acompanhar rendas, contas mensais e parcelas, com lembretes e confirmação manual dos pagamentos.
+Projeto completo: perfil com foto e dados pessoais separados, edição de valores de rendas e despesas confirmadas, opção de atualizar os próximos meses de uma recorrência, lembretes e confirmação manual preservados.
 
-O único projeto do aplicativo fica em **`flutter_project`**. Execute os comandos Flutter dentro dessa pasta.
+Use Flutter 3.47.6, Dart 3.13.5 e Java 17. Android: Gradle 8.14.3, AGP 8.11.1, Kotlin 2.2.20 e compileSdk 36. O aplicativo mantém targetSdk 34 e assinatura de debug para testes; publicação nas lojas exige configuração própria.
 
-## O que foi entregue
+## Instalar no Windows e enviar pelo VS Code
 
-- Correções de navegação, formulário, entrada de dados e tratamento de falhas.
-- Temas claro e escuro consistentes, menu fixo e botão visível para novo lançamento.
-- Listas com rolagem para telas pequenas e teclado aberto.
-- Testes financeiros preservados e novos testes de regressão e contratos HTTP simulados.
-- Workflow com análise e testes antes dos builds Android e iOS.
-- Projeto consolidado, sem protótipo web, cópias de plataformas na raiz ou ZIPs antigos.
+1. Se COMMIT_EDITMSG estiver aberto, escreva uma mensagem na primeira linha, salve e clique em Commit. A primeira linha vazia impede concluir o commit.
+2. Faça uma cópia de segurança da sua pasta FinancaFacil antes de substituir os arquivos.
+3. Extraia este ZIP em uma pasta temporária. Copie seu conteúdo para C:\Users\pietr\Downloads\FinancaFacil, aceitando substituir arquivos. Preserve a pasta .git e seu android/local.properties. Não crie flutter_project dentro de flutter_project.
+4. Se ainda existirem .github/workflows/build-apk.yml ou build-ios.yml, remova somente esses workflows antigos. O pacote usa apenas build.yml.
+5. Abra a pasta FinancaFacil no VS Code. No terminal PowerShell:
 
-Leia `docs/ANALISE.md` para o diagnóstico e `docs/VALIDACAO.md` para os resultados e limites da validação. `docs/LIMPEZA.md` lista os itens removidos da entrega.
-
-## Executar e conferir
-
-Use Flutter **3.24.5**, Dart **3.5.4** e Java **17** para o Android, conforme o workflow.
-
-```sh
-cd flutter_project
-flutter pub get --enforce-lockfile
-dart format --output=none --set-exit-if-changed lib test
-flutter analyze --fatal-infos
-flutter test --coverage
-flutter run
+```powershell
+cd C:\Users\pietr\Downloads\FinancaFacil\flutter_project
+C:\dev\flutter\bin\flutter.bat pub get
+C:\dev\flutter\bin\dart.bat format lib test
+C:\dev\flutter\bin\flutter.bat analyze --no-fatal-infos
+C:\dev\flutter\bin\flutter.bat test
+C:\dev\flutter\bin\flutter.bat run -d emulator-5554
 ```
 
-O `pubspec.lock` faz parte do projeto. Não o apague para resolver builds: isso muda as versões das dependências. `app_links` permanece fixado em **6.3.2**.
+O emulador precisa estar ligado. A seleção de foto adiciona um plugin nativo: pare a execução antiga e execute novamente; hot reload não instala plugins.
 
-Para Android:
+O lockfile antigo não acompanha o pacote porque as dependências mudaram. pub get gera ou atualiza o pubspec.lock na sua máquina. Inclua esse arquivo no commit após a resolução bem-sucedida. O workflow resolve dependências com pub get e executa análise e testes antes dos builds.
 
-```sh
-flutter build apk --release
+Depois dos testes, envie os arquivos extraídos, não o ZIP:
+
+```powershell
+cd C:\Users\pietr\Downloads\FinancaFacil
+git status
+git add .
+git commit -m "Atualiza perfil e edicao de valores"
+git push origin main
 ```
 
-Para iOS, em um Mac com Xcode e CocoaPods:
+Se o Git disser que faltam nome e email, configure sua identidade com git config user.name e git config user.email, usando seu próprio nome e email. Se o push falhar, copie a mensagem completa; não use force push para tentar resolver.
 
-```sh
-flutter build ios --release --no-codesign
-flutter build ios --simulator --debug
-```
+## Banco de dados
 
-O build sem assinatura para dispositivo serve para verificar a compilação. A instalação no iPhone físico precisa de assinatura. O workflow também disponibiliza uma versão para simulador.
+No Supabase, abra SQL Editor e execute flutter_project/supabase/editar_valores.sql para habilitar as correções de recorrências confirmadas. Leia EDICAO-DE-VALORES.txt. O script não foi executado automaticamente no banco remoto. As demais migrações anteriores continuam necessárias para um banco novo; não são recriadas por este script.
 
-## Supabase
+A foto é opcional e fica salva neste aparelho, separada por conta. Não é enviada ao Supabase. Dados pessoais permanecem no repositório de perfil existente. Editar um valor não desfaz sua confirmação de pagamento ou recebimento. Em uma renda confirmada, atualizar os próximos meses mantém o mês confirmado com o valor original.
 
-A configuração existente foi preservada. A chave configurada tem papel público `anon`, não `service_role`. A proteção dos dados depende das políticas RLS do banco.
+## Validação e limites
 
-Os scripts pressupõem que as tabelas `categories` e `transactions` já existam. Esta revisão não executou SQL nem alterou o banco remoto. Para uma instalação nova, primeiro confira o esquema base e depois a sequência documentada em `docs/ANALISE.md`.
+Os 129 testes da implementação de perfil e edição de valores passaram no ambiente disponível, com Flutter 3.24.5 e um substituto de teste para image_picker. Eles cobrem regras, interface e contratos HTTP simulados. Não validam a galeria nativa, o banco remoto ou compilação Android/iOS.
 
-## Atualizar o GitHub no Windows
+Este pacote recebeu depois a adaptação ao Flutter 3.47.6 informado pelo usuário, incluindo CardThemeData, callbacks de navegação, dropdowns, intl e build Android. Não foi possível executar essa versão de Flutter neste ambiente; execute os comandos acima para validar a versão consolidada. O iOS foi adaptado ao ciclo UIScene com registro dos plugins no engine implícito, conforme a documentação Flutter. Build iOS exige Mac/Xcode; instalação em iPhone exige assinatura.
 
-**Extraia este pacote. Envie os arquivos extraídos; não apenas o ZIP.**
-
-Com GitHub Desktop, clone o repositório e abra a pasta do clone. Preserve a pasta `.git`. Substitua `flutter_project` e `.github` pelas versões deste pacote, copie o README, `.gitignore` e `docs`, e remova os itens antigos listados em `docs/LIMPEZA.md`. Confira o resumo das mudanças, faça o commit e o push.
-
-Pelo site do GitHub, faça os uploads em lotes separados para evitar o limite de quantidade de arquivos:
-
-1. Dentro de `flutter_project`, envie `lib`, `test`, `assets`, `supabase`, `pubspec.yaml`, `pubspec.lock` e `analysis_options.yaml`.
-2. Dentro da mesma pasta, envie `android` e `ios`.
-3. Atualize `.github/workflows/build.yml` e os documentos da raiz.
-
-Preserve os caminhos das pastas e remova as cópias antigas da raiz conforme a lista. Upload de novos arquivos não remove automaticamente arquivos antigos.
-
-Acompanhe o workflow **Build FinançaFácil**. Primeiro deve passar **Análise e testes**, depois os builds Android e iOS. Esta revisão não foi enviada ao seu GitHub automaticamente.
+Os documentos antigos em docs/historico referem-se à revisão anterior e não comprovam validação deste pacote.

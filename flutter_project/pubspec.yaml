@@ -1,10 +1,11 @@
 name: financafacil
 description: "Aplicativo de gestão financeira pessoal FinançaFácil."
 publish_to: "none"
-version: 1.2.1+7
+version: 1.3.0+8
 
 environment:
-  sdk: ">=3.5.0 <4.0.0"
+  sdk: ">=3.13.0 <4.0.0"
+  flutter: ">=3.47.6"
 
 dependencies:
   flutter:
@@ -18,7 +19,7 @@ dependencies:
   app_links: 6.3.2
 
   # Formatação monetária e de datas
-  intl: 0.20.3
+  intl: ^0.20.3
 
   # Lembretes locais e fuso horário do aparelho
   flutter_local_notifications: 17.2.4
