@@ -1,0 +1,229 @@
+import '../../../core/utils/finance_utils.dart';
+import 'recurrence.dart';
+
+enum TransactionKind {
+  expense('despesa', 'EXPENSE', 'Despesa'),
+  income('receita', 'INCOME', 'Receita');
+
+  const TransactionKind(this.databaseValue, this.categoryValue, this.label);
+  final String databaseValue;
+  final String categoryValue;
+  final String label;
+
+  static TransactionKind fromDatabase(Object? value) {
+    switch (value?.toString().trim().toUpperCase()) {
+      case 'DESPESA':
+      case 'EXPENSE':
+        return expense;
+      case 'RECEITA':
+      case 'INCOME':
+        return income;
+      default:
+        throw const FormatException('Tipo de lançamento inválido.');
+    }
+  }
+}
+
+class FinanceCategory {
+  const FinanceCategory({required this.id, required this.name});
+  final String id;
+  final String name;
+  factory FinanceCategory.fromMap(Map<String, dynamic> data) => FinanceCategory(
+        id: data['id'].toString(),
+        name: data['name'].toString(),
+      );
+}
+
+class FinanceEntry {
+  const FinanceEntry(
+      {required this.id,
+      required this.kind,
+      required this.amount,
+      required this.description,
+      required this.dueDate,
+      required this.categoryName,
+      required this.isPaid,
+      this.notes = '',
+      this.isRecurring = false,
+      this.installment,
+      this.totalInstallments,
+      this.lastDue});
+  final String id;
+  final TransactionKind kind;
+  final double amount;
+  final String description;
+  final DateTime? dueDate;
+  final String categoryName;
+  final bool isPaid;
+  final String notes;
+  final bool isRecurring;
+  final int? installment;
+  final int? totalInstallments;
+  final DateTime? lastDue;
+  int get amountInCents => (amount * 100).round();
+  bool get isIncome => kind == TransactionKind.income;
+  bool belongsToMonth(DateTime month) =>
+      dueDate?.year == month.year && dueDate?.month == month.month;
+  String get recurrenceDescription {
+    if (installment == null) return isRecurring ? 'Recorrência antiga' : '';
+    return totalInstallments == null
+        ? 'Mensal • sem data final'
+        : 'Parcela $installment de $totalInstallments';
+  }
+
+  factory FinanceEntry.fromMap(Map<String, dynamic> data) {
+    final category = data['category'];
+    final amount = data['amount'] is num
+        ? (data['amount'] as num).toDouble()
+        : double.tryParse('${data['amount']}');
+    if (amount == null || !amount.isFinite || amount <= 0) {
+      throw const FormatException('Valor do lançamento inválido.');
+    }
+    return FinanceEntry(
+      id: data['id'].toString(),
+      kind: TransactionKind.fromDatabase(data['type']),
+      amount: amount,
+      description: data['description']?.toString() ?? 'Lançamento',
+      dueDate: DateTime.tryParse(data['due_date']?.toString() ?? ''),
+      categoryName: category is Map
+          ? category['name']?.toString() ?? 'Sem categoria'
+          : 'Sem categoria',
+      isPaid: data['is_paid'] == true,
+      notes: data['notes']?.toString() ?? '',
+      isRecurring: data['is_recurrent'] == true,
+      installment: (data['_installment'] as num?)?.toInt(),
+      totalInstallments: (data['_total_installments'] as num?)?.toInt(),
+      lastDue: DateTime.tryParse(data['_last_due']?.toString() ?? ''),
+    );
+  }
+}
+
+class TransactionDraft {
+  TransactionDraft(
+      {required this.kind,
+      required this.amount,
+      required String description,
+      required this.dueDate,
+      required this.categoryId,
+      this.notes = '',
+      this.alreadyConfirmed = false,
+      int? dueDay,
+      this.isRecurring = false,
+      this.totalInstallments})
+      : dueDay = dueDay ?? dueDate.day,
+        description =
+            description.trim().isEmpty ? 'Lançamento' : description.trim() {
+    if (!amount.isFinite || amount <= 0) {
+      throw const FormatException('Informe um valor válido maior que zero.');
+    }
+    if (this.dueDay < 1 || this.dueDay > 31) {
+      throw const FormatException('Informe um dia de 1 a 31.');
+    }
+    if (isRecurring && alreadyConfirmed) {
+      throw const FormatException(
+          'Confirme cada mês da recorrência em Finanças.');
+    }
+    if (categoryId.isEmpty) {
+      throw const FormatException('Selecione uma categoria.');
+    }
+    if (totalInstallments != null &&
+        (!isRecurring || totalInstallments! < 2 || totalInstallments! > 1200)) {
+      throw const FormatException('Informe de 2 a 1200 parcelas.');
+    }
+  }
+  final TransactionKind kind;
+  final double amount;
+  final String description;
+  final DateTime dueDate;
+  final String categoryId;
+  final String notes;
+  final bool alreadyConfirmed;
+  final int dueDay;
+  final bool isRecurring;
+  final int? totalInstallments;
+  Map<String, dynamic> get template => {
+        'type': kind.databaseValue,
+        'amount': amount,
+        'description': description,
+        'notes': notes.trim(),
+        'category_id': categoryId,
+      };
+}
+
+class RecurrencePlan {
+  const RecurrencePlan(
+      {required this.id,
+      required this.firstDue,
+      required this.description,
+      required this.amount,
+      this.dueDay,
+      this.totalInstallments,
+      this.endDate,
+      this.futureAmounts = const []});
+  final String id;
+  final DateTime firstDue;
+  final int? dueDay;
+  int get monthlyDay => dueDay ?? firstDue.day;
+  final String description;
+  final double amount;
+  final int? totalInstallments;
+  final DateTime? endDate;
+  final List<Map<String, dynamic>> futureAmounts;
+  double amountAt(DateTime month) {
+    var result = amount;
+    final changes = [...futureAmounts]..sort((a, b) =>
+        a['from_month'].toString().compareTo(b['from_month'].toString()));
+    for (final change in changes) {
+      if (change['from_month'].toString().compareTo(monthKey(month)) <= 0) {
+        result = (change['amount'] as num).toDouble();
+      }
+    }
+    return result;
+  }
+
+  DateTime? get lastDue => totalInstallments == null
+      ? null
+      : monthlyDueDate(firstDue, totalInstallments! - 1, day: monthlyDay);
+  DateTime? get effectiveEnd {
+    final last = lastDue;
+    if (endDate == null) return last;
+    return last == null || endDate!.isBefore(last) ? endDate : last;
+  }
+
+  bool isFinished(DateTime today) =>
+      effectiveEnd?.isBefore(DateTime(today.year, today.month, today.day)) ??
+      false;
+  factory RecurrencePlan.fromMap(Map<String, dynamic> data) {
+    final template = Map<String, dynamic>.from(data['template'] as Map);
+    return RecurrencePlan(
+        id: data['id'].toString(),
+        firstDue: DateTime.parse(data['first_due'].toString()),
+        dueDay: (data['due_day'] as num?)?.toInt(),
+        description: template['description'].toString(),
+        amount: (template['amount'] as num).toDouble(),
+        totalInstallments: (data['total_installments'] as num?)?.toInt(),
+        endDate: DateTime.tryParse(data['end_date']?.toString() ?? ''),
+        futureAmounts: List<Map<String, dynamic>>.from(
+            template['future_amounts'] as List? ?? []));
+  }
+}
+
+class RecurrenceReference {
+  const RecurrenceReference(this.ruleId, this.month);
+  final String ruleId;
+  final DateTime month;
+  static RecurrenceReference? fromEntryId(String id) {
+    if (!id.startsWith('r:')) return null;
+    final parts = id.split(':');
+    final month = parts.length == 3 ? DateTime.tryParse(parts[2]) : null;
+    if (month == null ||
+        month.day != 1 ||
+        parts[1].isEmpty ||
+        monthKey(month) != parts[2]) {
+      throw const FormatException('Identificador de recorrência inválido.');
+    }
+    return RecurrenceReference(parts[1], month);
+  }
+
+  String get databaseMonth => monthKey(month);
+}
