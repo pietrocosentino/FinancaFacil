@@ -25,6 +25,7 @@ dependencies:
   flutter_timezone: 3.0.1
   timezone: ^0.9.4
   shared_preferences: ^2.5.3
+  image_picker: 1.1.2
 
 dev_dependencies:
   # Cliente HTTP simulado nos testes de contrato dos repositórios.
