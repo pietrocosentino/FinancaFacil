@@ -24,7 +24,7 @@ void main() {
     await show(t, r);
     await t.tap(find.text('Dados pessoais'));
     await t.pumpAndSettle();
-    await t.tap(find.text('Editar dados'));
+    await t.tap(find.text('Alterar'));
     await t.pumpAndSettle();
     await t.enterText(find.byType(TextFormField).first, 'Pietro Ferreira');
     await t.ensureVisible(find.text('Salvar dados'));
@@ -40,7 +40,7 @@ void main() {
     await show(t, r);
     await t.tap(find.text('Dados pessoais'));
     await t.pumpAndSettle();
-    await t.tap(find.text('Editar dados'));
+    await t.tap(find.text('Alterar'));
     await t.pumpAndSettle();
     await t.enterText(find.byType(TextFormField).first, 'Outro nome');
     await t.ensureVisible(find.text('Cancelar'));

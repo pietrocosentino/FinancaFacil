@@ -10,6 +10,12 @@ class FakeFinanceRepository implements FinanceRepository {
   TransactionDraft? saved;
   Set<String>? paidIds;
   double? updatedAmount;
+  String? deletedId;
+  @override
+  Future<void> deleteEntry(String id) async {
+    deletedId = id;
+    entries.removeWhere((entry) => entry.id == id);
+  }
   @override
   Future<List<FinanceEntry>> transactions(DateTime through) async => entries;
   @override

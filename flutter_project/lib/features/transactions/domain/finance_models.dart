@@ -62,6 +62,7 @@ class FinanceEntry {
   final DateTime? lastDue;
   int get amountInCents => (amount * 100).round();
   bool get isIncome => kind == TransactionKind.income;
+  bool get isAutomaticIncome => isIncome && isRecurring;
   bool belongsToMonth(DateTime month) =>
       dueDate?.year == month.year && dueDate?.month == month.month;
   String get recurrenceDescription {
@@ -71,7 +72,13 @@ class FinanceEntry {
         : 'Parcela $installment de $totalInstallments';
   }
 
-  factory FinanceEntry.fromMap(Map<String, dynamic> data) {
+  factory FinanceEntry.fromMap(Map<String, dynamic> data, {DateTime? today}) {
+    final kind = TransactionKind.fromDatabase(data['type']);
+    final dueDate = DateTime.tryParse(data['due_date']?.toString() ?? '');
+    final recurring = data['is_recurrent'] == true;
+    final now = today ?? DateTime.now();
+    final currentDay = DateTime(now.year, now.month, now.day);
+    final automaticIncome = kind == TransactionKind.income && recurring;
     final category = data['category'];
     final amount = data['amount'] is num
         ? (data['amount'] as num).toDouble()
@@ -81,14 +88,18 @@ class FinanceEntry {
     }
     return FinanceEntry(
       id: data['id'].toString(),
-      kind: TransactionKind.fromDatabase(data['type']),
+      kind: kind,
       amount: amount,
       description: data['description']?.toString() ?? 'Lançamento',
-      dueDate: DateTime.tryParse(data['due_date']?.toString() ?? ''),
+      dueDate: dueDate,
       categoryName: category is Map
           ? category['name']?.toString() ?? 'Sem categoria'
           : 'Sem categoria',
-      isPaid: data['is_paid'] == true,
+      isPaid: automaticIncome
+          ? dueDate != null &&
+              !DateTime(dueDate.year, dueDate.month, dueDate.day)
+                  .isAfter(currentDay)
+          : data['is_paid'] == true,
       notes: data['notes']?.toString() ?? '',
       isRecurring: data['is_recurrent'] == true,
       installment: (data['_installment'] as num?)?.toInt(),

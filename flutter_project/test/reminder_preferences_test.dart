@@ -27,7 +27,7 @@ void main() {
         {'reminder_time': '25:99', 'theme_mode': -1});
     await ReminderPreferences.load();
     expect(ReminderPreferences.time.value, const TimeOfDay(hour: 9, minute: 0));
-    expect(ReminderPreferences.themeMode.value, ThemeMode.dark);
+    expect(ReminderPreferences.themeMode.value, ThemeMode.light);
   });
   test('preserva a preferência antiga de hora ao carregar', () async {
     SharedPreferences.setMockInitialValues({'reminder_hour': 18});

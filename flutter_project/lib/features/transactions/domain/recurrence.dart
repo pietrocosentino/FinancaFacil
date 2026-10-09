@@ -32,6 +32,7 @@ List<Map<String, dynamic>> projectRecurrences(
       final date = monthlyDueDate(first, index, day: dueDay);
       final key = monthKey(date);
       final change = changes['${rule['id']}:$key'];
+      if (change?['is_deleted'] == true) continue;
       var plannedAmount = template['amount'];
 
       for (final value in futureAmounts) {

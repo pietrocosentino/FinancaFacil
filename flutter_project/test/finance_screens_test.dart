@@ -136,6 +136,8 @@ void main() {
     await tester.pumpWidget(
         MaterialApp(home: TransactionsListScreen(repository: repository)));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(Checkbox));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar selecionados (1)'));
@@ -161,6 +163,12 @@ void main() {
     ];
     await tester.pumpWidget(
         MaterialApp(home: TransactionsListScreen(repository: repository)));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Editar valor'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Editar valor'));
     await tester.pumpAndSettle();

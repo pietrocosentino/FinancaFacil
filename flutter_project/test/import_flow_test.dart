@@ -114,7 +114,7 @@ void main() {
     await choose(tester);
     await tester.tap(find.text('Importar 1 lançamentos'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('cadastrados como pendentes'), findsOneWidget);
+    expect(find.textContaining('rendas recorrentes entram automaticamente no saldo na data mensal'), findsOneWidget);
     await tester.tap(find.text('Importar agora'));
     await tester.pump(const Duration(milliseconds: 400));
     expect(imports.saves, 1);

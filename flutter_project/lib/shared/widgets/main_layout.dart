@@ -6,10 +6,14 @@ import '../../core/services/app_services.dart';
 import '../../core/utils/finance_updates.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/notifications/data/reminder_service.dart';
+import '../../features/notifications/domain/reminder_plan.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/profile/data/profile_repository.dart';
+import '../../features/profile/presentation/profile_controller.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/widgets/profile_identity.dart';
 import '../../features/transactions/data/finance_repository.dart';
+import '../../features/transactions/domain/finance_models.dart';
 import '../../features/transactions/presentation/screens/add_transaction_screen.dart';
 import '../../features/transactions/presentation/screens/transactions_list_screen.dart';
 
@@ -35,13 +39,22 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   bool _syncAgain = false;
   bool _notificationsOpen = false;
   bool _adding = false;
+  bool _profileOpen = false;
   final _navigator = GlobalKey<NavigatorState>();
   final _addKey = GlobalKey<AddTransactionScreenState>();
   final _tab = ValueNotifier<int>(0);
   late final List<Widget> _screens;
+  late final ProfileController _profile;
+  late Future<List<FinanceEntry>> _headerEntries;
   @override
   void initState() {
     super.initState();
+    _profile =
+        ProfileController(widget.profileRepository ?? AppServices.profile);
+    _profile.loadPhoto();
+    _headerEntries = (widget.financeRepository ?? AppServices.finance)
+        .transactions(DateTime.now().add(const Duration(days: 3)));
+    financeRevision.addListener(_reloadHeader);
     _reminders = widget.reminderService ??
         (widget.financeRepository == null ? AppServices.reminders : null);
     WidgetsBinding.instance.addObserver(this);
@@ -53,6 +66,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     });
     _screens = [
       DashboardScreen(
+          showHeader: false,
           repository: widget.financeRepository,
           reminders: _reminders,
           onNavigateToAdd: _add,
@@ -62,6 +76,8 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           addKey: _addKey,
           onEnableReminders: _openNotifications),
       ProfileScreen(
+          controller: _profile,
+          showIdentity: false,
           repository: widget.profileRepository,
           onNavigateToNotifications: _openNotifications),
     ];
@@ -72,9 +88,65 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     financeRevision.removeListener(_syncReminders);
     _reminders?.openRequested.removeListener(_notificationTapped);
+    financeRevision.removeListener(_reloadHeader);
+    _profile.dispose();
     _tab.dispose();
     super.dispose();
   }
+
+  void _reloadHeader() {
+    if (!mounted) return;
+    final future = (widget.financeRepository ?? AppServices.finance)
+        .transactions(DateTime.now().add(const Duration(days: 3)));
+    setState(() {
+      _headerEntries = future;
+    });
+  }
+
+  Future<void> _openProfile() async {
+    if (_profileOpen || !mounted) return;
+    _profileOpen = true;
+    try {
+      final add = _addKey.currentState;
+      if (add != null && !await add.requestLeave()) return;
+      if (!mounted) return;
+      await _navigator.currentState?.push(MaterialPageRoute(
+          builder: (_) => ProfileScreen(
+              controller: _profile,
+              showIdentity: false,
+              onNavigateToNotifications: _openNotifications)));
+    } finally {
+      _profileOpen = false;
+    }
+  }
+
+  Widget _header() => SafeArea(
+      bottom: false,
+      child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(children: [
+            Expanded(
+                child:
+                    ProfileIdentity(controller: _profile, onTap: _openProfile)),
+            const SizedBox(width: 8),
+            Tooltip(
+                message: 'FinançaFácil',
+                child: Image.asset('assets/icon/icon.png',
+                    width: 24, height: 24, cacheWidth: 48)),
+            FutureBuilder<List<FinanceEntry>>(
+                future: _headerEntries,
+                builder: (_, snapshot) {
+                  final count =
+                      pendingBills(snapshot.data ?? [], DateTime.now()).length;
+                  return IconButton(
+                      tooltip: 'Notificações',
+                      onPressed: _openNotifications,
+                      icon: Badge(
+                          isLabelVisible: count > 0,
+                          label: Text('$count'),
+                          child: const Icon(Icons.notifications_outlined)));
+                }),
+          ])));
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -159,15 +231,20 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   Widget build(BuildContext context) => NavigatorPopHandler(
         onPopWithResult: (result) => _navigator.currentState?.maybePop(result),
         child: Scaffold(
-          body: Navigator(
-              key: _navigator,
-              onGenerateRoute: (settings) => MaterialPageRoute(
-                    settings: settings,
-                    builder: (_) => ValueListenableBuilder<int>(
-                        valueListenable: _tab,
-                        builder: (_, index, __) =>
-                            IndexedStack(index: index, children: _screens)),
-                  )),
+          body: Column(children: [
+            _header(),
+            Expanded(
+              child: Navigator(
+                  key: _navigator,
+                  onGenerateRoute: (settings) => MaterialPageRoute(
+                        settings: settings,
+                        builder: (_) => ValueListenableBuilder<int>(
+                            valueListenable: _tab,
+                            builder: (_, index, __) =>
+                                IndexedStack(index: index, children: _screens)),
+                      )),
+            ),
+          ]),
           bottomNavigationBar: ValueListenableBuilder<int>(
               valueListenable: _tab,
               builder: (_, index, __) => BottomNavigationBar(

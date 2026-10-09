@@ -45,8 +45,12 @@ void main() {
     await t
         .pumpWidget(MaterialApp(home: TransactionsListScreen(repository: r)));
     await t.pumpAndSettle();
-    await t.scrollUntilVisible(find.text('Editar valor'), 200,
-        scrollable: find.byType(Scrollable).first);
+    await t.ensureVisible(find.byType(PopupMenuButton<String>));
+    await t.pumpAndSettle();
+    await t.tap(find.byType(PopupMenuButton<String>));
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.text('Editar valor'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Editar valor'));
     await t.pumpAndSettle();
     return r;

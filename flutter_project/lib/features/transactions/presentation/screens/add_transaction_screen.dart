@@ -176,20 +176,24 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
       _message(_recurring
           ? 'Conta mensal salva. Consulte em Finanças.'
           : 'Lançamento salvo.');
-      final enable = await showDialog<bool>(
+      final action = await showDialog<String>(
+          barrierDismissible: false,
           context: context,
           builder: (context) => AlertDialog(
                   title: const Text('Cadastro salvo'),
                   content: Text(
-                      '${_description.text}\n${AppFormatters.currency.format(parseMoney(_amount.text))}\nPrimeiro vencimento: ${AppFormatters.date.format(_dueDate)}\n\nConsulte e confirme cada pagamento em Finanças. Ative os lembretes em Notificações para receber avisos.'),
+                      '${_description.text}\n${AppFormatters.currency.format(parseMoney(_amount.text))}\nPrimeiro vencimento: ${AppFormatters.date.format(_dueDate)}\n\n${_kind == TransactionKind.income && _recurring ? 'A renda será considerada recebida automaticamente na data de cada mês. Você pode editar o valor em Finanças.' : _kind == TransactionKind.income ? 'Consulte sua renda em Finanças.' : 'Confirme cada pagamento em Finanças. Ative os lembretes em Notificações para receber avisos.'}'),
                   actions: [
+                    FilledButton(
+                        onPressed: () => Navigator.pop(context, 'exit'),
+                        child: const Text('Sair')),
                     TextButton(
-                        onPressed: () => Navigator.pop(context, false),
+                        onPressed: () => Navigator.pop(context, 'another'),
                         child: const Text('Cadastrar outra')),
                     if (widget.onEnableReminders != null &&
                         _kind == TransactionKind.expense)
                       ElevatedButton(
-                          onPressed: () => Navigator.pop(context, true),
+                          onPressed: () => Navigator.pop(context, 'reminders'),
                           child: const Text('Configurar lembretes')),
                   ]));
       if (!mounted) return;
@@ -208,7 +212,12 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
         _allowExit = false;
         _categoryId = _categories.length == 1 ? _categories.first.id : null;
       });
-      if (enable == true) widget.onEnableReminders?.call();
+      if (action == 'exit') {
+        setState(() => _allowExit = true);
+        Navigator.of(context).pop();
+      } else if (action == 'reminders') {
+        widget.onEnableReminders?.call();
+      }
     } catch (_) {
       if (mounted) {
         _message(

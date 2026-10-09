@@ -50,6 +50,12 @@ void main() {
     await tester.pumpWidget(
         MaterialApp(home: TransactionsListScreen(repository: repository)));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Corrigir confirmação'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Corrigir confirmação'));
     await tester.pumpAndSettle();
     expect(repository.entries.single.isPaid, true);

@@ -40,7 +40,7 @@ async function scenario(integerIds) {
     grant select,insert,update on transactions to authenticated;
     grant usage,select on all sequences in schema public to authenticated;
   `);
-  for (const file of ['recorrencia.sql','editar_valores.sql','importacao_mvp2.sql']) {
+  for (const file of ['recorrencia.sql','editar_valores.sql','importacao_mvp2.sql','excluir_lancamentos.sql']) {
     await db.exec(await fs.readFile(new URL(file,scripts),'utf8'));
   }
   // Idempotência da própria migração.
@@ -118,6 +118,27 @@ async function scenario(integerIds) {
   const edited=await save([row(2,{description:'Corrigida',recurring:false})]);
   await db.exec("update transactions set amount=1600 where description='Corrigida'");
   await rejects(()=>undo(edited.batch_id),/preservado/);
+  const disposableId=(await db.query("select id::text from transactions where description='Descartável'")).rows[0].id;
+  const remove = id => db.query('select public.delete_finance_entry($1)',[id]);
+  await account(other);
+  await rejects(()=>db.query('select public.stop_finance_plan($1::uuid)',[ruleId]),/no rows/);
+  await rejects(()=>remove(disposableId),/não encontrado/);
+  await rejects(()=>remove(`r:${ruleId}:2026-11-01`),/no rows/);
+  await account(owner);
+  await remove(disposableId);
+  equal((await db.query('select count(*)::int as n from transactions where id::text=$1',[disposableId])).rows[0].n,0);
+  await rejects(()=>remove(disposableId),/não encontrado/);
+  await remove(`r:${ruleId}:2026-11-01`);
+  equal((await db.query('select is_deleted,is_paid from recurrence_occurrences where rule_id=$1',[ruleId])).rows[0],{is_deleted:true,is_paid:false});
+  equal((await db.query('select count(*)::int as n from recurrence_rules where id=$1',[ruleId])).rows[0].n,1);
+  await remove(`r:${ruleId}:2026-11-01`);
+  equal((await db.query('select count(*)::int as n from recurrence_occurrences where rule_id=$1',[ruleId])).rows[0].n,1);
+  await rejects(()=>remove(`r:${ruleId}:2026-10-01`),/fora do período/);
+  await rejects(()=>remove(`r:${ruleId}:2026-11-02`),/Mês inválido/);
+  await rejects(()=>undo(imported.batch_id),/preservado/);
+  await db.query("update recurrence_rules set end_date='2025-01-31' where id=$1",[ruleId]);
+  await db.query('select public.stop_finance_plan($1::uuid)',[ruleId]);
+  equal((await db.query('select end_date::text from recurrence_rules where id=$1',[ruleId])).rows[0].end_date,'2025-01-31');
   // Segunda conta não vê os lotes nem pode desfazer lote da primeira.
   await account(other);
   equal(await counts(),{transactions:0,rules:0,batches:0});
@@ -125,6 +146,7 @@ async function scenario(integerIds) {
   equal(await preview([row(2)]),[]);
   equal((await save([row(2)],fixedHash)).already_imported,false);
   await account('');
+  await rejects(()=>remove(disposableId),/Sessão expirada/);
   await rejects(()=>save([row(2)]),/sessão/);
   await db.close();
 }
