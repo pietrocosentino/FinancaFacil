@@ -17,7 +17,11 @@ enum _Frequency {
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen(
-      {super.key, this.repository, this.onEnableReminders});
+      {super.key,
+      this.repository,
+      this.onEnableReminders,
+      this.initialKind = TransactionKind.expense});
+  final TransactionKind initialKind;
   final FinanceRepository? repository;
   final VoidCallback? onEnableReminders;
   @override
@@ -84,6 +88,8 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   void initState() {
     super.initState();
+    _kind = widget.initialKind;
+    _initialKind = widget.initialKind;
     _repository = widget.repository ?? AppServices.finance;
     _loadCategories();
   }

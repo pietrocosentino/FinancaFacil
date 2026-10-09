@@ -1,4 +1,4 @@
-# FinançaFácil — MVP2 (2.0.6+15)
+# FinançaFácil — MVP2 (2.0.7+16)
 
 Projeto completo com todas as alterações solicitadas: importação de Excel, ações compactas, foto e nome fixos no cabeçalho, menu extensível, dados pessoais separados com edição via Alterar, exclusão de lançamentos, edição de valores e recorrências.
 
@@ -66,3 +66,7 @@ O clique na foto abre um menu modal sobre a tela atual, com botão Fechar menu. 
 ## Ajuste visual 2.0.6
 
 Nome FinançaFácil visível no cabeçalho e botão Adicionar centralizado com largura conforme o texto, mantendo área de toque de 48 pixels. Sete testes de perfil e ações visíveis passaram na cópia de compatibilidade. Build nativo não executado.
+
+## Navegação 2.0.7
+
+Quatro abas: Início, Finanças (cadastro de conta, renda e importação), Extrato (consulta, filtros, confirmação, edição e exclusão) e Perfil. Cadastro de renda abre com o tipo Receita selecionado. As regras financeiras e de recorrência continuam iguais. A suíte completa passou com 193 testes na cópia de compatibilidade; build nativo não executado.

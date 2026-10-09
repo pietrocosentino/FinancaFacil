@@ -24,7 +24,12 @@ enum _EntryFilter {
 
 class TransactionsListScreen extends StatefulWidget {
   const TransactionsListScreen(
-      {super.key, this.repository, this.addKey, this.onEnableReminders});
+      {super.key,
+      this.repository,
+      this.addKey,
+      this.onEnableReminders,
+      this.showRegistration = true});
+  final bool showRegistration;
   final FinanceRepository? repository;
   final VoidCallback? onEnableReminders;
   final GlobalKey<AddTransactionScreenState>? addKey;
@@ -391,32 +396,37 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Finanças'), actions: [
-        IconButton(
-            tooltip: 'Buscar contas',
-            icon: const Icon(Icons.search),
-            onPressed: _processing
-                ? null
-                : () => setState(() {
-                      _searchOpen = !_searchOpen;
-                      _query = '';
+      appBar: AppBar(
+          title: Text(widget.showRegistration ? 'Finanças' : 'Extrato'),
+          actions: [
+            IconButton(
+                tooltip: 'Buscar contas',
+                icon: const Icon(Icons.search),
+                onPressed: _processing
+                    ? null
+                    : () => setState(() {
+                          _searchOpen = !_searchOpen;
+                          _query = '';
+                          _selectedIds.clear();
+                        })),
+            PopupMenuButton<int>(
+                tooltip: 'Filtrar receitas e despesas',
+                enabled: !_processing,
+                icon: const Icon(Icons.filter_list),
+                onSelected: (kind) => setState(() {
+                      _kind =
+                          kind == 0 ? null : TransactionKind.values[kind - 1];
                       _selectedIds.clear();
-                    })),
-        PopupMenuButton<int>(
-            tooltip: 'Filtrar receitas e despesas',
-            enabled: !_processing,
-            icon: const Icon(Icons.filter_list),
-            onSelected: (kind) => setState(() {
-                  _kind = kind == 0 ? null : TransactionKind.values[kind - 1];
-                  _selectedIds.clear();
-                }),
-            itemBuilder: (_) => const [
-                  PopupMenuItem(value: 0, child: Text('Receitas e despesas')),
-                  PopupMenuItem(value: 1, child: Text('Somente despesas')),
-                  PopupMenuItem(value: 2, child: Text('Somente receitas'))
-                ]),
-      ]),
-      bottomNavigationBar: MediaQuery.of(context).viewInsets.bottom > 0
+                    }),
+                itemBuilder: (_) => const [
+                      PopupMenuItem(
+                          value: 0, child: Text('Receitas e despesas')),
+                      PopupMenuItem(value: 1, child: Text('Somente despesas')),
+                      PopupMenuItem(value: 2, child: Text('Somente receitas'))
+                    ]),
+          ]),
+      bottomNavigationBar: (!widget.showRegistration && _selectedIds.isEmpty) ||
+              MediaQuery.of(context).viewInsets.bottom > 0
           ? null
           : SafeArea(
               top: false,
@@ -447,21 +457,22 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
             child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  SliverToBoxAdapter(
-                      child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                          child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: OutlinedButton.icon(
-                                  onPressed: _processing
-                                      ? null
-                                      : () => Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                              builder: (_) => ImportScreen(
-                                                  finance: _repository))),
-                                  icon: const Icon(Icons.upload_file_outlined,
-                                      size: 20),
-                                  label: const Text('Importar planilha'))))),
+                  if (widget.showRegistration)
+                    SliverToBoxAdapter(
+                        child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                            child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: OutlinedButton.icon(
+                                    onPressed: _processing
+                                        ? null
+                                        : () => Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                                builder: (_) => ImportScreen(
+                                                    finance: _repository))),
+                                    icon: const Icon(Icons.upload_file_outlined,
+                                        size: 20),
+                                    label: const Text('Importar planilha'))))),
                   _filtersPanel(),
                   AsyncSliverPanel<List<FinanceEntry>>(
                     future: _future,
