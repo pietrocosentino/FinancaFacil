@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/app_services.dart';
 import '../../core/utils/finance_updates.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
+import '../../features/imports/presentation/import_screen.dart';
 import '../../features/notifications/data/reminder_service.dart';
 import '../../features/notifications/domain/reminder_plan.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
@@ -15,6 +16,7 @@ import '../../features/profile/presentation/widgets/profile_identity.dart';
 import '../../features/transactions/data/finance_repository.dart';
 import '../../features/transactions/domain/finance_models.dart';
 import '../../features/transactions/presentation/screens/add_transaction_screen.dart';
+import '../../features/transactions/presentation/screens/finance_registration_screen.dart';
 import '../../features/transactions/presentation/screens/transactions_list_screen.dart';
 
 /// As rotas internas ficam dentro do corpo; o menu permanece fora delas.
@@ -71,7 +73,14 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           reminders: _reminders,
           onNavigateToAdd: _add,
           onNavigateToNotifications: _openNotifications),
+      FinanceRegistrationScreen(
+          onAddExpense: () => _add(),
+          onAddIncome: () => _add(kind: TransactionKind.income),
+          onImport: () => _navigator.currentState?.push(MaterialPageRoute(
+              builder: (_) =>
+                  ImportScreen(finance: widget.financeRepository)))),
       TransactionsListScreen(
+          showRegistration: false,
           repository: widget.financeRepository,
           addKey: _addKey,
           onEnableReminders: _openNotifications),
@@ -234,13 +243,14 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     _tab.value = index;
   }
 
-  Future<void> _add() async {
+  Future<void> _add({TransactionKind kind = TransactionKind.expense}) async {
     if (_adding || !mounted) return;
     _adding = true;
     try {
       await _navigator.currentState?.push(MaterialPageRoute(
           builder: (_) => AddTransactionScreen(
               key: _addKey,
+              initialKind: kind,
               repository: widget.financeRepository,
               onEnableReminders: _openNotifications)));
     } finally {
@@ -269,6 +279,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           bottomNavigationBar: ValueListenableBuilder<int>(
               valueListenable: _tab,
               builder: (_, index, __) => BottomNavigationBar(
+                    type: BottomNavigationBarType.fixed,
                     currentIndex: index,
                     onTap: _onTabTapped,
                     items: const [
@@ -277,9 +288,13 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
                           activeIcon: Icon(Icons.home),
                           label: 'Início'),
                       BottomNavigationBarItem(
+                          icon: Icon(Icons.add_circle_outline),
+                          activeIcon: Icon(Icons.add_circle),
+                          label: 'Finanças'),
+                      BottomNavigationBarItem(
                           icon: Icon(Icons.receipt_long_outlined),
                           activeIcon: Icon(Icons.receipt_long),
-                          label: 'Finanças'),
+                          label: 'Extrato'),
                       BottomNavigationBarItem(
                           icon: Icon(Icons.person_outline),
                           activeIcon: Icon(Icons.person),
