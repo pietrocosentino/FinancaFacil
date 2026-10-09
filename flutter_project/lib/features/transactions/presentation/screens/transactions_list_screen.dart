@@ -423,20 +423,23 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
               child: Container(
                   color: Theme.of(context).colorScheme.surface,
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                  child: FilledButton.icon(
-                      onPressed: _processing
-                          ? null
-                          : _selectedIds.isEmpty
-                              ? _addEntry
-                              : _paySelected,
-                      icon: Icon(_selectedIds.isEmpty
-                          ? Icons.add_circle_outline
-                          : Icons.check_circle_outline),
-                      label: Text(_selectedIds.isEmpty
-                          ? 'Adicionar'
-                          : _processing
-                              ? 'Confirmando...'
-                              : 'Confirmar selecionados (${_selectedIds.length})')))),
+                  child: Align(
+                      heightFactor: 1,
+                      alignment: Alignment.center,
+                      child: FilledButton.icon(
+                          onPressed: _processing
+                              ? null
+                              : _selectedIds.isEmpty
+                                  ? _addEntry
+                                  : _paySelected,
+                          icon: Icon(_selectedIds.isEmpty
+                              ? Icons.add_circle_outline
+                              : Icons.check_circle_outline),
+                          label: Text(_selectedIds.isEmpty
+                              ? 'Adicionar'
+                              : _processing
+                                  ? 'Confirmando...'
+                                  : 'Confirmar selecionados (${_selectedIds.length})'))))),
       body: SafeArea(
           top: false,
           child: RefreshIndicator(
