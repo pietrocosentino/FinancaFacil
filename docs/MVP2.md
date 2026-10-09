@@ -1,10 +1,16 @@
+# Atualização 2.0.4
+
+A entrega atual inclui 191 testes Flutter na cópia adaptada ao SDK disponível e 98 verificações PostgreSQL. Requer a migração excluir_lancamentos.sql além das migrações anteriores. README.md contém as instruções atuais de instalação e as limitações de validação.
+
+Perfil: estado compartilhado via ProfileController, opções extensíveis via ProfileMenuItem, foto/nome fixos no cabeçalho, dados separados e edição de Nome/Telefone via Alterar. Ações dos lançamentos ficam no menu; informações adicionais em Detalhes. Cache financeiro por conta/revisão com expiração de dois minutos, sem consulta periódica; cache com erro é descartado para permitir nova tentativa.
+
 # MVP2 — importação de Excel
 
 ## Entrega
 
 Em Finanças, o botão **Importar planilha Excel** abre a seleção de arquivo, o modelo para baixar e o histórico. O formato é .xlsx, até 5 MB, com até 500 linhas na aba Lançamentos. Os exemplos estão somente na aba Como preencher e nunca são cadastrados automaticamente.
 
-A prévia mostra receitas, despesas, valor por linha, primeiro vencimento, categoria e recorrência. O usuário pode corrigir campos e associar categorias às existentes, ou desmarcar linhas. Tipos e categorias não recebem valores padrão silenciosos. Todas as importações entram pendentes. As recorrências criam uma regra por linha; não multiplicam o valor mensal nem antecipam as parcelas.
+A prévia mostra receitas, despesas, valor por linha, primeiro vencimento, categoria e recorrência. O usuário pode corrigir campos e associar categorias às existentes, ou desmarcar linhas. Tipos e categorias não recebem valores padrão silenciosos. As despesas e rendas avulsas entram pendentes. Rendas recorrentes são consideradas recebidas automaticamente na data mensal, por cálculo do aplicativo. As recorrências criam uma regra por linha; não multiplicam o valor mensal nem antecipam as parcelas.
 
 O primeiro vencimento define mês e dia inicial. A coluna opcional Dia de vencimento permite manter, por exemplo, dia 31 com primeiro vencimento em 28/02. A quantidade vazia significa recorrência sem data final. Quantidades de 2 a 1200 meses mantêm o intervalo usado pelo formulário atual. Para uma única parcela, use lançamento avulso.
 

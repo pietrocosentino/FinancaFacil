@@ -13,12 +13,59 @@ abstract class FinanceRepository {
   Future<void> updateAmount(String id, double amount);
   Future<void> updateFutureAmount(String id, double amount);
   Future<void> stopPlan(String id);
+  Future<void> deleteEntry(String id);
 }
 
 class SupabaseFinanceRepository implements FinanceRepository {
-  SupabaseFinanceRepository(this._client);
+  SupabaseFinanceRepository(this._client, {DateTime Function()? now})
+      : _now = now ?? DateTime.now;
   final SupabaseClient _client;
+  final DateTime Function() _now;
   static const _pageSize = 500;
+  Future<_FinanceSnapshot>? _snapshotFuture;
+  int _snapshotRevision = -1;
+  String? _snapshotOwner;
+  DateTime? _snapshotLoadedAt;
+
+  Future<_FinanceSnapshot> _snapshot() async {
+    final owner = _userId;
+    final revision = financeRevision.value;
+    final fresh = _snapshotLoadedAt != null &&
+        _now().difference(_snapshotLoadedAt!) < const Duration(minutes: 2);
+    if (_snapshotFuture == null ||
+        _snapshotOwner != owner ||
+        _snapshotRevision != revision ||
+        !fresh) {
+      _snapshotOwner = owner;
+      _snapshotRevision = revision;
+      _snapshotLoadedAt = _now();
+      _snapshotFuture = _loadSnapshot();
+    }
+    final pending = _snapshotFuture!;
+    try {
+      return await pending;
+    } catch (_) {
+      if (identical(_snapshotFuture, pending)) _snapshotFuture = null;
+      rethrow;
+    }
+  }
+
+  Future<_FinanceSnapshot> _loadSnapshot() async {
+    final parts = await Future.wait<Object>([
+      _read('transactions', select: '*, category:categories(name)'),
+      _read('recurrence_rules'),
+      _read('recurrence_occurrences'),
+      categories(TransactionKind.expense),
+      categories(TransactionKind.income),
+    ]);
+    return _FinanceSnapshot(
+        List<Map<String, dynamic>>.from(parts[0] as List),
+        List<Map<String, dynamic>>.from(parts[1] as List),
+        List<Map<String, dynamic>>.from(parts[2] as List), [
+      ...parts[3] as List<FinanceCategory>,
+      ...parts[4] as List<FinanceCategory>
+    ]);
+  }
 
   String get _userId {
     final user = _client.auth.currentUser;
@@ -71,14 +118,11 @@ class SupabaseFinanceRepository implements FinanceRepository {
 
   @override
   Future<List<FinanceEntry>> transactions(DateTime through) async {
-    final legacy =
-        await _read('transactions', select: '*, category:categories(name)');
-    final rules = await _read('recurrence_rules');
-    final overrides = await _read('recurrence_occurrences');
-    final categoryRows = [
-      ...await categories(TransactionKind.expense),
-      ...await categories(TransactionKind.income)
-    ];
+    final snapshot = await _snapshot();
+    final legacy = snapshot.transactions;
+    final rules = snapshot.rules;
+    final overrides = snapshot.occurrences;
+    final categoryRows = snapshot.categories;
     final names = {
       for (final category in categoryRows) category.id: category.name
     };
@@ -88,7 +132,10 @@ class SupabaseFinanceRepository implements FinanceRepository {
         'name': names[row['category_id'].toString()] ?? 'Sem categoria'
       };
     }
-    return [...legacy, ...projected].map(FinanceEntry.fromMap).toList()
+    final today = _now();
+    return [...legacy, ...projected]
+        .map((row) => FinanceEntry.fromMap(row, today: today))
+        .toList()
       ..sort((a, b) =>
           (b.dueDate ?? DateTime(0)).compareTo(a.dueDate ?? DateTime(0)));
   }
@@ -193,18 +240,31 @@ class SupabaseFinanceRepository implements FinanceRepository {
   }
 
   @override
+  Future<void> deleteEntry(String id) async {
+    _userId;
+    if (id.isEmpty) throw const FormatException('Registro inválido.');
+    RecurrenceReference.fromEntryId(id);
+    await _client.rpc('delete_finance_entry', params: {'p_entry_id': id});
+    notifyFinanceChanged();
+  }
+
+  @override
   Future<void> stopPlan(String id) async {
-    final now = DateTime.now();
-    await _client
-        .from('recurrence_rules')
-        .update({'end_date': _date(DateTime(now.year, now.month + 1, 0))})
-        .eq('user_id', _userId)
-        .eq('id', id)
-        .select('id')
-        .single();
+    _userId;
+    await _client.rpc('stop_finance_plan', params: {'p_rule_id': id});
     notifyFinanceChanged();
   }
 
   String _date(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+}
+
+/// Apenas um conjunto de dados por conta/revisão, compartilhado entre consultas.
+class _FinanceSnapshot {
+  const _FinanceSnapshot(
+      this.transactions, this.rules, this.occurrences, this.categories);
+  final List<Map<String, dynamic>> transactions;
+  final List<Map<String, dynamic>> rules;
+  final List<Map<String, dynamic>> occurrences;
+  final List<FinanceCategory> categories;
 }

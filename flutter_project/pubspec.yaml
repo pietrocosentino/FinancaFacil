@@ -1,7 +1,7 @@
 name: financafacil
 description: "Aplicativo de gestão financeira pessoal FinançaFácil."
 publish_to: "none"
-version: 2.0.0+9
+version: 2.0.4+13
 
 environment:
   sdk: ">=3.13.0 <4.0.0"
@@ -53,4 +53,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/import/modelo_financafacil.xlsx
+    - assets/icon/icon.png
 

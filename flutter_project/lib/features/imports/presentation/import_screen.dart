@@ -1,7 +1,7 @@
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../core/services/app_services.dart';
 import '../../../core/utils/formatters.dart';
 import '../../transactions/data/finance_repository.dart';
@@ -10,21 +10,11 @@ import '../data/import_file_gateway.dart';
 import '../data/import_repository.dart';
 import '../data/xlsx_import_reader.dart';
 import '../domain/import_models.dart';
+import 'import_error_message.dart';
 import 'import_history_screen.dart';
 import 'import_line_dialog.dart';
 
 List<ImportLine> _readSheet(Uint8List bytes) => XlsxImportReader().read(bytes);
-
-String importFailure(Object error) {
-  if (error is FormatException) return error.message;
-  if (error is PostgrestException) {
-    if (['42883', '42P01', 'PGRST202', 'PGRST205'].contains(error.code)) {
-      return 'A importação ainda não está ativada no banco. Execute importacao_mvp2.sql no Supabase.';
-    }
-    if (error.code == 'P0001') return error.message;
-  }
-  return 'Não foi possível concluir. Confira a conexão e tente novamente. Nenhum cadastro parcial será feito.';
-}
 
 class ImportScreen extends StatefulWidget {
   const ImportScreen(
@@ -177,10 +167,9 @@ class _ImportScreenState extends State<ImportScreen> {
         builder: (context) => AlertDialog(
                 title: const Text('Confirmar importação?'),
                 scrollable: true,
-                content: Text(
-                    '${rows.length} lançamentos serão cadastrados como pendentes.\n'
+                content: Text('${rows.length} lançamentos serão cadastrados.\n'
                     '${_lines.length - rows.length} linhas não serão importadas.\n\n'
-                    'Recorrências serão cadastradas uma única vez. Cada mês continuará exigindo confirmação manual.'
+                    'Recorrências serão cadastradas uma única vez. Despesas exigem confirmação de pagamento; rendas recorrentes entram automaticamente no saldo na data mensal.'
                     '${similar > 0 ? '\n\nVocê incluiu $similar possíveis duplicatas. Confirme somente se são lançamentos diferentes.' : ''}'),
                 actions: [
                   TextButton(

@@ -4,6 +4,7 @@ import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
 import '../../../../shared/widgets/month_picker.dart';
+import '../../../imports/presentation/import_screen.dart';
 import '../../data/finance_repository.dart';
 import '../../domain/amount_edit_scope.dart';
 import '../../domain/finance_models.dart';
@@ -11,7 +12,6 @@ import 'add_transaction_screen.dart';
 import 'edit_amount_dialog.dart';
 import 'finance_entry_card.dart';
 import 'recurrence_rules_screen.dart';
-import '../../../imports/presentation/import_screen.dart';
 
 enum _EntryFilter {
   all('Todas'),
@@ -75,7 +75,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   }
 
   Future<void> _refresh() async {
-    _reload();
+    notifyFinanceChanged();
     try {
       await _future;
     } catch (_) {/* AsyncPanel apresenta o erro. */}
@@ -224,6 +224,77 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     }
   }
 
+  Future<void> _delete(FinanceEntry entry) async {
+    if (_processing || _reviewing) return;
+    final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Text(entry.isRecurring
+                    ? 'Excluir somente este mês?'
+                    : 'Excluir lançamento?'),
+                content: Text(
+                    '${entry.description}\n${AppFormatters.currency.format(entry.amount)}\n${entry.dueDate == null ? '' : AppFormatters.monthYear.format(entry.dueDate!)}\n\nO valor será retirado do saldo.${entry.isRecurring ? ' A recorrência continuará nos outros meses e este mês não reaparecerá.' : ''}'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text('Excluir',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error)))
+                ]));
+    if (accepted != true || !mounted) return;
+    setState(() => _processing = true);
+    try {
+      await _repository.deleteEntry(entry.id);
+      if (mounted) _message('Lançamento excluído.');
+    } catch (_) {
+      if (mounted) {
+        _message(
+            'Não foi possível excluir. Confira a conexão e a atualização do banco.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+        _reload();
+      }
+    }
+  }
+
+  Future<void> _stop(FinanceEntry entry) async {
+    if (_processing || _reviewing) return;
+    final reference = RecurrenceReference.fromEntryId(entry.id);
+    if (reference == null) return;
+    final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: const Text('Encerrar próximos meses?'),
+                content: Text(
+                    '${entry.description}\n\nA recorrência termina no fim do mês atual. Os registros anteriores e deste mês serão preservados.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Encerrar'))
+                ]));
+    if (accepted != true || !mounted) return;
+    setState(() => _processing = true);
+    try {
+      await _repository.stopPlan(reference.ruleId);
+      if (mounted) _message('Recorrência encerrada após este mês.');
+    } catch (_) {
+      if (mounted) _message('Não foi possível encerrar. Tente novamente.');
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+        _reload();
+      }
+    }
+  }
+
   Future<void> _pickMonth() async {
     final date = await showMonthPicker(context: context, initialMonth: _month);
     if (date != null && mounted) {
@@ -273,13 +344,15 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                       ? null
                       : () => _changeMonth(1)),
             ]),
-            TextButton(
-                onPressed: _processing
-                    ? null
-                    : () {
-                        _setMonth(DateTime.now());
-                      },
-                child: const Text('Mês atual')),
+            Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                    onPressed: _processing
+                        ? null
+                        : () {
+                            _setMonth(DateTime.now());
+                          },
+                    child: const Text('Mês atual'))),
             Wrap(spacing: 8, children: [
               for (final filter in _EntryFilter.values)
                 ChoiceChip(
@@ -292,11 +365,6 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                               _selectedIds.clear();
                             }))
             ]),
-            TextButton.icon(
-                onPressed: _processing ? null : () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => ImportScreen(finance: _repository))),
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Importar planilha Excel')),
             TextButton.icon(
                 onPressed: _processing
                     ? null
@@ -348,24 +416,27 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   PopupMenuItem(value: 2, child: Text('Somente receitas'))
                 ]),
       ]),
-      floatingActionButton: _selectedIds.isEmpty
-          ? FloatingActionButton.extended(
-              onPressed: _processing ? null : _addEntry,
-              icon: const Icon(Icons.add),
-              label: const Text('Novo lançamento'))
-          : null,
-      bottomNavigationBar: _selectedIds.isEmpty
+      bottomNavigationBar: MediaQuery.of(context).viewInsets.bottom > 0
           ? null
           : SafeArea(
               top: false,
-              child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: ElevatedButton.icon(
-                      onPressed: _processing ? null : _paySelected,
-                      icon: const Icon(Icons.check),
-                      label: Text(_processing
-                          ? 'Confirmando...'
-                          : 'Confirmar selecionados (${_selectedIds.length})')))),
+              child: Container(
+                  color: Theme.of(context).colorScheme.surface,
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                  child: FilledButton.icon(
+                      onPressed: _processing
+                          ? null
+                          : _selectedIds.isEmpty
+                              ? _addEntry
+                              : _paySelected,
+                      icon: Icon(_selectedIds.isEmpty
+                          ? Icons.add_circle_outline
+                          : Icons.check_circle_outline),
+                      label: Text(_selectedIds.isEmpty
+                          ? 'Adicionar'
+                          : _processing
+                              ? 'Confirmando...'
+                              : 'Confirmar selecionados (${_selectedIds.length})')))),
       body: SafeArea(
           top: false,
           child: RefreshIndicator(
@@ -373,6 +444,21 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
             child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
+                  SliverToBoxAdapter(
+                      child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                          child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: OutlinedButton.icon(
+                                  onPressed: _processing
+                                      ? null
+                                      : () => Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (_) => ImportScreen(
+                                                  finance: _repository))),
+                                  icon: const Icon(Icons.upload_file_outlined,
+                                      size: 20),
+                                  label: const Text('Importar planilha'))))),
                   _filtersPanel(),
                   AsyncSliverPanel<List<FinanceEntry>>(
                     future: _future,
@@ -405,7 +491,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                 ])));
                       }
                       return SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 100),
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
                           sliver: SliverList.builder(
                               itemCount: entries.length,
                               itemBuilder: (_, index) {
@@ -413,19 +499,26 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                 return FinanceEntryCard(
                                     entry: entry,
                                     selected: _selectedIds.contains(entry.id),
-                                    actions: entry.isPaid
-                                        ? TextButton.icon(
-                                            onPressed: _processing
-                                                ? null
-                                                : () => _undo(entry),
-                                            icon: const Icon(Icons.undo),
-                                            label: const Text(
-                                                'Corrigir confirmação'))
+                                    onUndo: entry.isPaid &&
+                                            !entry.isAutomaticIncome &&
+                                            !_processing
+                                        ? () => _undo(entry)
                                         : null,
+                                    onDelete: _processing
+                                        ? null
+                                        : () => _delete(entry),
+                                    onStop: _processing ||
+                                            RecurrenceReference.fromEntryId(
+                                                    entry.id) ==
+                                                null
+                                        ? null
+                                        : () => _stop(entry),
                                     onTap: _processing
                                         ? null
                                         : () => _editAmount(entry),
-                                    onSelected: entry.isPaid || _processing
+                                    onSelected: entry.isPaid ||
+                                            entry.isAutomaticIncome ||
+                                            _processing
                                         ? null
                                         : (value) => setState(() {
                                               if (value == true) {

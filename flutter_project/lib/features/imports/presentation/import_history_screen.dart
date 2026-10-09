@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/utils/formatters.dart';
 import '../data/import_repository.dart';
 import '../domain/import_models.dart';
-import 'import_screen.dart' show importFailure;
+import 'import_error_message.dart';
 
 class ImportHistoryScreen extends StatefulWidget {
   const ImportHistoryScreen({super.key, required this.repository});

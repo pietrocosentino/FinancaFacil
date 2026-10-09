@@ -1,13 +1,19 @@
-# FinançaFácil — MVP2 (2.0.0+9)
+# FinançaFácil — MVP2 (2.0.4+13)
 
-Projeto completo com importação de Excel, perfil com foto e dados pessoais separados, edição de rendas e despesas confirmadas, recorrências, lembretes e confirmação manual.
+Projeto completo com todas as alterações solicitadas: importação de Excel, ações compactas, foto e nome fixos no cabeçalho, menu extensível, dados pessoais separados com edição via Alterar, exclusão de lançamentos, edição de valores e recorrências.
+
+Rendas recorrentes são consideradas recebidas automaticamente na data cadastrada, sem integração bancária. Rendas futuras permanecem previstas. Despesas e rendas avulsas mantêm confirmação manual. Excluir somente este mês impede que o lançamento reapareça; encerrar a recorrência preserva o histórico. O cadastro concluído oferece Sair e Cadastrar outra.
+
+O repositório financeiro compartilha consultas em memória por conta/revisão por até dois minutos, invalidando dados após alterações, atualização manual, retomada do app ou troca de conta. A foto é carregada uma vez e decodificada em tamanho reduzido. E-mail permanece identificação da autenticação; Nome e Telefone são editáveis.
+
+Validação: 191 testes Flutter passaram na cópia adaptada ao SDK 3.24.5 disponível, com 98 verificações PostgreSQL para IDs UUID e inteiro. Build Android/iOS no Flutter 3.47.6 e medição de desempenho real ainda precisam ser validados no seu ambiente.
 
 ## Atualizar no Windows
 
 1. Faça backup da sua pasta FinancaFacil.
 2. Extraia o pacote em uma pasta temporária. Copie o conteúdo para C:\Users\pietr\Downloads\FinancaFacil, substituindo arquivos. Preserve .git e flutter_project/android/local.properties. Não crie flutter_project dentro de flutter_project.
 3. Se ainda existirem build-apk.yml e build-ios.yml em .github/workflows, remova somente esses workflows antigos; o pacote usa build.yml.
-4. No Supabase SQL Editor, execute flutter_project/supabase/importacao_mvp2.sql. Se editar_valores.sql ainda não foi aplicado, execute-o antes. Leia docs/MVP2.md para os pré-requisitos do banco. O SQL não foi executado no seu Supabase automaticamente.
+4. No Supabase SQL Editor, execute flutter_project/supabase/excluir_lancamentos.sql. Esse é o novo script para exclusão e encerramento. Se os anteriores ainda não foram aplicados, execute primeiro recorrencia.sql, editar_valores.sql e importacao_mvp2.sql, nessa ordem. Os scripts não foram executados no seu Supabase automaticamente.
 5. Abra FinancaFacil no VS Code. Com o emulador ligado, no terminal PowerShell:
 
 ```powershell

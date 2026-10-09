@@ -19,11 +19,13 @@ class DashboardScreen extends StatefulWidget {
       required this.onNavigateToAdd,
       this.onNavigateToNotifications,
       this.repository,
-      this.reminders});
+      this.reminders,
+      this.showHeader = true});
   final VoidCallback onNavigateToAdd;
   final VoidCallback? onNavigateToNotifications;
   final FinanceRepository? repository;
   final ReminderService? reminders;
+  final bool showHeader;
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -50,7 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _refresh() async {
-    _reload();
+    notifyFinanceChanged();
     try {
       await _future;
     } catch (_) {/* AsyncPanel mostra a opção de tentar novamente. */}
@@ -74,22 +76,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('FinançaFácil'), actions: [
-        FutureBuilder<List<FinanceEntry>>(
-            future: _future,
-            builder: (_, snapshot) {
-              final count = snapshot.hasError
-                  ? 0
-                  : pendingBills(snapshot.data ?? [], DateTime.now()).length;
-              return IconButton(
-                  tooltip: 'Notificações',
-                  onPressed: _openNotifications,
-                  icon: Badge(
-                      label: Text('$count'),
-                      isLabelVisible: count > 0,
-                      child: const Icon(Icons.notifications_outlined)));
-            })
-      ]),
+      appBar: widget.showHeader
+          ? AppBar(title: const Text('FinançaFácil'), actions: [
+              FutureBuilder<List<FinanceEntry>>(
+                  future: _future,
+                  builder: (_, snapshot) {
+                    final count = snapshot.hasError
+                        ? 0
+                        : pendingBills(snapshot.data ?? [], DateTime.now())
+                            .length;
+                    return IconButton(
+                        tooltip: 'Notificações',
+                        onPressed: _openNotifications,
+                        icon: Badge(
+                            label: Text('$count'),
+                            isLabelVisible: count > 0,
+                            child: const Icon(Icons.notifications_outlined)));
+                  })
+            ])
+          : null,
       bottomNavigationBar: SafeArea(
           top: false,
           child: Padding(

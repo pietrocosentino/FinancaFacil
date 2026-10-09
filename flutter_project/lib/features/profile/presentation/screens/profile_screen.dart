@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -8,6 +6,9 @@ import '../../../../core/services/reminder_preferences.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../data/profile_photo_store.dart';
 import '../../data/profile_repository.dart';
+import '../profile_controller.dart';
+import '../profile_menu_item.dart';
+import '../widgets/profile_identity.dart';
 import 'personal_data_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -16,11 +17,17 @@ class ProfileScreen extends StatefulWidget {
       this.repository,
       this.onNavigateToNotifications,
       this.photoStore,
-      this.imagePicker});
+      this.imagePicker,
+      this.controller,
+      this.extraItems = const [],
+      this.showIdentity = true});
   final ProfileRepository? repository;
   final VoidCallback? onNavigateToNotifications;
   final ProfilePhotoStore? photoStore;
   final ImagePicker? imagePicker;
+  final ProfileController? controller;
+  final List<ProfileMenuItem> extraItems;
+  final bool showIdentity;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -28,27 +35,24 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late final ProfileRepository _repository;
-  late final ProfilePhotoStore _photos;
-  Uint8List? _photo;
+  late final ProfileController _controller;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ?? AppServices.profile;
-    _photos = widget.photoStore ?? ProfilePhotoStore();
-    _loadPhoto();
+    _repository = widget.controller?.repository ??
+        widget.repository ??
+        AppServices.profile;
+    _controller = widget.controller ??
+        ProfileController(_repository, photos: widget.photoStore);
+    _controller.loadPhoto();
   }
 
-  Future<void> _loadPhoto() async {
-    final account = _repository.currentProfile?.email;
-    if (account == null) return;
-    try {
-      final photo = await _photos.load(account);
-      if (mounted) setState(() => _photo = photo);
-    } catch (_) {
-      // A missing local avatar never blocks access to the account.
-    }
+  @override
+  void dispose() {
+    if (widget.controller == null) _controller.dispose();
+    super.dispose();
   }
 
   void _message(String text) {
@@ -66,7 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   leading: const Icon(Icons.photo_library_outlined),
                   title: const Text('Escolher da galeria'),
                   onTap: () => Navigator.pop(context, 'select')),
-              if (_photo != null)
+              if (_controller.photo != null)
                 ListTile(
                     leading: const Icon(Icons.delete_outline),
                     title: const Text('Remover foto'),
@@ -82,8 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _busy = true);
     try {
       if (action == 'remove') {
-        await _photos.remove(account);
-        if (mounted) setState(() => _photo = null);
+        await _controller.removePhoto();
         _message('Foto removida.');
       } else {
         final file = await (widget.imagePicker ?? ImagePicker()).pickImage(
@@ -98,8 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _message('Escolha uma imagem menor, de até 200 KB após a redução.');
           return;
         }
-        await _photos.save(account, bytes);
-        if (mounted) setState(() => _photo = bytes);
+        await _controller.savePhoto(bytes);
         _message('Foto atualizada.');
       }
     } catch (_) {
@@ -111,7 +113,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _personalData() async {
     await Navigator.of(context).push<void>(MaterialPageRoute(
-        builder: (_) => PersonalDataScreen(repository: _repository)));
+        builder: (_) => PersonalDataScreen(
+            repository: _repository, onSaved: _controller.refresh)));
     if (mounted) setState(() {});
   }
 
@@ -227,55 +230,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         body: SafeArea(
             top: false,
             child: ListView(padding: const EdgeInsets.all(20), children: [
-              const SizedBox(height: 12),
-              Center(
-                  child: Semantics(
-                      label: 'Alterar foto de perfil',
-                      button: true,
-                      child: InkWell(
-                          onTap: _busy ? null : _changePhoto,
-                          customBorder: const CircleBorder(),
-                          child: Stack(children: [
-                            CircleAvatar(
-                                radius: 44,
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                                child: _photo == null
-                                    ? Text(data.initials,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineMedium)
-                                    : ClipOval(
-                                        child: Image.memory(_photo!,
-                                            width: 88,
-                                            height: 88,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
-                                                Text(data.initials)))),
-                            Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: CircleAvatar(
-                                    radius: 14,
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    child: Icon(Icons.camera_alt_outlined,
-                                        size: 16,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onPrimary))),
-                          ])))),
-              const SizedBox(height: 16),
-              Text(data.name.isEmpty ? 'Minha conta' : data.name,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 4),
-              const Text('Minha conta', textAlign: TextAlign.center),
-              TextButton(
-                  onPressed: _busy ? null : _changePhoto,
-                  child: Text(_busy ? 'Aguarde...' : 'Alterar foto')),
+              if (widget.showIdentity) ProfileIdentity(controller: _controller),
               _section('Minha conta', [
+                _item(
+                    Icons.photo_camera_outlined, 'Alterar foto', _changePhoto),
+                for (final item in widget.extraItems)
+                  _item(item.icon, item.title, item.onTap,
+                      subtitle: item.subtitle),
                 _item(Icons.person_outline, 'Dados pessoais', _personalData,
                     subtitle: 'Nome, e-mail e telefone'),
               ]),
