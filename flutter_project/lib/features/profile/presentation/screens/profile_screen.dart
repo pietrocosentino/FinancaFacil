@@ -20,7 +20,8 @@ class ProfileScreen extends StatefulWidget {
       this.imagePicker,
       this.controller,
       this.extraItems = const [],
-      this.showIdentity = true});
+      this.showIdentity = true,
+      this.onClose});
   final ProfileRepository? repository;
   final VoidCallback? onNavigateToNotifications;
   final ProfilePhotoStore? photoStore;
@@ -28,6 +29,7 @@ class ProfileScreen extends StatefulWidget {
   final ProfileController? controller;
   final List<ProfileMenuItem> extraItems;
   final bool showIdentity;
+  final VoidCallback? onClose;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -226,7 +228,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           body: Center(child: Text('Sua sessão terminou. Entre novamente.')));
     }
     return Scaffold(
-        appBar: AppBar(title: const Text('Meu perfil'), centerTitle: false),
+        appBar: AppBar(
+            title: const Text('Meu perfil'),
+            centerTitle: false,
+            automaticallyImplyLeading: widget.onClose == null,
+            actions: [
+              if (widget.onClose != null)
+                IconButton(
+                    tooltip: 'Fechar menu',
+                    onPressed: widget.onClose,
+                    icon: const Icon(Icons.close)),
+            ]),
         body: SafeArea(
             top: false,
             child: ListView(padding: const EdgeInsets.all(20), children: [

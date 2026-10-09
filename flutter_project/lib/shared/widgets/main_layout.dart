@@ -107,14 +107,30 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     if (_profileOpen || !mounted) return;
     _profileOpen = true;
     try {
-      final add = _addKey.currentState;
-      if (add != null && !await add.requestLeave()) return;
-      if (!mounted) return;
-      await _navigator.currentState?.push(MaterialPageRoute(
-          builder: (_) => ProfileScreen(
-              controller: _profile,
-              showIdentity: false,
-              onNavigateToNotifications: _openNotifications)));
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        clipBehavior: Clip.antiAlias,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (sheetContext) => SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.78,
+          child: Navigator(
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+              builder: (_) => ProfileScreen(
+                controller: _profile,
+                showIdentity: false,
+                onClose: () => Navigator.of(sheetContext).pop(),
+                onNavigateToNotifications: () {
+                  Navigator.of(sheetContext).pop();
+                  _openNotifications();
+                },
+              ),
+            ),
+          ),
+        ),
+      );
     } finally {
       _profileOpen = false;
     }
@@ -131,8 +147,13 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
             const SizedBox(width: 8),
             Tooltip(
                 message: 'FinançaFácil',
-                child: Image.asset('assets/icon/icon.png',
-                    width: 24, height: 24, cacheWidth: 48)),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Image.asset('assets/icon/icon.png',
+                      width: 24, height: 24, cacheWidth: 48),
+                  const SizedBox(height: 2),
+                  Text('FinançaFácil',
+                      style: Theme.of(context).textTheme.labelMedium),
+                ])),
             FutureBuilder<List<FinanceEntry>>(
                 future: _headerEntries,
                 builder: (_, snapshot) {

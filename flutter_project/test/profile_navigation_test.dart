@@ -46,6 +46,9 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Pietro'));
     await t.pumpAndSettle();
+    expect(find.text('FinançaFácil'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byTooltip('Fechar menu'), findsOneWidget);
     expect(find.text('Dados pessoais'), findsOneWidget);
     expect(find.byTooltip('Notificações'), findsOneWidget);
     expect(find.text('Pietro'), findsOneWidget);
@@ -60,6 +63,28 @@ void main() {
     await t.tap(find.text('Salvar dados'));
     await t.pumpAndSettle();
     expect(find.text('Pietro Ferreira'), findsNWidgets(2));
+  });
+  testWidgets('fechar menu sobreposto mantém a aba atual', (t) async {
+    await t.pumpWidget(MaterialApp(
+        home: MainLayout(
+            financeRepository: FakeFinanceRepository(),
+            profileRepository: FakeProfileRepository())));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Pietro'));
+    await t.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    await t.tap(find.byTooltip('Fechar menu'));
+    await t.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(
+        t
+            .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
+            .currentIndex,
+        0);
+    expect(find.text('Pietro'), findsOneWidget);
+    await t.tap(find.text('Pietro'));
+    await t.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
   });
   testWidgets('voltar com dados alterados pede descarte e preserva edição',
       (t) async {

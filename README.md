@@ -1,4 +1,4 @@
-# FinançaFácil — MVP2 (2.0.4+13)
+# FinançaFácil — MVP2 (2.0.6+15)
 
 Projeto completo com todas as alterações solicitadas: importação de Excel, ações compactas, foto e nome fixos no cabeçalho, menu extensível, dados pessoais separados com edição via Alterar, exclusão de lançamentos, edição de valores e recorrências.
 
@@ -58,3 +58,11 @@ Código direcionado a Flutter 3.47.6, Dart 3.13.5 e Java 17. Android: Gradle 8.1
 A foto de perfil fica neste aparelho e não é sincronizada com o Supabase. A URL e chave pública anon existentes foram preservadas. A proteção dos dados depende das políticas RLS.
 
 Consulte docs/MVP2.md para regras, resultado dos testes e limites da validação. Os documentos em docs/historico referem-se a versões anteriores.
+
+## Correção 2.0.5
+
+O clique na foto abre um menu modal sobre a tela atual, com botão Fechar menu. Os dados pessoais abrem dentro do menu, sem substituir a aba principal. Cinco testes de navegação e perfil passaram na cópia de compatibilidade; build nativo não executado neste ambiente.
+
+## Ajuste visual 2.0.6
+
+Nome FinançaFácil visível no cabeçalho e botão Adicionar centralizado com largura conforme o texto, mantendo área de toque de 48 pixels. Sete testes de perfil e ações visíveis passaram na cópia de compatibilidade. Build nativo não executado.

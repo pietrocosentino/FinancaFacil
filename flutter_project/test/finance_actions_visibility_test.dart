@@ -27,6 +27,11 @@ void main() {
       final add = find.text('Adicionar');
       expect(upload.hitTestable(), findsOneWidget);
       expect(add.hitTestable(), findsOneWidget);
+      final button = find.ancestor(
+          of: add,
+          matching: find.byWidgetPredicate((widget) => widget is FilledButton));
+      expect(tester.getSize(button).width, lessThan(260));
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
       await tester.pumpAndSettle();
       expect(add.hitTestable(), findsOneWidget);
