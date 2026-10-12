@@ -1,0 +1,35 @@
+name: Build FinançaFácil Web
+on:
+  pull_request:
+    paths:
+      - 'flutter_project/**'
+      - '.github/workflows/build-web.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: financafacil-web-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: flutter_project
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter test
+      - run: flutter build web --release --no-tree-shake-icons
+      - uses: actions/upload-artifact@v4
+        with:
+          name: financafacil-web
+          path: flutter_project/build/web
+          if-no-files-found: error
