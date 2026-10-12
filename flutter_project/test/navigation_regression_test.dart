@@ -151,6 +151,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Dia 31'), 150,
         scrollable: find.byType(Scrollable).last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Dia 31').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dia 31').last);
     await tester.pumpAndSettle();
     final first = find.textContaining('Primeiro vencimento:');
