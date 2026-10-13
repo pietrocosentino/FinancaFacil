@@ -135,7 +135,9 @@ class XlsxImportReader {
         }
         if (cells.values
                 .every((v) => v == null || v.toString().trim().isEmpty) &&
-            !hasFormula) continue;
+            !hasFormula) {
+          continue;
+        }
         if (!foundHeader) {
           if (hasFormula) {
             throw const FormatException(

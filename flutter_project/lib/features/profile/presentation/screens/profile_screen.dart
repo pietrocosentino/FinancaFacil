@@ -1,9 +1,14 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/files/selected_file_reader.dart';
 import '../../../../core/services/app_services.dart';
 import '../../../../core/services/reminder_preferences.dart';
 import '../../../../core/utils/finance_updates.dart';
+import '../../data/profile_image_decoder.dart';
 import '../../data/profile_photo_store.dart';
 import '../../data/profile_repository.dart';
 import '../profile_controller.dart';
@@ -72,6 +77,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   leading: const Icon(Icons.photo_library_outlined),
                   title: const Text('Escolher da galeria'),
                   onTap: () => Navigator.pop(context, 'select')),
+              ListTile(
+                  leading: const Icon(Icons.folder_open_outlined),
+                  title: const Text('Arquivos do aparelho ou nuvem'),
+                  subtitle: const Text('Google Drive e outros locais disponíveis'),
+                  onTap: () => Navigator.pop(context, 'files')),
               if (_controller.photo != null)
                 ListTile(
                     leading: const Icon(Icons.delete_outline),
@@ -91,14 +101,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await _controller.removePhoto();
         _message('Foto removida.');
       } else {
-        final file = await (widget.imagePicker ?? ImagePicker()).pickImage(
-            source: ImageSource.gallery,
-            maxWidth: 512,
-            maxHeight: 512,
-            imageQuality: 70,
-            requestFullMetadata: false);
-        if (file == null) return;
-        final bytes = await file.readAsBytes();
+        final Uint8List bytes;
+        if (action == 'files') {
+          final result = await FilePicker.platform.pickFiles(
+              type: FileType.custom,
+              allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+              allowMultiple: false,
+              withData: false,
+              withReadStream: true);
+          if (result == null) return;
+          final input = await readSelectedFile(result.files.single, 5 * 1024 * 1024);
+          bytes = await prepareProfileImage(input);
+        } else {
+          final file = await (widget.imagePicker ?? ImagePicker()).pickImage(
+              source: ImageSource.gallery,
+              maxWidth: 512,
+              maxHeight: 512,
+              imageQuality: 70,
+              requestFullMetadata: false);
+          if (file == null) return;
+          bytes = await prepareProfileImage(await file.readAsBytes());
+        }
         if (bytes.length > ProfilePhotoStore.maxBytes) {
           _message('Escolha uma imagem menor, de até 200 KB após a redução.');
           return;
@@ -106,8 +129,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await _controller.savePhoto(bytes);
         _message('Foto atualizada.');
       }
+    } on FormatException catch (error) {
+      _message(error.message);
     } catch (_) {
-      _message('Não foi possível atualizar a foto. Tente novamente.');
+      _message('Não foi possível atualizar a foto. Verifique a conexão e tente novamente.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }

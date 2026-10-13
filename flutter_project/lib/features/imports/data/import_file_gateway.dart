@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
+import '../../../core/files/selected_file_reader.dart';
 import 'xlsx_import_reader.dart';
 
 class ImportFile {
@@ -21,21 +22,15 @@ class NativeImportFileGateway implements ImportFileGateway {
         type: FileType.custom,
         allowedExtensions: ['xlsx'],
         allowMultiple: false,
-        withData: false);
+        withData: false,
+        withReadStream: true);
     if (result == null) return null;
     final selected = result.files.single;
     if (selected.size > XlsxImportReader.maxBytes ||
         !selected.name.toLowerCase().endsWith('.xlsx')) {
       throw const FormatException('Escolha um Excel .xlsx de até 5 MB.');
     }
-    final bytes = selected.bytes ??
-        (selected.path == null
-            ? null
-            : await File(selected.path!).readAsBytes());
-    if (bytes == null) {
-      throw const FormatException(
-          'Não foi possível abrir o arquivo escolhido.');
-    }
+    final bytes = await readSelectedFile(selected, XlsxImportReader.maxBytes);
     return ImportFile(selected.name, bytes);
   }
 

@@ -32,6 +32,8 @@ jobs:
           cache-dependency-path: tools/database/package-lock.json
       - name: Instalar ferramentas de teste do banco
         run: npm ci --prefix ../tools/database
+      - name: Validar contratos dos endpoints e ambiente
+        run: node ../tools/validation/contracts.test.mjs
       - name: Testar importação no PostgreSQL local
         run: npm test --prefix ../tools/database
       - name: Configurar Flutter

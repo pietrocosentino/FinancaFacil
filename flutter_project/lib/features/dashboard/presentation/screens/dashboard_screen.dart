@@ -16,12 +16,10 @@ import '../../domain/finance_summary.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen(
       {super.key,
-      required this.onNavigateToAdd,
       this.onNavigateToNotifications,
       this.repository,
       this.reminders,
       this.showHeader = true});
-  final VoidCallback onNavigateToAdd;
   final VoidCallback? onNavigateToNotifications;
   final FinanceRepository? repository;
   final ReminderService? reminders;
@@ -95,14 +93,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   })
             ])
           : null,
-      bottomNavigationBar: SafeArea(
-          top: false,
-          child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: ElevatedButton.icon(
-                  onPressed: widget.onNavigateToAdd,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Cadastrar conta ou renda')))),
       body: SafeArea(
           child: AsyncPanel<List<FinanceEntry>>(
         future: _future,

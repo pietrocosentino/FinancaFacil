@@ -16,7 +16,9 @@ void main() {
             financeRepository: FakeFinanceRepository(),
             profileRepository: FakeProfileRepository())));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cadastrar conta ou renda'));
+    await tester.tap(find.text('Finanças'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Adicionar conta'));
     await tester.pumpAndSettle();
     await tester.enterText(
         find.widgetWithText(TextFormField, 'Valor'), '90,60');

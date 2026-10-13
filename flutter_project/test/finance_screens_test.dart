@@ -52,7 +52,9 @@ void main() {
             financeRepository: finance,
             profileRepository: FakeProfileRepository())));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cadastrar conta ou renda'));
+    await tester.tap(find.text('Finanças'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Adicionar conta'));
     await tester.pumpAndSettle();
     expect(find.text('Perfil'), findsOneWidget);
     expect(find.text('Finanças'), findsOneWidget);
@@ -104,7 +106,7 @@ void main() {
         home: MediaQuery(
             data: const MediaQueryData(textScaler: TextScaler.linear(2)),
             child: DashboardScreen(
-                repository: repository, onNavigateToAdd: () {}))));
+                repository: repository))));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });

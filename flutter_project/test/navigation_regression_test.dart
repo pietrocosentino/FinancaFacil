@@ -37,7 +37,10 @@ void main() {
             financeRepository: FakeFinanceRepository(),
             profileRepository: FakeProfileRepository())));
     await tester.pumpAndSettle();
-    final add = find.text('Cadastrar conta ou renda');
+    expect(find.text('Cadastrar conta ou renda'), findsNothing);
+    await tester.tap(find.text('Finanças'));
+    await tester.pumpAndSettle();
+    final add = find.text('Adicionar conta');
     await tester.tap(add);
     await tester.tap(add);
     await tester.pumpAndSettle();
@@ -46,7 +49,7 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Novo lançamento'), findsNothing);
-    expect(find.text('Cadastrar conta ou renda'), findsOneWidget);
+    expect(find.text('Adicionar conta'), findsOneWidget);
   });
 
   testWidgets('voltar do Android respeita o formulário não salvo',
@@ -56,7 +59,9 @@ void main() {
             financeRepository: FakeFinanceRepository(),
             profileRepository: FakeProfileRepository())));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cadastrar conta ou renda'));
+    await tester.tap(find.text('Finanças'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Adicionar conta'));
     await tester.pumpAndSettle();
     await tester.enterText(
         find.widgetWithText(TextFormField, 'Valor'), '90,60');
@@ -72,7 +77,7 @@ void main() {
     await tester.tap(find.text('Descartar'));
     await tester.pumpAndSettle();
     expect(find.text('Novo lançamento'), findsNothing);
-    expect(find.text('Cadastrar conta ou renda'), findsOneWidget);
+    expect(find.text('Adicionar conta'), findsOneWidget);
   });
 
   testWidgets('mudança apenas do tipo também protege o cadastro',
@@ -82,7 +87,9 @@ void main() {
             financeRepository: FakeFinanceRepository(),
             profileRepository: FakeProfileRepository())));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cadastrar conta ou renda'));
+    await tester.tap(find.text('Finanças'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Adicionar conta'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Receita'));
     await tester.pumpAndSettle();

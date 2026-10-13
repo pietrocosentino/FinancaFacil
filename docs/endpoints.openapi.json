@@ -1,0 +1,371 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Finan\u00e7aF\u00e1cil RPC",
+    "version": "2.0.7"
+  },
+  "servers": [
+    {
+      "url": "https://SEU-PROJETO.supabase.co"
+    }
+  ],
+  "paths": {
+    "/rest/v1/rpc/preview_finance_import": {
+      "post": {
+        "summary": "preview_finance_import",
+        "security": [
+          {
+            "apiKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "p_rows": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "required": [
+                  "p_rows"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado da fun\u00e7\u00e3o"
+          },
+          "400": {
+            "description": "Valida\u00e7\u00e3o inv\u00e1lida"
+          },
+          "401": {
+            "description": "Sess\u00e3o inv\u00e1lida"
+          },
+          "403": {
+            "description": "Acesso negado"
+          }
+        }
+      }
+    },
+    "/rest/v1/rpc/import_finance_batch": {
+      "post": {
+        "summary": "import_finance_batch",
+        "security": [
+          {
+            "apiKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "p_file_name": {
+                    "type": "string"
+                  },
+                  "p_file_hash": {
+                    "type": "string"
+                  },
+                  "p_rows": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "p_allow_similar": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "p_file_name",
+                  "p_file_hash",
+                  "p_rows"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado da fun\u00e7\u00e3o"
+          },
+          "400": {
+            "description": "Valida\u00e7\u00e3o inv\u00e1lida"
+          },
+          "401": {
+            "description": "Sess\u00e3o inv\u00e1lida"
+          },
+          "403": {
+            "description": "Acesso negado"
+          }
+        }
+      }
+    },
+    "/rest/v1/rpc/undo_finance_import": {
+      "post": {
+        "summary": "undo_finance_import",
+        "security": [
+          {
+            "apiKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "p_batch_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "p_batch_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado da fun\u00e7\u00e3o"
+          },
+          "400": {
+            "description": "Valida\u00e7\u00e3o inv\u00e1lida"
+          },
+          "401": {
+            "description": "Sess\u00e3o inv\u00e1lida"
+          },
+          "403": {
+            "description": "Acesso negado"
+          }
+        }
+      }
+    },
+    "/rest/v1/rpc/set_recurrence_future_amount": {
+      "post": {
+        "summary": "set_recurrence_future_amount",
+        "security": [
+          {
+            "apiKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "p_rule_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "p_from_month": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "p_amount": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "p_rule_id",
+                  "p_from_month",
+                  "p_amount"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado da fun\u00e7\u00e3o"
+          },
+          "400": {
+            "description": "Valida\u00e7\u00e3o inv\u00e1lida"
+          },
+          "401": {
+            "description": "Sess\u00e3o inv\u00e1lida"
+          },
+          "403": {
+            "description": "Acesso negado"
+          }
+        }
+      }
+    },
+    "/rest/v1/rpc/set_recurrence_occurrence": {
+      "post": {
+        "summary": "set_recurrence_occurrence",
+        "security": [
+          {
+            "apiKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "p_rule_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "p_due_month": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "p_is_paid": {
+                    "type": "boolean",
+                    "nullable": true
+                  },
+                  "p_amount": {
+                    "type": "number",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "p_rule_id",
+                  "p_due_month"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado da fun\u00e7\u00e3o"
+          },
+          "400": {
+            "description": "Valida\u00e7\u00e3o inv\u00e1lida"
+          },
+          "401": {
+            "description": "Sess\u00e3o inv\u00e1lida"
+          },
+          "403": {
+            "description": "Acesso negado"
+          }
+        }
+      }
+    },
+    "/rest/v1/rpc/delete_finance_entry": {
+      "post": {
+        "summary": "delete_finance_entry",
+        "security": [
+          {
+            "apiKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "p_entry_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "p_entry_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado da fun\u00e7\u00e3o"
+          },
+          "400": {
+            "description": "Valida\u00e7\u00e3o inv\u00e1lida"
+          },
+          "401": {
+            "description": "Sess\u00e3o inv\u00e1lida"
+          },
+          "403": {
+            "description": "Acesso negado"
+          }
+        }
+      }
+    },
+    "/rest/v1/rpc/stop_finance_plan": {
+      "post": {
+        "summary": "stop_finance_plan",
+        "security": [
+          {
+            "apiKey": [],
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "p_rule_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "p_rule_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado da fun\u00e7\u00e3o"
+          },
+          "400": {
+            "description": "Valida\u00e7\u00e3o inv\u00e1lida"
+          },
+          "401": {
+            "description": "Sess\u00e3o inv\u00e1lida"
+          },
+          "403": {
+            "description": "Acesso negado"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "apikey"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

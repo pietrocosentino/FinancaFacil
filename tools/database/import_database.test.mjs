@@ -148,6 +148,65 @@ async function scenario(integerIds) {
   await account('');
   await rejects(()=>remove(disposableId),/Sessão expirada/);
   await rejects(()=>save([row(2)]),/sessão/);
+  await account(owner);
+  const started = performance.now();
+  const volumeRows = Array.from({length:500}, (_,i) => row(i+2, {
+    description:`Massa ${i}`, amount:(i+1)/100, recurring:false}));
+  const beforeVolume = await counts();
+  const bulk = await save(volumeRows);
+  equal((await counts()).transactions, beforeVolume.transactions + 500);
+  equal((await save(volumeRows, (await db.query(
+    'select file_hash from finance_import_batches where id=$1',[bulk.batch_id])).rows[0].file_hash)).already_imported,true);
+  equal(await undo(bulk.batch_id),500);
+  const beforeInvalid = await counts();
+  await rejects(()=>save([...volumeRows.slice(0,499),row(501,{amount:-1})]), /valor|Valor/);
+  equal(await counts(),beforeInvalid);
+  await rejects(()=>save([...volumeRows,row(502)]), /500/);
+  equal(await counts(),beforeInvalid);
+  console.log(`Carga 500 linhas (${integerIds?'inteiro':'UUID'}): ${Math.round(performance.now()-started)} ms; importação, reenvio, desfazer e rollback.`);
+  const invalidRows = [
+    {amount:0}, {amount:-0.01}, {amount:1000000000}, {amount:1.001},
+    {amount:'10.00'}, {amount:null}, {type:'INCOME'}, {type:'sql'},
+    {description:''}, {description:' '.repeat(5)}, {description:'x'.repeat(161)},
+    {notes:'x'.repeat(1001)}, {due_date:'2019-12-31'}, {due_date:'2101-01-01'},
+    {due_date:'2026-02-30'}, {due_date:'10/11/2026'}, {due_day:0}, {due_day:32},
+    {months:1}, {months:1201}, {recurring:'Sim'}, {line:1}, {line:10001},
+    {category_id:privateCategory}, {category_id:'unknown'}, {category_id:null},
+    {recurring:false,months:12}
+  ];
+  for (const invalid of invalidRows) {
+    const snapshot = await counts();
+    await rejects(()=>save([row(2,{description:'Válida antes de falha',recurring:false}),
+      row(3,{description:'Teste inválido',...invalid})]), /./);
+    equal(await counts(),snapshot);
+  }
+  await rejects(()=>save([row(2),row(2)],hash(),true), /Numeração/);
+  for (const invalidFile of ['', ' '.repeat(3), 'x'.repeat(256)]) {
+    await rejects(()=>db.query('select import_finance_batch($1,$2,$3::jsonb,false)',
+      [invalidFile,hash(),JSON.stringify([row(2)])]), /Identificação/);
+  }
+  for (const badHash of ['', 'a'.repeat(63), 'G'.repeat(64)]) {
+    await rejects(()=>save([row(2)],badHash), /Identificação/);
+  }
+  // Massa pseudoaleatória determinística: 5 lotes de 100 linhas.
+  let randomSeed = 42;
+  const random = () => {randomSeed=(1664525*randomSeed+1013904223)>>>0;return randomSeed;};
+  for (let batchNo=0;batchNo<5;batchNo++) {
+    const rows=Array.from({length:100},(_,i)=>row(i+2,{
+      description:`Fuzz ${batchNo}-${i}`, amount:(1+random()%10000000)/100,
+      recurring:false}));
+    const baseline=await counts();
+    const receipt=await save(rows);
+    equal(receipt.count,100);
+    const sum=(await db.query('select sum(t.amount)::text as total from transactions t join finance_import_items i on i.record_id=t.id::text and i.record_kind=\'transaction\' where i.batch_id=$1',[receipt.batch_id])).rows[0].total;
+    equal(Math.round(Number(sum)*100),rows.reduce((n,r)=>n+Math.round(r.amount*100),0));
+    equal(await undo(receipt.batch_id),100);
+    equal((await counts()).transactions,baseline.transactions);
+  }
+  await db.exec('set role anon');
+  await rejects(()=>db.query('select public.delete_finance_entry($1)',['anything']),/permission denied/);
+  await rejects(()=>db.query('select public.import_finance_batch($1,$2,$3::jsonb,false)',
+    ['x.xlsx',hash(),'[]']),/permission denied/);
   await db.close();
 }
 await scenario(false);

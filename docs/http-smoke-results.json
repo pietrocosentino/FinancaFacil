@@ -1,0 +1,12 @@
+[
+  {
+    "endpoint": "preview_finance_import",
+    "status": 401,
+    "anonymous_rejected": true
+  },
+  {
+    "endpoint": "delete_finance_entry",
+    "status": 401,
+    "anonymous_rejected": true
+  }
+]

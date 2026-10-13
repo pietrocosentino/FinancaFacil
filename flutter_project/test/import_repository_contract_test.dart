@@ -58,4 +58,20 @@ void main() {
         throwsStateError);
     expect(backend.requests, isEmpty);
   });
+  for (final status in [401, 403, 429, 500, 503]) {
+    test('falha HTTP $status não é tratada como importação concluída', () async {
+      backend.respond = (_) => FakeSupabaseBackend.jsonResponse(
+          {'message': 'Falha simulada', 'code': '$status'}, status: status);
+      await expectLater(repository.save('massa.xlsx', 'a' * 64, [row],
+          allowSimilar: false), throwsException);
+      expect(backend.requests, hasLength(1));
+      backend.respond = (_) => FakeSupabaseBackend.jsonResponse(
+          {'batch_id': 'retry', 'count': 1, 'already_imported': true});
+      final retry = await repository.save('massa.xlsx', 'a' * 64, [row],
+          allowSimilar: false);
+      expect(retry.alreadyImported, true);
+      expect(backend.requests, hasLength(2));
+    });
+  }
+
 }

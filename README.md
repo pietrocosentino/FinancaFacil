@@ -70,3 +70,6 @@ Nome FinançaFácil visível no cabeçalho e botão Adicionar centralizado com l
 ## Navegação 2.0.7
 
 Quatro abas: Início, Finanças (cadastro de conta, renda e importação), Extrato (consulta, filtros, confirmação, edição e exclusão) e Perfil. Cadastro de renda abre com o tipo Receita selecionado. As regras financeiras e de recorrência continuam iguais. A suíte completa passou com 193 testes na cópia de compatibilidade; build nativo não executado.
+
+## Testes ampliados e ambiente
+Consulte `docs/TESTES-REGRESSAO.md` e `docs/endpoints.openapi.json`.

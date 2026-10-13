@@ -91,7 +91,7 @@ class _ImportLineDialogState extends State<ImportLineDialog> {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   _input('description', 'Descrição'),
                   DropdownButtonFormField<TransactionKind>(
-                      value: _kind,
+                      initialValue: _kind,
                       decoration: const InputDecoration(labelText: 'Tipo'),
                       items: [
                         for (final kind in TransactionKind.values)
@@ -108,7 +108,7 @@ class _ImportLineDialogState extends State<ImportLineDialog> {
                   _input('due_date', 'Primeiro vencimento',
                       hint: 'DD/MM/AAAA ou AAAA-MM-DD'),
                   DropdownButtonFormField<bool>(
-                      value: _recurring,
+                      initialValue: _recurring,
                       decoration:
                           const InputDecoration(labelText: 'Recorrente'),
                       items: const [
@@ -134,7 +134,7 @@ class _ImportLineDialogState extends State<ImportLineDialog> {
                   ],
                   DropdownButtonFormField<String>(
                       key: ValueKey('${_kind?.name}:$_category'),
-                      value: _category,
+                      initialValue: _category,
                       isExpanded: true,
                       decoration: InputDecoration(
                           labelText: 'Categoria',

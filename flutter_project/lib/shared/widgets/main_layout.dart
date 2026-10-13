@@ -71,7 +71,6 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           showHeader: false,
           repository: widget.financeRepository,
           reminders: _reminders,
-          onNavigateToAdd: _add,
           onNavigateToNotifications: _openNotifications),
       FinanceRegistrationScreen(
           onAddExpense: () => _add(),
