@@ -32,7 +32,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		97C146EB1CF90770007C117D /* Frameworks */ = {
+		97C146EB1CF9000F007C117D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -88,13 +88,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		97C146ED1CF90770007C117D /* Runner */ = {
+		97C146ED1CF9000F007C117D /* Runner */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 97C147051CF90770007C117D /* Build configuration list for PBXNativeTarget "Runner" */;
 			buildPhases = (
                 F10000000000000000000001 /* Flutter Build */,
 				97C146EA1CF90770007C117D /* Sources */,
-				97C146EB1CF90770007C117D /* Frameworks */,
+				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF90770007C117D /* Resources */,
                 F10000000000000000000002 /* Flutter Embed */,
 			);
@@ -110,13 +110,13 @@
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		97C146E61CF90770007C117D /* Project object */ = {
+		97C146E61CF9000F007C117D /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1510;
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
-					97C146ED1CF90770007C117D = {
+					97C146ED1CF9000F007C117D = {
 						CreatedOnToolsVersion = 7.3.1;
 						LastSwiftMigration = 1100;
 					};
@@ -135,7 +135,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				97C146ED1CF90770007C117D /* Runner */,
+				97C146ED1CF9000F007C117D /* Runner */,
 			);
 		};
 /* End PBXProject section */
@@ -454,5 +454,5 @@
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 97C146E61CF90770007C117D /* Project object */;
+	rootObject = 97C146E61CF9000F007C117D /* Project object */;
 }

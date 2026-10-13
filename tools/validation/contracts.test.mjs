@@ -24,4 +24,24 @@ const env=JSON.parse(read('flutter_project/env.example.json'));
 const config=read('flutter_project/lib/core/config/supabase_config.dart');
 for(const key of Object.keys(env)){assert.ok(config.includes(`String.fromEnvironment('${key}'`));checks++;}
 assert.ok(!JSON.stringify(env).includes('service_role'));checks++;
-console.log(`${checks} verificações de contratos de API e ambiente passaram.`);
+
+const project = read('flutter_project/ios/Runner.xcodeproj/project.pbxproj');
+const scheme = read('flutter_project/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme');
+// Flutter's SwiftPM migrator expects the identifiers from its iOS template.
+for (const [id, label, type] of [
+  ['97C146ED1CF9000F007C117D', 'Runner', 'PBXNativeTarget'],
+  ['97C146EB1CF9000F007C117D', 'Frameworks', 'PBXFrameworksBuildPhase'],
+  ['97C146E61CF9000F007C117D', 'Project object', 'PBXProject'],
+]) {
+  assert.ok(project.includes(id + ' /* ' + label + ' */ = {'),
+      'Identificador incompatível com migração SwiftPM: ' + type); checks++;
+}
+const references = [...scheme.matchAll(/<BuildableReference\s+([\s\S]*?)>/g)];
+assert.ok(references.length >= 3, 'Scheme deve referenciar Runner nas ações de build/run/profile'); checks++;
+for (const ref of references) {
+  assert.ok(ref[1].includes('BlueprintIdentifier = "97C146ED1CF9000F007C117D"'),
+      'BuildableReference incompatível com o alvo Runner'); checks++;
+}
+assert.ok(project.includes('rootObject = 97C146E61CF9000F007C117D'), 'rootObject incompatível'); checks++;
+
+console.log(`${checks} verificações de contratos de API, ambiente e iOS passaram.`);
