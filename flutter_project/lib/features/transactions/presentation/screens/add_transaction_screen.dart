@@ -262,7 +262,8 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
           description: _description.text,
           notes: _notes.text,
           dueDay: _dueDay,
-          alreadyConfirmed: !_recurring && _alreadyConfirmed,
+          // Renda avulsa é lançada no momento em que entra: já conta como recebida.
+          alreadyConfirmed: !_recurring && (_isIncome || _alreadyConfirmed),
           dueDate: _dueDate,
           categoryId: categoryId,
           isRecurring: _recurring,
@@ -346,7 +347,7 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
     final guidance = _isIncome
         ? _recurring
               ? 'A renda será considerada recebida automaticamente na data de cada mês. Se houver descontos ou mudança no valor, edite pelo Extrato.'
-              : 'Consulte sua renda no Extrato.'
+              : 'A renda já entrou no saldo como recebida. Você pode alterá-la ou excluí-la no Extrato.'
         : 'Confirme cada pagamento no Extrato. Ative os lembretes em Notificações para receber avisos.';
     return '${_description.text}\n'
         '${AppFormatters.currency.format(_amountValue)}\n'
@@ -368,7 +369,7 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
         ? 'Lembretes começam 3 dias antes do vencimento, se ativados.'
         : _recurring
         ? 'A renda entra no saldo automaticamente na data de cada mês.'
-        : 'Confirme o recebimento no Extrato.';
+        : 'Entra no saldo como recebida.';
     return '${AppFormatters.currency.format(amount)} $when$period. $guidance';
   }
 
@@ -482,7 +483,8 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
               '${_recurring ? _text.firstDate : _text.date}: ${AppFormatters.date.format(_dueDate)}',
             ),
           ),
-          if (!_recurring)
+          // Conta pode já estar paga; renda avulsa sempre entra como recebida.
+          if (!_recurring && !_isIncome)
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(_text.alreadyConfirmed),

@@ -39,7 +39,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Suas rendas fixas'), findsOneWidget);
     expect(find.text('Salário'), findsOneWidget);
-    await tester.tap(find.text('Alterar'));
+    await tester.tap(find.byTooltip('Alterar Salário'));
     await tester.pumpAndSettle();
     expect(find.text('Alterar renda fixa'), findsOneWidget);
     await tester.enterText(
@@ -57,6 +57,30 @@ void main() {
       find.text('Renda fixa atualizada deste mês em diante.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('Início exclui a renda fixa depois de confirmar', (tester) async {
+    tester.view.physicalSize = const Size(800, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repository = FakeFinanceRepository()..entries = [_salary()];
+    await tester.pumpWidget(
+      MaterialApp(home: DashboardScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Excluir Salário'));
+    await tester.pumpAndSettle();
+    expect(find.text('Excluir renda fixa?'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(repository.deletedIncome, isNull);
+    await tester.tap(find.byTooltip('Excluir Salário'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Excluir'));
+    await tester.pumpAndSettle();
+    expect(repository.deletedIncome?.id, 'legacy-1');
+    expect(find.text('Renda fixa excluída.'), findsOneWidget);
   });
 
   testWidgets('Extrato oferece alterar só o mês ou a renda fixa de vez', (

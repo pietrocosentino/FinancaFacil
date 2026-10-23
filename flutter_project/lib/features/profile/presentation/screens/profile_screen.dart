@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../../core/errors/app_log.dart';
+import '../../../../core/files/cloud_files.dart';
 import '../../../../core/services/device_preferences.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../data/profile_photo_source.dart';
@@ -61,41 +62,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_busy) return;
     final action = await showModalBottomSheet<String>(
       context: context,
+      // Cinco opções não cabem na altura padrão em telas pequenas.
+      isScrollControlled: true,
+      showDragHandle: true,
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Galeria do celular'),
-              onTap: () => Navigator.pop(context, 'select'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_outlined),
-              title: const Text('Google Fotos'),
-              onTap: () => Navigator.pop(context, 'photos'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_to_drive_outlined),
-              title: const Text('Google Drive'),
-              onTap: () => Navigator.pop(context, 'drive'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.folder_open_outlined),
-              title: const Text('Arquivos do celular'),
-              onTap: () => Navigator.pop(context, 'files'),
-            ),
-            if (_controller.photo != null)
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               ListTile(
-                leading: const Icon(Icons.delete_outline),
-                title: const Text('Remover foto'),
-                onTap: () => Navigator.pop(context, 'remove'),
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Galeria do celular'),
+                onTap: () => Navigator.pop(context, 'select'),
               ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 0, 24, 20),
-              child: Text('Sua foto fica salva nesta conta, neste aparelho.'),
-            ),
-          ],
+              ListTile(
+                leading: const Icon(Icons.photo_outlined),
+                title: const Text('Google Fotos'),
+                onTap: () => Navigator.pop(context, 'photos'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.add_to_drive_outlined),
+                title: const Text('Google Drive'),
+                onTap: () => Navigator.pop(context, 'drive'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.folder_open_outlined),
+                title: const Text('Arquivos do celular'),
+                onTap: () => Navigator.pop(context, 'files'),
+              ),
+              if (_controller.photo != null)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline),
+                  title: const Text('Remover foto'),
+                  onTap: () => Navigator.pop(context, 'remove'),
+                ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 0, 24, 20),
+                child: Text('Sua foto fica salva nesta conta, neste aparelho.'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -123,6 +129,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _message('Foto atualizada.');
       }
     } on FormatException catch (error) {
+      _message(error.message);
+    } on CloudAppNotReady catch (error) {
       _message(error.message);
     } catch (error, stack) {
       AppLog.error(error, stack, 'alterar foto');

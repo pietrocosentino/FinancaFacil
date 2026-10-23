@@ -385,6 +385,9 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   Widget _filterChips() {
     Widget kindChip(TransactionKind kind, String label) => FilterChip(
+      visualDensity: VisualDensity.compact,
+      showCheckmark: false,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       label: Text(label),
       selected: _filter.kind == kind,
       onSelected: _processing
@@ -393,30 +396,36 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
               _filter.copyWith(kind: () => selected ? kind : null),
             ),
     );
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
+    // Duas linhas centralizadas: situação em cima, tipo embaixo.
+    Widget row(List<Widget> chips) => Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 6,
+      runSpacing: 4,
+      children: chips,
+    );
+    return Column(
+      children: [
+        row([
           for (final confirmation in ConfirmationFilter.values)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(confirmation.label),
-                selected: _filter.confirmation == confirmation,
-                onSelected: _processing
-                    ? null
-                    : (_) => _updateFilter(
-                        _filter.copyWith(confirmation: confirmation),
-                      ),
-              ),
+            ChoiceChip(
+              visualDensity: VisualDensity.compact,
+              showCheckmark: false,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              label: Text(confirmation.label),
+              selected: _filter.confirmation == confirmation,
+              onSelected: _processing
+                  ? null
+                  : (_) => _updateFilter(
+                      _filter.copyWith(confirmation: confirmation),
+                    ),
             ),
-          const SizedBox(height: 24, child: VerticalDivider()),
-          const SizedBox(width: 8),
+        ]),
+        const SizedBox(height: 4),
+        row([
           kindChip(TransactionKind.expense, 'Despesas'),
-          const SizedBox(width: 8),
           kindChip(TransactionKind.income, 'Receitas'),
-        ],
-      ),
+        ]),
+      ],
     );
   }
 
@@ -565,22 +574,11 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   },
                   child: const Text('Limpar filtros'),
                 )
-              else if (widget.onAdd != null)
-                Wrap(
-                  spacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () => widget.onAdd!(AddChoice.expense),
-                      icon: const Icon(Icons.remove_circle_outline),
-                      label: const Text('Adicionar despesa'),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => widget.onAdd!(AddChoice.income),
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: const Text('Adicionar renda'),
-                    ),
-                  ],
+              else
+                // Cadastro fica só no Início; aqui apenas orientamos.
+                const Text(
+                  'Para cadastrar, use Despesa ou Renda no Início.',
+                  textAlign: TextAlign.center,
                 ),
             ],
           ),
@@ -645,27 +643,32 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
         ),
       ],
     ),
-    floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    floatingActionButton: widget.onAdd == null || _selectedIds.isNotEmpty
-        ? null
-        : AddEntryButtons(onAdd: widget.onAdd!),
     bottomNavigationBar: _confirmationBar(context),
     body: SafeArea(
       top: false,
-      child: RefreshIndicator(
-        onRefresh: _refresh,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            _filtersPanel(),
-            AsyncSliverPanel<List<FinanceEntry>>(
-              future: _future,
-              onRetry: _reload,
-              errorMessage: 'Não foi possível carregar as contas. Verifique sua conexão e tente novamente.',
-              builder: _entries,
+      child: Column(
+        children: [
+          // Fixa no topo, acima dos totais: não rola com a lista.
+          if (widget.onAdd != null && _selectedIds.isEmpty)
+            QuickAddBar(onAdd: widget.onAdd!),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  _filtersPanel(),
+                  AsyncSliverPanel<List<FinanceEntry>>(
+                    future: _future,
+                    onRetry: _reload,
+                    errorMessage: 'Não foi possível carregar as contas. Verifique sua conexão e tente novamente.',
+                    builder: _entries,
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     ),
   );

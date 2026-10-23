@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/errors/app_log.dart';
+import '../../../../core/errors/failure_message.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/month_picker.dart';
 import '../../../notifications/data/reminder_service.dart';
 import '../../../notifications/domain/reminder_plan.dart';
@@ -191,6 +194,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .toList()
         ..sort((a, b) => b.amount.compareTo(a.amount));
 
+  Future<void> _deleteIncome(FinanceEntry entry) async {
+    final now = DateTime.now();
+    final month = AppFormatters.monthYear.format(DateTime(now.year, now.month));
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Excluir renda fixa?',
+      message:
+          '${entry.description}\n${AppFormatters.currency.format(entry.amount)} por mês\n\n'
+          'Ela deixa de aparecer de $month em diante. Os meses anteriores continuam no histórico.',
+      confirmLabel: 'Excluir',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await widget.repository.deleteIncomeFromMonth(
+        entry,
+        DateTime(now.year, now.month),
+      );
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Renda fixa excluída.')),
+      );
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'excluir renda fixa');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            failureMessage(
+              error,
+              fallback: 'Não foi possível excluir. Tente novamente.',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _changeIncome(FinanceEntry entry) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -253,13 +293,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   foregroundColor: colors.income,
                   child: const Icon(Icons.savings_outlined),
                 ),
-                title: Text(income.description),
+                title: Text(
+                  income.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: Text(
                   '${money(income.amount)}${income.dueDate == null ? '' : ' · todo dia ${income.dueDate!.day}'}',
                 ),
-                trailing: OutlinedButton(
-                  onPressed: () => _changeIncome(income),
-                  child: const Text('Alterar'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Alterar ${income.description}',
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => _changeIncome(income),
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Excluir ${income.description}',
+                      icon: Icon(Icons.delete_outline, color: colors.danger),
+                      onPressed: () => _deleteIncome(income),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -308,60 +365,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    floatingActionButton: widget.onAdd == null
-        ? null
-        : AddEntryButtons(onAdd: widget.onAdd!),
     body: SafeArea(
-      child: AsyncPanel<List<FinanceEntry>>(
-        future: _future,
-        onRetry: _reload,
-        errorMessage: 'Não foi possível carregar suas finanças. Verifique sua conexão e tente novamente.',
-        builder: (entries) {
-          final summary = FinanceSummary.forMonth(entries, _month);
-          final previous = FinanceSummary.forMonth(
-            entries,
-            DateTime(_month.year, _month.month - 1),
-          );
-          final empty = entries.isEmpty;
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-              children: [
-                if (widget.reminders != null && !empty) _remindersOff(),
-                if (empty) _firstSteps(),
-                if (_isCurrentMonth && !empty)
-                  ..._attention(pendingBills(entries, DateTime.now())),
-                const SizedBox(height: 8),
-                _monthNavigation(),
-                _MonthSummaryCard(summary: summary),
-                if (!empty) _incomeSources(entries),
-                if (summary.expenses > 0 || previous.expenses > 0)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 8,
-                    ),
-                    child: Text(
-                      expenseTrend(summary.expenses, previous.expenses),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                _CategoriesCard(summary: summary),
-                if (widget.onOpenStatement != null && !empty)
-                  TextButton.icon(
-                    onPressed: widget.onOpenStatement,
-                    icon: const Icon(Icons.receipt_long_outlined),
-                    label: const Text('Ver lançamentos no Extrato'),
-                  ),
-              ],
-            ),
-          );
-        },
+      child: Column(
+        children: [
+          // Fixa no topo, acima do saldo: não rola com a lista.
+          if (widget.onAdd != null) QuickAddBar(onAdd: widget.onAdd!),
+          Expanded(child: _content()),
+        ],
       ),
     ),
+  );
+
+  Widget _content() => AsyncPanel<List<FinanceEntry>>(
+    future: _future,
+    onRetry: _reload,
+    errorMessage: 'Não foi possível carregar suas finanças. Verifique sua conexão e tente novamente.',
+    builder: (entries) {
+      final summary = FinanceSummary.forMonth(entries, _month);
+      final previous = FinanceSummary.forMonth(
+        entries,
+        DateTime(_month.year, _month.month - 1),
+      );
+      final empty = entries.isEmpty;
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          children: [
+            if (widget.reminders != null && !empty) _remindersOff(),
+            if (empty) _firstSteps(),
+            if (_isCurrentMonth && !empty)
+              ..._attention(pendingBills(entries, DateTime.now())),
+            const SizedBox(height: 8),
+            _monthNavigation(),
+            _MonthSummaryCard(summary: summary),
+            if (!empty) _incomeSources(entries),
+            if (summary.expenses > 0 || previous.expenses > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                child: Text(
+                  expenseTrend(summary.expenses, previous.expenses),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            _CategoriesCard(summary: summary),
+            if (widget.onOpenStatement != null && !empty)
+              TextButton.icon(
+                onPressed: widget.onOpenStatement,
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: const Text('Ver lançamentos no Extrato'),
+              ),
+          ],
+        ),
+      );
+    },
   );
 }
 

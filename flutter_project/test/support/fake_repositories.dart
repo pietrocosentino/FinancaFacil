@@ -79,6 +79,18 @@ class FakeFinanceRepository implements FinanceRepository {
     notifyFinanceChanged();
   }
 
+  FinanceEntry? deletedIncome;
+
+  @override
+  Future<void> deleteIncomeFromMonth(
+    FinanceEntry entry,
+    DateTime fromMonth,
+  ) async {
+    deletedIncome = entry;
+    entries.removeWhere((item) => item.id == entry.id);
+    notifyFinanceChanged();
+  }
+
   @override
   Future<void> setInactive(String id, bool inactive) async {
     inactiveChanges[id] = inactive;

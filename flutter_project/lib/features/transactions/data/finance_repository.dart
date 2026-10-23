@@ -28,6 +28,10 @@ abstract class FinanceRepository {
     DateTime fromMonth,
   );
 
+  /// Exclui uma renda fixa de [fromMonth] em diante; meses anteriores ficam
+  /// no histórico.
+  Future<void> deleteIncomeFromMonth(FinanceEntry entry, DateTime fromMonth);
+
   /// Tira (ou devolve) um lançamento confirmado das somas, sem apagá-lo.
   Future<void> setInactive(String id, bool inactive);
   Future<void> updateFutureAmount(String id, double amount);
@@ -304,6 +308,47 @@ class SupabaseFinanceRepository implements FinanceRepository {
             .eq('user_id', owner)
             .eq('id', row['id']);
       }
+    } finally {
+      notifyFinanceChanged();
+    }
+  }
+
+  @override
+  Future<void> deleteIncomeFromMonth(
+    FinanceEntry entry,
+    DateTime fromMonth,
+  ) async {
+    final owner = _userId;
+    if (!entry.isIncome || !entry.isRecurring) {
+      throw const FormatException('Somente rendas fixas são excluídas assim.');
+    }
+    final start = DateTime(fromMonth.year, fromMonth.month);
+    try {
+      final reference = RecurrenceReference.fromEntryId(entry.id);
+      if (reference != null) {
+        // A regra termina no último dia do mês anterior: some deste mês em
+        // diante e o histórico continua.
+        final updated = await _client
+            .from('recurrence_rules')
+            .update({
+              'end_date': isoDate(start.subtract(const Duration(days: 1))),
+            })
+            .eq('user_id', owner)
+            .eq('id', reference.ruleId)
+            .select('id');
+        if (updated.length != 1) {
+          throw StateError('Renda não encontrada. Atualize a lista.');
+        }
+        return;
+      }
+      await _client
+          .from('transactions')
+          .delete()
+          .eq('user_id', owner)
+          .eq('type', TransactionKind.income.databaseValue)
+          .eq('is_recurrent', true)
+          .eq('description', entry.description)
+          .gte('due_date', isoDate(start));
     } finally {
       notifyFinanceChanged();
     }

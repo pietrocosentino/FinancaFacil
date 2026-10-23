@@ -35,11 +35,23 @@ class CloudAppUnavailable implements Exception {
   final CloudApp app;
 }
 
+/// O aplicativo abriu e fechou na hora, sem o usuário escolher nada. Acontece
+/// quando não há conta Google no aparelho (o Drive exige uma).
+class CloudAppNotReady implements Exception {
+  const CloudAppNotReady(this.app);
+  final CloudApp app;
+
+  String get message =>
+      'O ${app.label} não abriu. Entre com uma conta Google no celular '
+      '(Configurações > Contas) e abra o ${app.label} uma vez. Depois, tente de novo.';
+}
+
 /// Atalhos para Google Drive e Google Fotos usando os aplicativos do aparelho.
 /// Não há login próprio: o arquivo passa pelo app instalado e conectado.
 class CloudFiles {
   const CloudFiles();
   static const _channel = MethodChannel('financafacil/cloud_files');
+  static const instantCancel = Duration(milliseconds: 1500);
 
   bool get _supported => Platform.isAndroid;
 
@@ -50,6 +62,7 @@ class CloudFiles {
     required int maxBytes,
   }) async {
     if (!_supported) throw CloudAppUnavailable(app);
+    final clock = Stopwatch()..start();
     try {
       final result = await _channel.invokeMapMethod<String, Object?>(
         'pickFromApp',
@@ -59,7 +72,12 @@ class CloudFiles {
           'maxBytes': maxBytes,
         },
       );
-      if (result == null) return null;
+      if (result == null) {
+        // Ninguém escolhe e cancela em menos de um segundo e meio: o app
+        // recusou abrir (normalmente por falta de conta Google).
+        if (clock.elapsed < instantCancel) throw CloudAppNotReady(app);
+        return null;
+      }
       final bytes = result['bytes'] as Uint8List?;
       if (bytes == null || bytes.isEmpty) {
         throw const FormatException('Arquivo vazio.');
