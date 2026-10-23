@@ -47,6 +47,7 @@ class FinanceEntry {
     this.installment,
     this.totalInstallments,
     this.lastDue,
+    this.manualReceipt = false,
   });
   final String id;
   final TransactionKind kind;
@@ -60,9 +61,13 @@ class FinanceEntry {
   final int? installment;
   final int? totalInstallments;
   final DateTime? lastDue;
+
+  /// Mês de renda recorrente marcado como "Não recebi": deixa de ser
+  /// automático e passa a exigir confirmação, como uma conta.
+  final bool manualReceipt;
   int get amountInCents => (amount * 100).round();
   bool get isIncome => kind == TransactionKind.income;
-  bool get isAutomaticIncome => isIncome && isRecurring;
+  bool get isAutomaticIncome => isIncome && isRecurring && !manualReceipt;
   bool belongsToMonth(DateTime month) =>
       dueDate?.year == month.year && dueDate?.month == month.month;
 
@@ -81,6 +86,7 @@ class FinanceEntry {
     '_installment': installment,
     '_total_installments': totalInstallments,
     '_last_due': lastDue?.toIso8601String(),
+    '_manual_receipt': manualReceipt,
   };
 
   /// Cópia com confirmação ou valor alterados; os demais dados são mantidos.
@@ -97,6 +103,7 @@ class FinanceEntry {
     installment: installment,
     totalInstallments: totalInstallments,
     lastDue: lastDue,
+    manualReceipt: manualReceipt,
   );
 
   String get recurrenceDescription {
@@ -112,7 +119,9 @@ class FinanceEntry {
     final recurring = data['is_recurrent'] == true;
     final now = today ?? DateTime.now();
     final currentDay = DateTime(now.year, now.month, now.day);
-    final automaticIncome = kind == TransactionKind.income && recurring;
+    final manualReceipt = data['_manual_receipt'] == true;
+    final automaticIncome =
+        kind == TransactionKind.income && recurring && !manualReceipt;
     final category = data['category'];
     final amount = data['amount'] is num
         ? (data['amount'] as num).toDouble()
@@ -142,6 +151,7 @@ class FinanceEntry {
       installment: (data['_installment'] as num?)?.toInt(),
       totalInstallments: (data['_total_installments'] as num?)?.toInt(),
       lastDue: DateTime.tryParse(data['_last_due']?.toString() ?? ''),
+      manualReceipt: manualReceipt,
     );
   }
 }

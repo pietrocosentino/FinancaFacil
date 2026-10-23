@@ -13,7 +13,7 @@ class ProfileIdentity extends StatelessWidget {
       final data = controller.profile;
       return Semantics(
         button: onTap != null,
-        label: 'Abrir menu do perfil',
+        label: 'Abrir perfil',
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
@@ -50,7 +50,6 @@ class ProfileIdentity extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
-                if (onTap != null) const Icon(Icons.expand_more, size: 18),
               ],
             ),
           ),

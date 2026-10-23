@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'support/fake_repositories.dart';
+import 'support/navigation.dart';
 
 void main() {
   setUpAll(() async {
@@ -64,12 +65,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Finanças'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Adicionar conta'));
-    await tester.pumpAndSettle();
+    await openAdd(tester);
+    expect(find.text('Novo lançamento'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
-    expect(find.text('Finanças'), findsOneWidget);
+    expect(find.text('Extrato'), findsOneWidget);
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
     expect(find.text('Dados pessoais'), findsOneWidget);

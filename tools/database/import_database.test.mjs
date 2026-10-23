@@ -5,7 +5,7 @@ let checks = 0;
 async function scenario(integerIds) {
   const {db, category, privateCategory, account} = await createDatabase(integerIds);
   // Idempotência da própria migração.
-  await db.exec(await readMigration('importacao_mvp2.sql'));
+  await db.exec(await readMigration('004_importacao_mvp2.sql'));
   await db.exec('set role authenticated');
   await account(owner);
   const row = (line, overrides={}) => ({line,description:'Aluguel',type:'despesa',amount:1500,

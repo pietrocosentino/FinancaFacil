@@ -2,10 +2,12 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/errors/app_log.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../../transactions/data/finance_repository.dart';
 import '../../transactions/domain/finance_models.dart';
+import '../../transactions/presentation/screens/new_category_dialog.dart';
 import '../data/import_file_gateway.dart';
 import '../data/import_repository.dart';
 import '../data/xlsx_import_reader.dart';
@@ -160,7 +162,8 @@ class _ImportScreenState extends State<ImportScreen> {
           ),
         );
       }
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'salvar modelo');
       if (mounted) {
         setState(
           () => _error = 'Não foi possível salvar o modelo. Escolha uma pasta acessível no aparelho.',
@@ -276,6 +279,42 @@ class _ImportScreenState extends State<ImportScreen> {
     );
   }
 
+  bool _canCreateCategory(ImportLine line) =>
+      line.sourceError == null &&
+      line.kind != null &&
+      line.categoryId == null &&
+      line.text('category').length >= 2 &&
+      line.text('category').length <= 40;
+
+  /// Cria a categoria escrita na planilha e associa todas as linhas do mesmo
+  /// tipo que usam esse nome.
+  Future<void> _createCategory(ImportLine line) async {
+    final kind = line.kind!;
+    final category = await showNewCategoryDialog(
+      context,
+      kind: kind,
+      initialName: line.text('category'),
+      create: (name) => _finance.createCategory(kind, name),
+    );
+    if (category == null || !mounted) return;
+    setState(() {
+      final categories = [
+        for (final item in _categories[kind] ?? <FinanceCategory>[])
+          if (item.id != category.id) item,
+        category,
+      ];
+      _categories = {..._categories, kind: categories};
+      for (final item in _lines.where((item) => item.kind == kind)) {
+        if (item.categoryId == null) item.matchCategory(categories);
+        if (item.categoryId == category.id && _errors(item).isEmpty) {
+          item.selected = true;
+        }
+      }
+      _checked = false;
+    });
+    await _reviewAgain();
+  }
+
   Widget _row(ImportLine line) {
     final errors = _errors(line);
     final category = (_categories[line.kind] ?? [])
@@ -326,12 +365,23 @@ class _ImportScreenState extends State<ImportScreen> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
-            if (line.sourceError == null)
-              TextButton.icon(
-                onPressed: _busy ? null : () => _edit(line),
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Corrigir dados ou categoria'),
-              ),
+            Wrap(
+              spacing: 4,
+              children: [
+                if (line.sourceError == null)
+                  TextButton.icon(
+                    onPressed: _busy ? null : () => _edit(line),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Corrigir dados ou categoria'),
+                  ),
+                if (_canCreateCategory(line))
+                  TextButton.icon(
+                    onPressed: _busy ? null : () => _createCategory(line),
+                    icon: const Icon(Icons.add),
+                    label: Text('Criar categoria “${line.text('category')}”'),
+                  ),
+              ],
+            ),
           ],
         ),
       ),

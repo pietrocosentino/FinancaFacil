@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/errors/app_log.dart';
+import '../../../../core/errors/failure_message.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
@@ -41,11 +43,17 @@ class _RecurrenceRulesScreenState extends State<RecurrenceRulesScreen> {
     try {
       await _repository.stopPlan(plan.id);
       if (mounted) _reload();
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'encerrar recorrência');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível encerrar. Tente novamente.'),
+          SnackBar(
+            content: Text(
+              failureMessage(
+                error,
+                fallback: 'Não foi possível encerrar. Tente novamente.',
+              ),
+            ),
           ),
         );
       }

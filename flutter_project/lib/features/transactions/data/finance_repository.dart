@@ -16,6 +16,12 @@ abstract class FinanceRepository {
   Future<void> updateFutureAmount(String id, double amount);
   Future<void> stopPlan(String id);
   Future<void> deleteEntry(String id);
+
+  /// Cria uma categoria própria ou devolve a existente com o mesmo nome.
+  Future<FinanceCategory> createCategory(TransactionKind kind, String name);
+
+  /// Renda recorrente que não entrou: o mês passa a exigir confirmação.
+  Future<void> markNotReceived(String id);
 }
 
 class SupabaseFinanceRepository implements FinanceRepository {
@@ -263,6 +269,40 @@ class SupabaseFinanceRepository implements FinanceRepository {
     RecurrenceReference.fromEntryId(id);
     await _client.rpc('delete_finance_entry', params: {'p_entry_id': id});
     notifyFinanceChanged();
+  }
+
+  @override
+  Future<FinanceCategory> createCategory(
+    TransactionKind kind,
+    String name,
+  ) async {
+    _ensureSignedIn();
+    final result = await _client.rpc(
+      'create_category',
+      params: {'p_name': name.trim(), 'p_type': kind.categoryValue},
+    );
+    notifyFinanceChanged();
+    return FinanceCategory.fromMap(Map<String, dynamic>.from(result as Map));
+  }
+
+  @override
+  Future<void> markNotReceived(String id) async {
+    _ensureSignedIn();
+    final reference = RecurrenceReference.fromEntryId(id);
+    if (reference == null) {
+      throw const FormatException('Somente rendas mensais são automáticas.');
+    }
+    try {
+      await _client.rpc(
+        'set_income_not_received',
+        params: {
+          'p_rule_id': reference.ruleId,
+          'p_due_month': reference.databaseMonth,
+        },
+      );
+    } finally {
+      notifyFinanceChanged();
+    }
   }
 
   @override

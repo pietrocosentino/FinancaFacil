@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/errors/app_failure.dart';
+import '../../../../core/errors/app_log.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/auth_validators.dart';
 import '../../../../core/utils/phone_formatter.dart';
@@ -118,7 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on AppFailure catch (error) {
       if (mounted) setState(() => _error = error.message);
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'acesso');
       if (mounted) {
         setState(
           () => _error = 'Não foi possível conectar. Verifique a internet e tente novamente.',
@@ -292,12 +294,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (_error != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16),
-                          child: Text(
-                            _error!,
-                            style: TextStyle(
-                              color: AppTheme.semanticColor(
-                                context,
-                                Colors.redAccent,
+                          child: Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              _error!,
+                              style: TextStyle(
+                                color: AppColors.of(context).danger,
                               ),
                             ),
                           ),
@@ -305,12 +307,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (_message != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16),
-                          child: Text(
-                            _message!,
-                            style: TextStyle(
-                              color: AppTheme.semanticColor(
-                                context,
-                                AppTheme.mintNeon,
+                          child: Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              _message!,
+                              style: TextStyle(
+                                color: AppColors.of(context).positive,
                               ),
                             ),
                           ),

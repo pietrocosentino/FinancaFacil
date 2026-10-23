@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/errors/app_log.dart';
+import '../../../../core/errors/failure_message.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
@@ -9,15 +12,22 @@ import '../../data/finance_repository.dart';
 import '../../domain/amount_edit_scope.dart';
 import '../../domain/finance_models.dart';
 import '../../domain/statement.dart';
+import 'add_choice_sheet.dart';
 import 'edit_amount_dialog.dart';
 import 'finance_entry_card.dart';
 import 'recurrence_rules_screen.dart';
 
 /// Extrato mensal: consulta, filtros, confirmação, edição e exclusão.
-/// O cadastro de novos lançamentos fica na aba Finanças.
 class TransactionsListScreen extends StatefulWidget {
-  const TransactionsListScreen({super.key, required this.repository});
+  const TransactionsListScreen({
+    super.key,
+    required this.repository,
+    this.onAdd,
+  });
   final FinanceRepository repository;
+
+  /// Abre a escolha de cadastro; sem ele, o botão Adicionar não aparece.
+  final VoidCallback? onAdd;
   @override
   State<TransactionsListScreen> createState() => _TransactionsListScreenState();
 }
@@ -101,8 +111,9 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     try {
       await action();
       if (mounted) _message(success);
-    } catch (_) {
-      if (mounted) _message(failure);
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'extrato');
+      if (mounted) _message(failureMessage(error, fallback: failure));
     } finally {
       if (mounted) {
         setState(() => _processing = false);
@@ -118,7 +129,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     late final List<FinanceEntry> entries;
     try {
       entries = await _future;
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'revisar confirmações');
       _reviewing = false;
       if (mounted) {
         _message(
@@ -257,6 +269,51 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     }
   });
 
+  Future<void> _confirmOne(FinanceEntry entry) async {
+    if (_processing || _reviewing) return;
+    final confirmed = await showConfirmDialog(
+      context,
+      title: entry.isIncome ? 'Confirmar recebimento?' : 'Confirmar pagamento?',
+      message:
+          '${entry.description}\n${AppFormatters.currency.format(entry.amount)}\n\n'
+          '${entry.isIncome ? 'Confirme somente depois de o valor entrar na sua conta.' : 'Confirme somente depois de pagar. O aplicativo não realiza pagamentos.'}',
+      confirmLabel: entry.isIncome ? 'Sim, recebi' : 'Sim, paguei',
+      cancelLabel: 'Ainda não',
+      prominent: true,
+    );
+    if (!confirmed || !mounted) return;
+    await _mutate(
+      () => _repository.markPaid({entry.id}),
+      success: entry.isIncome
+          ? 'Recebimento confirmado.'
+          : 'Pagamento confirmado.',
+      failure: 'Não foi possível confirmar. Tente novamente.',
+    );
+  }
+
+  Future<void> _notReceived(FinanceEntry entry) async {
+    if (_processing || _reviewing) return;
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Não recebeu esta renda?',
+      message:
+          '${entry.description}\n${AppFormatters.currency.format(entry.amount)}\n\n'
+          'Este mês deixa de contar como recebido e fica pendente. Quando o valor entrar, confirme o recebimento. Os outros meses continuam automáticos.',
+      confirmLabel: 'Marcar como não recebida',
+    );
+    if (!confirmed || !mounted) return;
+    await _mutate(
+      () => _repository.markNotReceived(entry.id),
+      success: 'Renda marcada como pendente.',
+      failure: 'Não foi possível alterar. Tente novamente.',
+    );
+  }
+
+  bool get _isCurrentMonth {
+    final now = DateTime.now();
+    return _month.year == now.year && _month.month == now.month;
+  }
+
   Widget _monthNavigation() {
     bool reachable(int delta) =>
         !_processing &&
@@ -271,9 +328,18 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
         Expanded(
           child: TextButton(
             onPressed: _processing ? null : _pickMonth,
-            child: Text(AppFormatters.monthYear.format(_month)),
+            child: Text(
+              AppFormatters.monthYear.format(_month),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ),
         ),
+        if (!_isCurrentMonth)
+          IconButton(
+            tooltip: 'Voltar ao mês atual',
+            icon: const Icon(Icons.today_outlined),
+            onPressed: _processing ? null : () => _setMonth(DateTime.now()),
+          ),
         IconButton(
           tooltip: 'Próximo mês',
           icon: const Icon(Icons.chevron_right),
@@ -283,74 +349,65 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     );
   }
 
+  Widget _filterChips() {
+    Widget kindChip(TransactionKind kind, String label) => FilterChip(
+      label: Text(label),
+      selected: _filter.kind == kind,
+      onSelected: _processing
+          ? null
+          : (selected) => _updateFilter(
+              _filter.copyWith(kind: () => selected ? kind : null),
+            ),
+    );
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final confirmation in ConfirmationFilter.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(confirmation.label),
+                selected: _filter.confirmation == confirmation,
+                onSelected: _processing
+                    ? null
+                    : (_) => _updateFilter(
+                        _filter.copyWith(confirmation: confirmation),
+                      ),
+              ),
+            ),
+          const SizedBox(height: 24, child: VerticalDivider()),
+          const SizedBox(width: 8),
+          kindChip(TransactionKind.expense, 'Despesas'),
+          const SizedBox(width: 8),
+          kindChip(TransactionKind.income, 'Receitas'),
+        ],
+      ),
+    );
+  }
+
   Widget _filtersPanel() => SliverToBoxAdapter(
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_searchOpen)
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
               child: TextField(
                 autofocus: true,
+                textInputAction: TextInputAction.search,
                 decoration: const InputDecoration(
                   labelText: 'Buscar pelo nome da conta',
+                  prefixIcon: Icon(Icons.search),
                 ),
-                onChanged: (value) => _updateFilter(
-                  StatementFilter(
-                    confirmation: _filter.confirmation,
-                    kind: _filter.kind,
-                    query: value,
-                  ),
-                ),
+                onChanged: (value) =>
+                    _updateFilter(_filter.copyWith(query: value)),
               ),
             ),
-          if (_filter.kind != null)
-            Text(
-              _filter.kind == TransactionKind.expense
-                  ? 'Somente despesas'
-                  : 'Somente receitas',
-            ),
           _monthNavigation(),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: _processing ? null : () => _setMonth(DateTime.now()),
-              child: const Text('Mês atual'),
-            ),
-          ),
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final confirmation in ConfirmationFilter.values)
-                ChoiceChip(
-                  label: Text(confirmation.label),
-                  selected: _filter.confirmation == confirmation,
-                  onSelected: _processing
-                      ? null
-                      : (_) => _updateFilter(
-                          StatementFilter(
-                            confirmation: confirmation,
-                            kind: _filter.kind,
-                            query: _filter.query,
-                          ),
-                        ),
-                ),
-            ],
-          ),
-          TextButton.icon(
-            onPressed: _processing
-                ? null
-                : () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          RecurrenceRulesScreen(repository: _repository),
-                    ),
-                  ),
-            icon: const Icon(Icons.repeat),
-            label: const Text('Contas recorrentes e parcelas'),
-          ),
+          _filterChips(),
         ],
       ),
     ),
@@ -365,38 +422,78 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       child: Container(
         color: Theme.of(context).colorScheme.surface,
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-        child: Align(
-          heightFactor: 1,
-          alignment: Alignment.center,
-          child: FilledButton.icon(
-            onPressed: _processing ? null : _paySelected,
-            icon: const Icon(Icons.check_circle_outline),
-            label: Text(
-              _processing
-                  ? 'Confirmando...'
-                  : 'Confirmar selecionados (${_selectedIds.length})',
+        child: Row(
+          children: [
+            TextButton(
+              onPressed: _processing
+                  ? null
+                  : () => setState(_selectedIds.clear),
+              child: const Text('Limpar'),
             ),
-          ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _processing ? null : _paySelected,
+                icon: const Icon(Icons.check_circle_outline),
+                label: Text(
+                  _processing
+                      ? 'Confirmando...'
+                      : 'Confirmar selecionados (${_selectedIds.length})',
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _entryCard(FinanceEntry entry) => FinanceEntryCard(
-    entry: entry,
-    selected: _selectedIds.contains(entry.id),
-    onUndo: entry.isPaid && !entry.isAutomaticIncome && !_processing
-        ? () => _undo(entry)
-        : null,
-    onDelete: _processing ? null : () => _delete(entry),
-    onStop: _processing || RecurrenceReference.fromEntryId(entry.id) == null
-        ? null
-        : () => _stop(entry),
-    onTap: _processing ? null : () => _editAmount(entry),
-    onSelected: entry.isPaid || entry.isAutomaticIncome || _processing
-        ? null
-        : (value) => _toggleSelection(entry, value),
-  );
+  Widget _entryCard(FinanceEntry entry) {
+    final pendingManual =
+        !entry.isPaid && !entry.isAutomaticIncome && !_processing;
+    return FinanceEntryCard(
+      entry: entry,
+      selected: _selectedIds.contains(entry.id),
+      onConfirm: pendingManual ? () => _confirmOne(entry) : null,
+      onUndo: entry.isPaid && !entry.isAutomaticIncome && !_processing
+          ? () => _undo(entry)
+          : null,
+      onNotReceived: entry.isAutomaticIncome && !_processing
+          ? () => _notReceived(entry)
+          : null,
+      onDelete: _processing ? null : () => _delete(entry),
+      onStop: _processing || RecurrenceReference.fromEntryId(entry.id) == null
+          ? null
+          : () => _stop(entry),
+      onTap: _processing ? null : () => _editAmount(entry),
+      onSelected: pendingManual
+          ? (value) => _toggleSelection(entry, value)
+          : null,
+    );
+  }
+
+  Widget _monthTotals(List<FinanceEntry> entries) {
+    final totals = totalsInCents(entries);
+    final colors = AppColors.of(context);
+    final style = Theme.of(context).textTheme.bodyMedium;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 4,
+        children: [
+          Text(
+            'Receitas ${AppFormatters.currency.format(totals.incomeCents / 100)}',
+            style: style?.copyWith(color: colors.positive),
+          ),
+          Text(
+            'Despesas ${AppFormatters.currency.format(totals.expenseCents / 100)}',
+            style: style?.copyWith(color: colors.danger),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _entries(List<FinanceEntry> monthEntries) {
     final entries = _filter.apply(monthEntries);
@@ -410,21 +507,41 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
               const SizedBox(height: 12),
               Text(
                 monthEntries.isEmpty
-                    ? 'Nenhum lançamento neste mês. Cadastre uma conta ou consulte outro mês.'
-                    : 'Nenhum registro neste filtro. Consulte Todas para ver o mês.',
+                    ? 'Nenhum lançamento neste mês.'
+                    : 'Nenhum lançamento com estes filtros.',
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 8),
+              if (monthEntries.isNotEmpty)
+                TextButton(
+                  onPressed: () {
+                    _searchOpen = false;
+                    _updateFilter(const StatementFilter());
+                  },
+                  child: const Text('Limpar filtros'),
+                )
+              else if (widget.onAdd != null)
+                TextButton.icon(
+                  onPressed: widget.onAdd,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar conta ou renda'),
+                ),
             ],
           ),
         ),
       );
     }
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-      sliver: SliverList.builder(
-        itemCount: entries.length,
-        itemBuilder: (_, index) => _entryCard(entries[index]),
-      ),
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(child: _monthTotals(entries)),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
+          sliver: SliverList.builder(
+            itemCount: entries.length,
+            itemBuilder: (_, index) => _entryCard(entries[index]),
+          ),
+        ),
+      ],
     );
   }
 
@@ -435,38 +552,31 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       actions: [
         IconButton(
           tooltip: 'Buscar contas',
-          icon: const Icon(Icons.search),
+          icon: Icon(_searchOpen ? Icons.search_off : Icons.search),
           onPressed: _processing
               ? null
               : () {
                   _searchOpen = !_searchOpen;
-                  _updateFilter(
-                    StatementFilter(
-                      confirmation: _filter.confirmation,
-                      kind: _filter.kind,
-                    ),
-                  );
+                  _updateFilter(_filter.copyWith(query: ''));
                 },
         ),
-        PopupMenuButton<int>(
-          tooltip: 'Filtrar receitas e despesas',
-          enabled: !_processing,
-          icon: const Icon(Icons.filter_list),
-          onSelected: (kind) => _updateFilter(
-            StatementFilter(
-              confirmation: _filter.confirmation,
-              kind: kind == 0 ? null : TransactionKind.values[kind - 1],
-              query: _filter.query,
-            ),
-          ),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 0, child: Text('Receitas e despesas')),
-            PopupMenuItem(value: 1, child: Text('Somente despesas')),
-            PopupMenuItem(value: 2, child: Text('Somente receitas')),
-          ],
+        IconButton(
+          tooltip: 'Contas recorrentes e parcelas',
+          icon: const Icon(Icons.repeat),
+          onPressed: _processing
+              ? null
+              : () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        RecurrenceRulesScreen(repository: _repository),
+                  ),
+                ),
         ),
       ],
     ),
+    floatingActionButton: widget.onAdd == null || _selectedIds.isNotEmpty
+        ? null
+        : AddEntryButton(onPressed: widget.onAdd!),
     bottomNavigationBar: _confirmationBar(context),
     body: SafeArea(
       top: false,

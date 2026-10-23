@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/errors/app_log.dart';
 import '../data/profile_photo_store.dart';
 import '../data/profile_repository.dart';
 import '../domain/user_profile.dart';
@@ -25,7 +26,8 @@ class ProfileController extends ChangeNotifier {
     try {
       photo = await photos.load(account);
       refresh();
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'carregar foto');
       /* Avatar indisponível não bloqueia a conta. */
     }
   }

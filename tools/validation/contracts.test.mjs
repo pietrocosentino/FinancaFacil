@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 const root = new URL('../../', import.meta.url);
 const read = name => fs.readFileSync(new URL(name, root), 'utf8');
 const api = JSON.parse(read('docs/endpoints.openapi.json'));
-const sql = ['recorrencia','editar_valores','importacao_mvp2','excluir_lancamentos']
-  .map(name=>read(`flutter_project/supabase/${name}.sql`)).join('\n');
+const sql = fs.readdirSync(new URL('flutter_project/supabase/', root))
+  .filter(name=>/^\d{3}_.*\.sql$/.test(name)).sort()
+  .map(name=>read(`flutter_project/supabase/${name}`)).join('\n');
 const adapters = ['transactions/data/finance_repository','imports/data/import_repository']
   .map(name=>read(`flutter_project/lib/features/${name}.dart`)).join('\n');
 let checks=0;

@@ -5,22 +5,19 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/supabase_config.dart';
+import 'core/errors/app_log.dart';
 import 'core/services/app_services.dart';
-import 'core/services/reminder_preferences.dart';
+import 'core/services/device_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/screens/auth_gate.dart';
 import 'shared/widgets/async_panel.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: AppTheme.surfaceCard,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
+  AppLog.installGlobalHandlers();
+  // Android 15+ desenha o app de ponta a ponta; as barras do sistema ficam
+  // transparentes e o SafeArea das telas reserva o espaço delas.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const FinancaFacilApp());
 }
 
@@ -28,13 +25,18 @@ class FinancaFacilApp extends StatelessWidget {
   const FinancaFacilApp({super.key});
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
-    valueListenable: ReminderPreferences.themeMode,
+    valueListenable: DevicePreferences.themeMode,
     builder: (_, mode, __) => MaterialApp(
       title: 'FinançaFácil',
       builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-        value: Theme.of(context).brightness == Brightness.dark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
+        value:
+            (Theme.of(context).brightness == Brightness.dark
+                    ? SystemUiOverlayStyle.light
+                    : SystemUiOverlayStyle.dark)
+                .copyWith(
+                  statusBarColor: Colors.transparent,
+                  systemNavigationBarColor: Colors.transparent,
+                ),
         child: child!,
       ),
       debugShowCheckedModeBanner: false,
@@ -70,9 +72,10 @@ class _ApplicationStartupState extends State<_ApplicationStartup> {
       publishableKey: SupabaseConfig.anonKey,
     );
     try {
-      await ReminderPreferences.load();
+      await DevicePreferences.load();
       await AppServices.reminders.initialize();
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'inicialização dos lembretes');
       // Uma falha de notificações não impede o acesso às finanças.
     }
   }

@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fake_repositories.dart';
+import 'support/navigation.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
@@ -48,7 +49,7 @@ void main() {
     expect(tapped, true);
     expect(find.text('Dados pessoais'), findsOneWidget);
   });
-  testWidgets('cabeçalho fixo abre menu e preserva sino e navegação', (
+  testWidgets('nome no cabeçalho leva à aba Perfil e preserva o sino', (
     t,
   ) async {
     await t.pumpWidget(
@@ -60,52 +61,28 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
+    final nav = find.byType(BottomNavigationBar);
     await t.tap(find.text('Pietro'));
     await t.pumpAndSettle();
+    expect(t.widget<BottomNavigationBar>(nav).currentIndex, 2);
     expect(find.text('FinançaFácil'), findsOneWidget);
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.byTooltip('Fechar menu'), findsOneWidget);
     expect(find.text('Dados pessoais'), findsOneWidget);
     expect(find.byTooltip('Notificações'), findsOneWidget);
-    expect(find.text('Pietro'), findsOneWidget);
-    expect(find.text('Finanças'), findsOneWidget);
+    expect(find.text('Minhas notificações'), findsNothing);
     await t.tap(find.text('Dados pessoais'));
     await t.pumpAndSettle();
-    expect(find.text('Pietro'), findsNWidgets(2));
     await t.tap(find.text('Alterar'));
     await t.pumpAndSettle();
     await t.enterText(find.byType(TextFormField).first, 'Pietro Ferreira');
     await t.ensureVisible(find.text('Salvar dados'));
     await t.tap(find.text('Salvar dados'));
     await t.pumpAndSettle();
+    // Cabeçalho e formulário atualizados juntos.
     expect(find.text('Pietro Ferreira'), findsNWidgets(2));
-  });
-  testWidgets('fechar menu sobreposto mantém a aba atual', (t) async {
-    await t.pumpWidget(
-      MaterialApp(
-        home: MainLayout(
-          financeRepository: FakeFinanceRepository(),
-          profileRepository: FakeProfileRepository(),
-        ),
-      ),
-    );
-    await t.pumpAndSettle();
-    await t.tap(find.text('Pietro'));
-    await t.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsOneWidget);
-    await t.tap(find.byTooltip('Fechar menu'));
-    await t.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(
-      t
-          .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
-          .currentIndex,
-      0,
-    );
-    expect(find.text('Pietro'), findsOneWidget);
-    await t.tap(find.text('Pietro'));
-    await t.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsOneWidget);
+    await openTab(t, 'Início');
+    expect(t.widget<BottomNavigationBar>(nav).currentIndex, 0);
+    expect(find.text('Pietro Ferreira'), findsOneWidget);
+    expect(t.takeException(), isNull);
   });
   testWidgets('voltar com dados alterados pede descarte e preserva edição', (
     t,

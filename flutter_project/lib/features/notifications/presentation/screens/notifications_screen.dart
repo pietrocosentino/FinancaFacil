@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/services/reminder_preferences.dart';
+import '../../../../core/errors/app_log.dart';
+import '../../../../core/errors/failure_message.dart';
+import '../../../../core/services/device_preferences.dart';
 import '../../../../core/utils/dates.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
@@ -51,7 +53,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         now.add(const Duration(days: 3)),
       );
       return (entries: pendingBills(entries, now), cached: false);
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'notificações offline');
       final owner = widget.owner;
       final cached = owner == null
           ? null
@@ -75,7 +78,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       await widget.reminders?.requestPermission();
       notifyFinanceChanged();
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'ativar lembretes');
       if (mounted) {
         _message(
           'Não foi possível ativar. Confira as configurações do aparelho.',
@@ -115,10 +119,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         // são atualizados por esse aviso.
         _message('Pagamento confirmado. O lembrete deste mês foi removido.');
       }
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'confirmar pagamento');
       if (mounted) {
         _message(
-          'Não foi possível confirmar. O lembrete continua pendente; tente novamente com conexão.',
+          failureMessage(
+            error,
+            fallback: 'Não foi possível confirmar. O lembrete continua pendente; tente novamente com conexão.',
+          ),
         );
       }
     } finally {
@@ -141,7 +149,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 Text(status.message),
                 if (status.coveredUntil != null)
                   Text(
-                    'Agenda preparada até ${AppFormatters.date.format(status.coveredUntil!)}. Lembretes por volta das ${ReminderPreferences.time.value.hour.toString().padLeft(2, '0')}:${ReminderPreferences.time.value.minute.toString().padLeft(2, '0')}.',
+                    'Agenda preparada até ${AppFormatters.date.format(status.coveredUntil!)}. Lembretes por volta das ${DevicePreferences.time.value.hour.toString().padLeft(2, '0')}:${DevicePreferences.time.value.minute.toString().padLeft(2, '0')}.',
                   ),
                 if (!status.enabled)
                   OutlinedButton.icon(
@@ -233,30 +241,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       FinanceEntryCard(
                         entry: feed.entries[index],
                         notice: _notice(feed.entries[index]),
-                        actions: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: _busyId != null || feed.cached
-                                  ? null
-                                  : () => _confirm(feed.entries[index]),
-                              icon: const Icon(Icons.check),
-                              label: Text(
-                                _busyId == feed.entries[index].id
-                                    ? 'Confirmando...'
-                                    : 'Confirmar pagamento',
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: _busyId != null
-                                  ? null
-                                  : () => _message(
-                                      'Conta mantida como pendente.',
-                                    ),
-                              child: const Text('Manter pendente'),
-                            ),
-                          ],
+                        actions: ElevatedButton.icon(
+                          onPressed: _busyId != null || feed.cached
+                              ? null
+                              : () => _confirm(feed.entries[index]),
+                          icon: const Icon(Icons.check),
+                          label: Text(
+                            _busyId == feed.entries[index].id
+                                ? 'Confirmando...'
+                                : 'Confirmar pagamento',
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),

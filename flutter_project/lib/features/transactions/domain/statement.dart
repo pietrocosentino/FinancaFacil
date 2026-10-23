@@ -28,6 +28,22 @@ class StatementFilter {
   final TransactionKind? kind;
   final String query;
 
+  /// [kind] usa uma função para permitir voltar a "todos os tipos" (null).
+  StatementFilter copyWith({
+    ConfirmationFilter? confirmation,
+    TransactionKind? Function()? kind,
+    String? query,
+  }) => StatementFilter(
+    confirmation: confirmation ?? this.confirmation,
+    kind: kind == null ? this.kind : kind(),
+    query: query ?? this.query,
+  );
+
+  bool get isFiltered =>
+      confirmation != ConfirmationFilter.all ||
+      kind != null ||
+      query.trim().isNotEmpty;
+
   bool accepts(FinanceEntry entry) =>
       confirmation.accepts(entry) &&
       (kind == null || entry.kind == kind) &&

@@ -8,14 +8,14 @@ class AppTheme {
   static const textPrimary = Colors.white;
   static const textSecondary = Color(0xFFBDC8E3);
   static const borderSubtle = Color(0xFF3A486B);
-  static const _lightPrimary = Color(0xFF3459CA);
+  static const lightPrimary = Color(0xFF3459CA);
 
   static ThemeData get lightTheme => _build(Brightness.light);
   static ThemeData get darkTheme => _build(Brightness.dark);
 
   static ThemeData _build(Brightness brightness) {
     final dark = brightness == Brightness.dark;
-    final primary = dark ? mintNeon : _lightPrimary;
+    final primary = dark ? mintNeon : lightPrimary;
     final surface = dark ? surfaceCard : Colors.white;
     final background = dark ? scaffoldBackground : const Color(0xFFF3F5FC);
     final border = dark ? borderSubtle : const Color(0xFFDEE4F2);
@@ -33,6 +33,7 @@ class AppTheme {
       borderRadius: BorderRadius.circular(14),
     );
     return base.copyWith(
+      extensions: [dark ? AppColors.dark : AppColors.light],
       scaffoldBackgroundColor: background,
       // A fonte do sistema está disponível mesmo sem conexão.
       textTheme: base.textTheme.copyWith(
@@ -121,12 +122,65 @@ class AppTheme {
       ),
     );
   }
+}
 
-  static Color semanticColor(BuildContext context, Color color) {
-    if (Theme.of(context).brightness == Brightness.dark) return color;
-    if (color == mintNeon) return _lightPrimary;
-    if (color == Colors.redAccent) return const Color(0xFFB00020);
-    if (color == Colors.amber) return const Color(0xFF865300);
-    return Theme.of(context).colorScheme.onSurface;
+/// Cores com significado (positivo, alerta, perigo e neutro), ajustadas a cada
+/// tema para manter contraste. Use `AppColors.of(context)`.
+@immutable
+class AppColors extends ThemeExtension<AppColors> {
+  const AppColors({
+    required this.positive,
+    required this.warning,
+    required this.danger,
+    required this.muted,
+  });
+
+  static const light = AppColors(
+    positive: Color(0xFF1B7F45),
+    warning: Color(0xFF865300),
+    danger: Color(0xFFB00020),
+    muted: Color(0xFF515760),
+  );
+  static const dark = AppColors(
+    positive: Color(0xFF7DDBA3),
+    warning: Color(0xFFFFC94D),
+    danger: Color(0xFFFF7A7A),
+    muted: AppTheme.textSecondary,
+  );
+
+  final Color positive;
+  final Color warning;
+  final Color danger;
+  final Color muted;
+
+  static AppColors of(BuildContext context) =>
+      Theme.of(context).extension<AppColors>() ??
+      (Theme.of(context).brightness == Brightness.dark ? dark : light);
+
+  /// Verde para saldo positivo ou zero, vermelho para negativo.
+  Color balance(num value) => value < 0 ? danger : positive;
+
+  @override
+  AppColors copyWith({
+    Color? positive,
+    Color? warning,
+    Color? danger,
+    Color? muted,
+  }) => AppColors(
+    positive: positive ?? this.positive,
+    warning: warning ?? this.warning,
+    danger: danger ?? this.danger,
+    muted: muted ?? this.muted,
+  );
+
+  @override
+  AppColors lerp(AppColors? other, double t) {
+    if (other == null) return this;
+    return AppColors(
+      positive: Color.lerp(positive, other.positive, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      danger: Color.lerp(danger, other.danger, t)!,
+      muted: Color.lerp(muted, other.muted, t)!,
+    );
   }
 }

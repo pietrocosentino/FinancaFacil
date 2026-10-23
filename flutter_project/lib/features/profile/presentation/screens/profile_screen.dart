@@ -2,7 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/services/reminder_preferences.dart';
+import '../../../../core/errors/app_log.dart';
+import '../../../../core/services/device_preferences.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../data/profile_photo_source.dart';
 import '../../data/profile_photo_store.dart';
@@ -18,17 +19,13 @@ class ProfileScreen extends StatefulWidget {
     super.key,
     this.controller,
     this.repository,
-    this.onNavigateToNotifications,
     this.photoSource,
     this.extraItems = const [],
-    this.onClose,
   }) : assert(controller != null || repository != null);
   final ProfileController? controller;
   final ProfileRepository? repository;
-  final VoidCallback? onNavigateToNotifications;
   final ProfilePhotoSource? photoSource;
   final List<ProfileMenuItem> extraItems;
-  final VoidCallback? onClose;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -115,7 +112,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } on FormatException catch (error) {
       _message(error.message);
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'alterar foto');
       _message(
         'Não foi possível atualizar a foto. Verifique a conexão e tente novamente.',
       );
@@ -139,16 +137,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _reminders() async {
     final time = await showTimePicker(
       context: context,
-      initialTime: ReminderPreferences.time.value,
+      initialTime: DevicePreferences.time.value,
       helpText: 'Horário dos lembretes',
     );
     if (time == null || !mounted) return;
     setState(() => _busy = true);
     try {
       // O layout principal observa o horário e reagenda os lembretes.
-      await ReminderPreferences.setTime(time);
+      await DevicePreferences.setTime(time);
       _message('Horário dos lembretes atualizado.');
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'horário dos lembretes');
       _message('Não foi possível salvar o horário. Tente novamente.');
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -175,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             for (final mode in ThemeMode.values)
               ListTile(
                 title: Text(_themeName(mode)),
-                trailing: mode == ReminderPreferences.themeMode.value
+                trailing: mode == DevicePreferences.themeMode.value
                     ? const Icon(Icons.check)
                     : null,
                 onTap: () => Navigator.pop(context, mode),
@@ -187,8 +186,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mode == null || !mounted) return;
     setState(() => _busy = true);
     try {
-      await ReminderPreferences.setTheme(mode);
-    } catch (_) {
+      await DevicePreferences.setTheme(mode);
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'aparência');
       _message('Não foi possível salvar a aparência.');
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -206,7 +206,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _busy = true);
     try {
       await _repository.signOut();
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'sair');
       _message('Não foi possível sair. Tente novamente.');
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -255,19 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Meu perfil'),
-        centerTitle: false,
-        automaticallyImplyLeading: widget.onClose == null,
-        actions: [
-          if (widget.onClose != null)
-            IconButton(
-              tooltip: 'Fechar menu',
-              onPressed: widget.onClose,
-              icon: const Icon(Icons.close),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Meu perfil'), centerTitle: false),
       body: SafeArea(
         top: false,
         child: ListView(
@@ -291,7 +280,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ]),
             _section('Preferências', [
               ValueListenableBuilder<TimeOfDay>(
-                valueListenable: ReminderPreferences.time,
+                valueListenable: DevicePreferences.time,
                 builder: (_, time, __) => _item(
                   Icons.schedule_outlined,
                   'Lembretes',
@@ -302,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const Divider(height: 1, indent: 56),
               ValueListenableBuilder<ThemeMode>(
-                valueListenable: ReminderPreferences.themeMode,
+                valueListenable: DevicePreferences.themeMode,
                 builder: (_, mode, __) => _item(
                   Icons.palette_outlined,
                   'Aparência',
@@ -318,9 +307,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 () => showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Seus lembretes'),
+                    title: const Text('Como funciona'),
+                    scrollable: true,
                     content: const Text(
-                      'Cadastre suas contas e o dia de vencimento. Os lembretes começam três dias antes. Confirme o pagamento manualmente na lista de notificações. Para receber alertas, permita as notificações nas configurações do aparelho.',
+                      'Toque em Adicionar para cadastrar uma conta, uma renda ou importar uma planilha.\n\n'
+                      'Contas: os lembretes começam três dias antes do vencimento. Depois de pagar, confirme pelo sino ou no Extrato. O app não faz pagamentos.\n\n'
+                      'Rendas mensais: entram no saldo automaticamente na data cadastrada. Se não recebeu, abra o lançamento no Extrato e escolha "Não recebi"; ele fica pendente até você confirmar.\n\n'
+                      'Para receber alertas com o app fechado, permita as notificações nas configurações do aparelho.',
                     ),
                     actions: [
                       TextButton(
@@ -331,12 +324,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-              if (widget.onNavigateToNotifications != null)
-                _item(
-                  Icons.notifications_outlined,
-                  'Minhas notificações',
-                  widget.onNavigateToNotifications!,
-                ),
             ]),
             const SizedBox(height: 28),
             TextButton.icon(

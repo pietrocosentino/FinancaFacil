@@ -51,3 +51,21 @@ class FinanceSummary {
     );
   }
 }
+
+/// Variação percentual de [current] em relação a [previous], arredondada.
+/// `null` quando não há base de comparação (mês anterior sem valor).
+int? percentChange(double current, double previous) {
+  final base = (previous * 100).round();
+  if (base <= 0) return null;
+  return (((current * 100).round() - base) * 100 / base).round();
+}
+
+/// Frase curta comparando as despesas com as do mês anterior.
+String expenseTrend(double current, double previous) {
+  final change = percentChange(current, previous);
+  if (change == null) return 'Sem despesas no mês anterior para comparar.';
+  if (change == 0) return 'Mesmo valor de despesas do mês anterior.';
+  return change > 0
+      ? 'Despesas $change% maiores que no mês anterior.'
+      : 'Despesas ${-change}% menores que no mês anterior.';
+}

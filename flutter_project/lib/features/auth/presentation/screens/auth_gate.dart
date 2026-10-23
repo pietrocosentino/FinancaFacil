@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/errors/app_log.dart';
 import '../../../../core/services/app_services.dart';
 import '../../../../shared/widgets/main_layout.dart';
 import '../../data/auth_gateway.dart';
@@ -64,7 +65,8 @@ class _AuthGateState extends State<AuthGate> {
     try {
       final uri = await links.getInitialLink();
       if (uri != null && mounted) _handleLink(uri);
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'link de acesso');
       if (mounted) {
         setState(() => _error = 'Não foi possível abrir o link de acesso.');
       }
@@ -81,7 +83,8 @@ class _AuthGateState extends State<AuthGate> {
     try {
       await _session.signOut();
       if (mounted) setState(() => _recovery = false);
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'cancelar recuperação');
       if (mounted) {
         setState(
           () => _error =

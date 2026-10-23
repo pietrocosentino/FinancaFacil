@@ -19,8 +19,10 @@ class FakeFinanceRepository implements FinanceRepository {
   @override
   Future<List<FinanceEntry>> transactions(DateTime through) async => entries;
   @override
-  Future<List<FinanceCategory>> categories(TransactionKind kind) async =>
-      const [FinanceCategory(id: '1', name: 'Categoria de teste')];
+  Future<List<FinanceCategory>> categories(TransactionKind kind) async => [
+    const FinanceCategory(id: '1', name: 'Categoria de teste'),
+    ...createdCategories,
+  ];
   @override
   Future<List<RecurrencePlan>> plans() async => [];
 
@@ -62,6 +64,39 @@ class FakeFinanceRepository implements FinanceRepository {
   @override
   Future<void> stopPlan(String id) async {
     stoppedPlanId = id;
+    notifyFinanceChanged();
+  }
+
+  final createdCategories = <FinanceCategory>[];
+  final notReceivedIds = <String>[];
+
+  @override
+  Future<FinanceCategory> createCategory(
+    TransactionKind kind,
+    String name,
+  ) async {
+    final category = FinanceCategory(
+      id: 'new-${name.trim()}',
+      name: name.trim(),
+    );
+    createdCategories.add(category);
+    notifyFinanceChanged();
+    return category;
+  }
+
+  @override
+  Future<void> markNotReceived(String id) async {
+    notReceivedIds.add(id);
+    entries = [
+      for (final entry in entries)
+        entry.id == id
+            ? FinanceEntry.fromMap({
+                ...entry.toMap(),
+                'is_paid': false,
+                '_manual_receipt': true,
+              })
+            : entry,
+    ];
     notifyFinanceChanged();
   }
 

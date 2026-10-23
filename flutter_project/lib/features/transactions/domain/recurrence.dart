@@ -78,6 +78,7 @@ List<Map<String, dynamic>> projectRecurrences(
         '_installment': index + 1,
         '_total_installments': count,
         '_last_due': lastDue,
+        '_manual_receipt': change?['manual_receipt'] == true,
         'created_at': rule['created_at'],
       });
     }

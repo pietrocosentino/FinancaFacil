@@ -36,7 +36,7 @@ $$;
 revoke all on function public.set_recurrence_occurrence(uuid,date,boolean,numeric) from public, anon;
 grant execute on function public.set_recurrence_occurrence(uuid,date,boolean,numeric) to authenticated;
 
--- Execute após recorrencia.sql e lembretes.sql.
+-- Execute após 001_recorrencia.sql e 002_lembretes.sql.
 
 create or replace function public.set_recurrence_future_amount(p_rule_id uuid, p_from_month date, p_amount numeric)
 returns void language plpgsql security invoker set search_path = '' as $$

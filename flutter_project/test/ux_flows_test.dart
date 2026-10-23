@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'support/fake_repositories.dart';
+import 'support/navigation.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
@@ -22,10 +23,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Finanças'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Adicionar conta'));
-    await tester.pumpAndSettle();
+    await openAdd(tester);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Valor'),
       '90,60',

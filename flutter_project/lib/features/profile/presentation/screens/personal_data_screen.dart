@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/errors/app_log.dart';
+import '../../../../core/errors/failure_message.dart';
 import '../../../../core/utils/auth_validators.dart';
 import '../../../../core/utils/phone_formatter.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
@@ -59,11 +61,14 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
           const SnackBar(content: Text('Dados do perfil atualizados.')),
         );
       }
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'salvar dados pessoais');
       if (mounted) {
         setState(
-          () => _error =
-              'Não foi possível salvar. Verifique a conexão e tente novamente.',
+          () => _error = failureMessage(
+            error,
+            fallback: 'Não foi possível salvar. Verifique a conexão e tente novamente.',
+          ),
         );
       }
     } finally {

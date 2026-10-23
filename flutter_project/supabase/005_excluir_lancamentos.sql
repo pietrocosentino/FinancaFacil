@@ -1,4 +1,4 @@
--- Executar após recorrencia.sql. Exclusão de um mês não apaga a regra.
+-- Executar após 001_recorrencia.sql. Exclusão de um mês não apaga a regra.
 begin;
 alter table public.recurrence_occurrences add column if not exists is_deleted boolean not null default false;
 create or replace function public.delete_finance_entry(p_entry_id text)

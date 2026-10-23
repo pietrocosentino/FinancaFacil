@@ -7,7 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
-import '../../../core/services/reminder_preferences.dart';
+import '../../../core/errors/app_log.dart';
+import '../../../core/services/device_preferences.dart';
 import '../../transactions/domain/finance_models.dart';
 import '../domain/reminder_plan.dart';
 
@@ -103,7 +104,8 @@ class LocalReminderService implements ReminderService {
             ? 'Lembretes ativados no aparelho.'
             : 'Ative os lembretes do aparelho.',
       );
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'preparar lembretes');
       _initialization = null;
       status.value = const ReminderStatus(
         message: 'Não foi possível preparar os lembretes. Tente ativá-los novamente.',
@@ -203,8 +205,8 @@ class LocalReminderService implements ReminderService {
       final plan = planReminders(
         entries,
         DateTime.now(),
-        hour: ReminderPreferences.time.value.hour,
-        minute: ReminderPreferences.time.value.minute,
+        hour: DevicePreferences.time.value.hour,
+        minute: DevicePreferences.time.value.minute,
       );
       try {
         for (final reminder in plan) {
@@ -243,7 +245,8 @@ class LocalReminderService implements ReminderService {
               ? 'Sem contas pendentes para lembrar nos próximos 90 dias.'
               : 'Lembretes preparados. Abra o app periodicamente para renovar os próximos vencimentos.',
         );
-      } catch (_) {
+      } catch (error, stack) {
+        AppLog.error(error, stack, 'agendar lembretes');
         status.value = const ReminderStatus(
           enabled: true,
           message: 'Alguns lembretes não foram preparados. Abra o app e tente novamente.',

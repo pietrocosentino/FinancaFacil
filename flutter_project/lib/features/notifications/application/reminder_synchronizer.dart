@@ -1,3 +1,4 @@
+import '../../../core/errors/app_log.dart';
 import '../../transactions/domain/finance_models.dart';
 import '../data/reminder_service.dart';
 
@@ -45,7 +46,8 @@ class ReminderSynchronizer {
       await reminders.activateOwner(owner);
       final entries = await loadEntries();
       if (!_disposed) await reminders.sync(owner, entries);
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'sincronizar lembretes');
       if (!_disposed) {
         reminders.status.value = reminders.status.value.withMessage(
           failureMessage,

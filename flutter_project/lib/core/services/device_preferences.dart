@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Preferências do aparelho; não alteram os valores ou as recorrências.
-class ReminderPreferences {
-  static final themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+/// Preferências deste aparelho (tema e horário dos lembretes); não alteram
+/// valores nem recorrências. O tema segue o sistema até o usuário escolher.
+class DevicePreferences {
+  static final themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
   static final time = ValueNotifier<TimeOfDay>(
     const TimeOfDay(hour: 9, minute: 0),
   );
@@ -29,7 +30,7 @@ class ReminderPreferences {
     themeMode.value =
         theme != null && theme >= 0 && theme < ThemeMode.values.length
         ? ThemeMode.values[theme]
-        : ThemeMode.light;
+        : ThemeMode.system;
     final savedTime = preferences.getString('reminder_time')?.split(':');
     if (savedTime != null && savedTime.length == 2) {
       final hour = int.tryParse(savedTime[0]);

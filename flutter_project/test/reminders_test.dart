@@ -153,9 +153,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Transferir para meu pai'), findsOneWidget);
-    await tester.tap(find.text('Manter pendente'));
-    await tester.pumpAndSettle();
-    expect(repository.paidIds, isNull);
+    expect(find.text('Manter pendente'), findsNothing);
     await tester.tap(find.text('Confirmar pagamento'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ainda não'));
@@ -187,7 +185,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Confirmar pagamento'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
-    expect(find.text('Finanças'), findsOneWidget);
+    expect(find.text('Extrato'), findsOneWidget);
     await tester.tap(find.text('Confirmar pagamento'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sim, paguei'));

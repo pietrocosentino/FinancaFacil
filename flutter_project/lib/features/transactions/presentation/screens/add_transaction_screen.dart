@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/errors/app_log.dart';
+import '../../../../core/errors/failure_message.dart';
 import '../../../../core/utils/finance_utils.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/month_picker.dart';
 import '../../data/finance_repository.dart';
 import '../../domain/finance_models.dart';
+import 'new_category_dialog.dart';
 
 enum _Frequency {
   once('Uma vez'),
@@ -118,7 +121,8 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
         _categories = categories;
         _categoryId = categories.length == 1 ? categories.first.id : null;
       });
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'carregar categorias');
       if (mounted && request == _categoryRequest) {
         setState(() {
           _categories = [];
@@ -130,6 +134,25 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
         setState(() => _loadingCategories = false);
       }
     }
+  }
+
+  Future<void> _createCategory() async {
+    final kind = _kind;
+    final category = await showNewCategoryDialog(
+      context,
+      kind: kind,
+      create: (name) => _repository.createCategory(kind, name),
+    );
+    if (category == null || !mounted || kind != _kind) return;
+    await _loadCategories();
+    if (!mounted) return;
+    setState(() {
+      if (!_categories.any((item) => item.id == category.id)) {
+        _categories = [..._categories, category];
+      }
+      _categoryId = category.id;
+      _detailsChanged = true;
+    });
   }
 
   void _changeKind(TransactionKind kind) {
@@ -236,10 +259,14 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
       } else if (action == 'reminders') {
         widget.onEnableReminders?.call();
       }
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'salvar lançamento');
       if (mounted) {
         _message(
-          'Não foi possível salvar. Verifique sua conexão e tente novamente.',
+          failureMessage(
+            error,
+            fallback: 'Não foi possível salvar. Verifique sua conexão e tente novamente.',
+          ),
         );
       }
     } finally {
@@ -461,10 +488,22 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
                         _categoryError ??
                             'Nenhuma categoria disponível para este tipo.',
                       ),
-                      TextButton.icon(
-                        onPressed: _saving ? null : _loadCategories,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Recarregar categorias'),
+                      Wrap(
+                        spacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          TextButton.icon(
+                            onPressed: _saving ? null : _loadCategories,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Recarregar categorias'),
+                          ),
+                          if (_categoryError == null)
+                            TextButton.icon(
+                              onPressed: _saving ? null : _createCategory,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Criar categoria'),
+                            ),
+                        ],
                       ),
                     ],
                   )
@@ -495,6 +534,17 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
                             _categoryId = value;
                             _detailsChanged = true;
                           }),
+                  ),
+                if (!_loadingCategories &&
+                    _categoryError == null &&
+                    _categories.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _saving ? null : _createCategory,
+                      icon: const Icon(Icons.add, size: 20),
+                      label: const Text('Nova categoria'),
+                    ),
                   ),
                 const SizedBox(height: 16),
                 TextFormField(

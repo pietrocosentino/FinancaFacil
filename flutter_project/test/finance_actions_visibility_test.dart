@@ -9,6 +9,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fake_repositories.dart';
+import 'support/navigation.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
@@ -24,7 +25,7 @@ void main() {
   for (final dark in [false, true]) {
     final theme = dark ? 'escuro' : 'claro';
 
-    testWidgets('cadastro e importação acessíveis em Finanças no tema $theme', (
+    testWidgets('botão Adicionar e opções acessíveis no tema $theme', (
       tester,
     ) async {
       phoneScreen(tester);
@@ -38,18 +39,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final nav = find.byType(BottomNavigationBar);
-      await tester.tap(
-        find.descendant(of: nav, matching: find.text('Finanças')),
-      );
+      for (final tab in ['Início', 'Extrato']) {
+        await openTab(tester, tab);
+        expect(addButton.hitTestable(), findsOneWidget);
+        expect(tester.getSize(addButton).height, greaterThanOrEqualTo(48));
+      }
+      await tester.tap(addButton);
       await tester.pumpAndSettle();
-      for (final label in [
-        'Adicionar conta',
-        'Adicionar renda',
-        'Importar planilha',
-      ]) {
-        await tester.ensureVisible(find.text(label));
-        await tester.pumpAndSettle();
+      for (final label in ['Conta ou despesa', 'Renda', 'Importar planilha']) {
         expect(find.text(label).hitTestable(), findsOneWidget);
         final tile = find.ancestor(
           of: find.text(label),
@@ -57,9 +54,7 @@ void main() {
         );
         expect(tester.getSize(tile).height, greaterThanOrEqualTo(48));
       }
-      await tester.ensureVisible(find.text('Adicionar conta'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Adicionar conta'));
+      await tester.tap(find.text('Conta ou despesa'));
       await tester.pumpAndSettle();
       expect(find.byType(AddTransactionScreen), findsOneWidget);
       expect(tester.takeException(), isNull);

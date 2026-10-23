@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/errors/app_log.dart';
+import '../../../../core/errors/failure_message.dart';
 import '../../../../core/utils/finance_utils.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/finance_models.dart';
@@ -55,11 +57,15 @@ class _EditAmountDialogState extends State<EditAmountDialog> {
         parseMoney(_amount.text)!,
       );
       if (mounted) Navigator.of(context).pop(true);
-    } catch (_) {
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'editar valor');
       if (mounted) {
         setState(() {
           _saving = false;
-          _error = 'Não foi possível atualizar o valor. Tente novamente.';
+          _error = failureMessage(
+            error,
+            fallback: 'Não foi possível atualizar o valor. Tente novamente.',
+          );
         });
       }
     }
