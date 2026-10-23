@@ -8,6 +8,7 @@ import 'package:financafacil/features/imports/data/xlsx_import_reader.dart';
 import 'package:financafacil/features/imports/domain/import_models.dart';
 import 'package:financafacil/features/imports/presentation/import_screen.dart';
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
+import 'package:financafacil/features/transactions/presentation/screens/add_choice_sheet.dart';
 import 'package:financafacil/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:financafacil/features/transactions/presentation/screens/transactions_list_screen.dart';
 import 'package:flutter/material.dart';
@@ -121,19 +122,20 @@ void main() {
     });
 
     testWidgets('primeiro acesso mostra como começar', (tester) async {
-      var added = 0;
+      final added = <AddChoice>[];
       await tester.pumpWidget(
         MaterialApp(
           home: DashboardScreen(
             repository: FakeFinanceRepository(),
-            onAdd: () => added++,
+            onAdd: added.add,
           ),
         ),
       );
       await tester.pumpAndSettle();
       expect(find.text('Comece por aqui'), findsOneWidget);
-      await tester.tap(find.text('Adicionar primeira conta ou renda'));
-      expect(added, 1);
+      await tester.tap(find.text('Cadastrar renda'));
+      await tester.tap(find.text('Cadastrar despesa'));
+      expect(added, [AddChoice.income, AddChoice.expense]);
     });
   });
 

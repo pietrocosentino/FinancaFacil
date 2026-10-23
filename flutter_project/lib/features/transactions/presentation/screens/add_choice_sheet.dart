@@ -1,75 +1,41 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
+
 enum AddChoice { expense, income, spreadsheet }
 
-/// Escolha do que cadastrar, aberta pelo botão "Adicionar".
-Future<AddChoice?> showAddChoiceSheet(BuildContext context) =>
-    showModalBottomSheet<AddChoice>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) {
-        Widget option(
-          AddChoice choice,
-          IconData icon,
-          String title,
-          String subtitle,
-        ) => ListTile(
-          leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-          title: Text(title),
-          subtitle: Text(subtitle),
-          onTap: () => Navigator.pop(context, choice),
-        );
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                  child: Text(
-                    'O que você quer adicionar?',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                option(
-                  AddChoice.expense,
-                  Icons.receipt_outlined,
-                  'Conta ou despesa',
-                  'O que você paga: aluguel, luz, compras, parcelas',
-                ),
-                option(
-                  AddChoice.income,
-                  Icons.savings_outlined,
-                  'Renda',
-                  'O que você recebe: salário, freela, aluguel recebido',
-                ),
-                option(
-                  AddChoice.spreadsheet,
-                  Icons.upload_file_outlined,
-                  'Importar planilha',
-                  'Vários lançamentos de uma vez, pelo modelo Excel',
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-/// Botão principal de cadastro, presente no Início e no Extrato.
-class AddEntryButton extends StatelessWidget {
-  const AddEntryButton({super.key, required this.onPressed});
-  final VoidCallback onPressed;
+/// Botões de cadastro do Início e do Extrato: despesa e renda separadas, cada
+/// uma abrindo o próprio formulário, sem menu intermediário.
+class AddEntryButtons extends StatelessWidget {
+  const AddEntryButtons({super.key, required this.onAdd});
+  final ValueChanged<AddChoice> onAdd;
 
   @override
-  Widget build(BuildContext context) => FloatingActionButton.extended(
-    heroTag: null,
-    onPressed: onPressed,
-    icon: const Icon(Icons.add),
-    label: const Text('Adicionar'),
-    tooltip: 'Adicionar conta, renda ou planilha',
-  );
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton.extended(
+          heroTag: null,
+          tooltip: 'Adicionar despesa',
+          backgroundColor: colors.expense,
+          foregroundColor: colors.onExpense,
+          onPressed: () => onAdd(AddChoice.expense),
+          icon: const Icon(Icons.remove_circle_outline),
+          label: const Text('Despesa'),
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.extended(
+          heroTag: null,
+          tooltip: 'Adicionar renda',
+          backgroundColor: colors.income,
+          foregroundColor: colors.onIncome,
+          onPressed: () => onAdd(AddChoice.income),
+          icon: const Icon(Icons.add_circle_outline),
+          label: const Text('Renda'),
+        ),
+      ],
+    );
+  }
 }

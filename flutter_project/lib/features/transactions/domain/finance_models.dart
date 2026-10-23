@@ -213,6 +213,33 @@ class EntryDetails {
   };
 }
 
+/// Alteração definitiva de uma renda fixa: vale do mês informado em diante.
+class IncomeChange {
+  IncomeChange({
+    required String description,
+    required this.amount,
+    required this.categoryId,
+    required this.dueDay,
+  }) : description = description.trim() {
+    if (this.description.isEmpty || this.description.length > 120) {
+      throw const FormatException('Informe um nome de até 120 caracteres.');
+    }
+    if (!amount.isFinite || amount <= 0) {
+      throw const FormatException('Informe um valor válido maior que zero.');
+    }
+    if (dueDay < 1 || dueDay > 31) {
+      throw const FormatException('Informe um dia de 1 a 31.');
+    }
+    if (categoryId.isEmpty) {
+      throw const FormatException('Selecione uma categoria.');
+    }
+  }
+  final String description;
+  final double amount;
+  final String categoryId;
+  final int dueDay;
+}
+
 /// Dados de uma renda mensal que valem para todos os meses.
 class IncomeRuleDetails {
   IncomeRuleDetails({

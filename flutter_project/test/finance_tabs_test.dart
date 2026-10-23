@@ -45,15 +45,11 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('Adicionar oferece conta, renda e planilha', (t) async {
+  testWidgets('Renda abre direto o cadastro de renda; planilha no Extrato', (
+    t,
+  ) async {
     await showApp(t);
-    await t.tap(addButton);
-    await t.pumpAndSettle();
-    expect(find.text('Conta ou despesa'), findsOneWidget);
-    expect(find.text('Renda'), findsOneWidget);
-    expect(find.text('Importar planilha'), findsOneWidget);
-    await t.tap(find.text('Renda'));
-    await t.pumpAndSettle();
+    await openAdd(t, 'Renda');
     expect(
       t
           .widget<AddTransactionScreen>(find.byType(AddTransactionScreen))
@@ -68,13 +64,10 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('fechar a escolha sem selecionar não abre nada', (t) async {
+  testWidgets('Despesa abre direto o cadastro de conta, sem menu', (t) async {
     await showApp(t);
-    await t.tap(addButton);
-    await t.pumpAndSettle();
-    await t.tapAt(const Offset(10, 10));
-    await t.pumpAndSettle();
-    expect(find.byType(AddTransactionScreen), findsNothing);
-    expect(addButton, findsOneWidget);
+    await openAdd(t);
+    expect(find.text('Nova conta'), findsOneWidget);
+    expect(find.text('Nome da renda'), findsNothing);
   });
 }

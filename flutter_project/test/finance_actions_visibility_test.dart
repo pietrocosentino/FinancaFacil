@@ -25,7 +25,7 @@ void main() {
   for (final dark in [false, true]) {
     final theme = dark ? 'escuro' : 'claro';
 
-    testWidgets('botão Adicionar e opções acessíveis no tema $theme', (
+    testWidgets('botões Despesa e Renda acessíveis no tema $theme', (
       tester,
     ) async {
       phoneScreen(tester);
@@ -41,22 +41,19 @@ void main() {
       await tester.pumpAndSettle();
       for (final tab in ['Início', 'Extrato']) {
         await openTab(tester, tab);
-        expect(addButton.hitTestable(), findsOneWidget);
-        expect(tester.getSize(addButton).height, greaterThanOrEqualTo(48));
+        for (final button in [addButton, addIncomeButton]) {
+          expect(button.hitTestable(), findsOneWidget);
+          expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+        }
       }
       await tester.tap(addButton);
       await tester.pumpAndSettle();
-      for (final label in ['Conta ou despesa', 'Renda', 'Importar planilha']) {
-        expect(find.text(label).hitTestable(), findsOneWidget);
-        final tile = find.ancestor(
-          of: find.text(label),
-          matching: find.byType(ListTile),
-        );
-        expect(tester.getSize(tile).height, greaterThanOrEqualTo(48));
-      }
-      await tester.tap(find.text('Conta ou despesa'));
-      await tester.pumpAndSettle();
-      expect(find.byType(AddTransactionScreen), findsOneWidget);
+      expect(
+        tester
+            .widget<AddTransactionScreen>(find.byType(AddTransactionScreen))
+            .initialKind,
+        TransactionKind.expense,
+      );
       expect(tester.takeException(), isNull);
     });
 

@@ -240,8 +240,11 @@ class AppTheme {
   }
 }
 
-/// Cores com significado (positivo, alerta, perigo e neutro), ajustadas a cada
-/// tema para manter contraste. Use `AppColors.of(context)`.
+/// Cores com significado e da marca, ajustadas a cada tema para manter
+/// contraste. Use `AppColors.of(context)`.
+///
+/// A marca (verde-petróleo) aparece no cabeçalho e no cartão de saldo; renda
+/// é sempre verde e despesa sempre coral, nos botões e nos valores.
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
@@ -249,6 +252,17 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.warning,
     required this.danger,
     required this.muted,
+    required this.brand,
+    required this.brandDeep,
+    required this.onBrand,
+    required this.onBrandMuted,
+    required this.brandPositive,
+    required this.brandNegative,
+    required this.brandWarning,
+    required this.income,
+    required this.onIncome,
+    required this.expense,
+    required this.onExpense,
   });
 
   static const light = AppColors(
@@ -256,12 +270,34 @@ class AppColors extends ThemeExtension<AppColors> {
     warning: Color(0xFF8A5A00),
     danger: Color(0xFFAF3A33),
     muted: Color(0xFF56615B),
+    brand: Color(0xFF0E5B53),
+    brandDeep: Color(0xFF0A4741),
+    onBrand: Color(0xFFF2FAF7),
+    onBrandMuted: Color(0xFFB9DCD4),
+    brandPositive: Color(0xFFA8EBC4),
+    brandNegative: Color(0xFFFFB8AC),
+    brandWarning: Color(0xFFFFD98F),
+    income: Color(0xFF1F7A4A),
+    onIncome: Color(0xFFF4FBF6),
+    expense: Color(0xFFB4483A),
+    onExpense: Color(0xFFFFF6F4),
   );
   static const dark = AppColors(
     positive: Color(0xFF8ED3A8),
     warning: Color(0xFFE9C46A),
     danger: Color(0xFFEFA39C),
     muted: Color(0xFFA3AFA8),
+    brand: Color(0xFF15433D),
+    brandDeep: Color(0xFF0F312D),
+    onBrand: Color(0xFFE6F3EF),
+    onBrandMuted: Color(0xFFA6C9C1),
+    brandPositive: Color(0xFF9FE6BC),
+    brandNegative: Color(0xFFFFB4A8),
+    brandWarning: Color(0xFFF5D38A),
+    income: Color(0xFF8ED3A8),
+    onIncome: Color(0xFF0E2A1B),
+    expense: Color(0xFFF0A094),
+    onExpense: Color(0xFF3A1410),
   );
 
   final Color positive;
@@ -269,12 +305,32 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color danger;
   final Color muted;
 
+  /// Fundo do cabeçalho e do cartão de saldo.
+  final Color brand;
+  final Color brandDeep;
+  final Color onBrand;
+  final Color onBrandMuted;
+
+  /// Positivo, negativo e alerta legíveis sobre [brand].
+  final Color brandPositive;
+  final Color brandNegative;
+  final Color brandWarning;
+
+  /// Botão e destaques de renda e de despesa.
+  final Color income;
+  final Color onIncome;
+  final Color expense;
+  final Color onExpense;
+
   static AppColors of(BuildContext context) =>
       Theme.of(context).extension<AppColors>() ??
       (Theme.of(context).brightness == Brightness.dark ? dark : light);
 
   /// Verde para saldo positivo ou zero, vermelho para negativo.
   Color balance(num value) => value < 0 ? danger : positive;
+
+  /// Mesmo critério de [balance], legível sobre a cor da marca.
+  Color brandBalance(num value) => value < 0 ? brandNegative : brandPositive;
 
   @override
   AppColors copyWith({
@@ -287,16 +343,39 @@ class AppColors extends ThemeExtension<AppColors> {
     warning: warning ?? this.warning,
     danger: danger ?? this.danger,
     muted: muted ?? this.muted,
+    brand: brand,
+    brandDeep: brandDeep,
+    onBrand: onBrand,
+    onBrandMuted: onBrandMuted,
+    brandPositive: brandPositive,
+    brandNegative: brandNegative,
+    brandWarning: brandWarning,
+    income: income,
+    onIncome: onIncome,
+    expense: expense,
+    onExpense: onExpense,
   );
 
   @override
   AppColors lerp(AppColors? other, double t) {
     if (other == null) return this;
+    Color mix(Color a, Color b) => Color.lerp(a, b, t)!;
     return AppColors(
-      positive: Color.lerp(positive, other.positive, t)!,
-      warning: Color.lerp(warning, other.warning, t)!,
-      danger: Color.lerp(danger, other.danger, t)!,
-      muted: Color.lerp(muted, other.muted, t)!,
+      positive: mix(positive, other.positive),
+      warning: mix(warning, other.warning),
+      danger: mix(danger, other.danger),
+      muted: mix(muted, other.muted),
+      brand: mix(brand, other.brand),
+      brandDeep: mix(brandDeep, other.brandDeep),
+      onBrand: mix(onBrand, other.onBrand),
+      onBrandMuted: mix(onBrandMuted, other.onBrandMuted),
+      brandPositive: mix(brandPositive, other.brandPositive),
+      brandNegative: mix(brandNegative, other.brandNegative),
+      brandWarning: mix(brandWarning, other.brandWarning),
+      income: mix(income, other.income),
+      onIncome: mix(onIncome, other.onIncome),
+      expense: mix(expense, other.expense),
+      onExpense: mix(onExpense, other.onExpense),
     );
   }
 }

@@ -109,14 +109,15 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
         _category.text,
       );
       if (_isIncomeRule) {
-        final ruleId = RecurrenceReference.fromEntryId(_entry.id)!.ruleId;
-        await widget.repository.updateIncomeRule(
-          ruleId,
-          IncomeRuleDetails(
+        await widget.repository.updateIncomeFromMonth(
+          _entry,
+          IncomeChange(
             description: _description.text,
+            amount: parseMoney(_amount.text)!,
             categoryId: categoryId,
             dueDay: _dueDay,
           ),
+          _fromMonth,
         );
       } else {
         await widget.repository.updateDetails(
@@ -145,8 +146,14 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
     }
   }
 
+  /// Alteração definitiva começa no mês atual; meses passados não mudam.
+  DateTime get _fromMonth {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month);
+  }
+
   String get _intro => _isIncomeRule
-      ? 'Nome, categoria e dia valem para todos os meses desta renda. Para mudar o valor (descontos, férias, débitos), use "Editar valor" no mês desejado.'
+      ? 'A alteração vale de ${AppFormatters.monthYear.format(_fromMonth)} em diante, para todos os próximos meses. Os meses anteriores continuam como estão.\n\nPara um desconto só em um mês, use "Editar só este mês" no Extrato.'
       : _isIncome
       ? 'A renda pode ser alterada a qualquer momento, mesmo depois de recebida.'
       : 'Você pode alterar esta conta enquanto ela estiver pendente. Depois de confirmar o pagamento, não será mais possível alterar nem excluir.';
@@ -158,7 +165,7 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
       appBar: AppBar(
         title: Text(
           _isIncomeRule
-              ? 'Editar renda mensal'
+              ? 'Alterar renda fixa'
               : _isIncome
               ? 'Editar renda'
               : 'Editar conta',
@@ -205,20 +212,24 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
           validator: (value) =>
               (value?.trim().isEmpty ?? true) ? 'Informe um nome.' : null,
         ),
-        if (!_isIncomeRule) ...[
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _amount,
-            enabled: !_saving,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: _isIncome ? 'Valor recebido' : 'Valor',
-              prefixText: 'R\$ ',
-            ),
-            validator: (value) => parseMoney(value ?? '') == null
-                ? 'Informe um valor maior que zero.'
-                : null,
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _amount,
+          enabled: !_saving,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: _isIncomeRule
+                ? 'Valor mensal'
+                : _isIncome
+                ? 'Valor recebido'
+                : 'Valor',
+            prefixText: 'R\$ ',
           ),
+          validator: (value) => parseMoney(value ?? '') == null
+              ? 'Informe um valor maior que zero.'
+              : null,
+        ),
+        if (!_isIncomeRule) ...[
           const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: _saving ? null : _pickDate,

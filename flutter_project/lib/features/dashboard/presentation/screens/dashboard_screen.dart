@@ -11,6 +11,7 @@ import '../../../transactions/data/finance_repository.dart';
 import '../../../transactions/domain/entry_status.dart';
 import '../../../transactions/domain/finance_models.dart';
 import '../../../transactions/presentation/screens/add_choice_sheet.dart';
+import '../../../transactions/presentation/screens/edit_entry_screen.dart';
 import '../../../transactions/presentation/screens/finance_entry_card.dart';
 import '../../domain/finance_summary.dart';
 
@@ -26,7 +27,9 @@ class DashboardScreen extends StatefulWidget {
   });
   final FinanceRepository repository;
   final VoidCallback? onNavigateToNotifications;
-  final VoidCallback? onAdd;
+
+  /// Abre o cadastro de despesa ou de renda; sem ele os botões não aparecem.
+  final ValueChanged<AddChoice>? onAdd;
   final VoidCallback? onOpenStatement;
   final ReminderService? reminders;
   @override
@@ -175,6 +178,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
   ];
 
+  /// Rendas que se repetem todo mês (salário, aluguel recebido etc.).
+  List<FinanceEntry> _fixedIncomes(List<FinanceEntry> entries) =>
+      entries
+          .where(
+            (entry) =>
+                entry.isIncome &&
+                entry.isRecurring &&
+                !entry.isInactive &&
+                entry.belongsToMonth(_month),
+          )
+          .toList()
+        ..sort((a, b) => b.amount.compareTo(a.amount));
+
+  Future<void> _changeIncome(FinanceEntry entry) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => EditEntryScreen(
+          entry: entry,
+          repository: widget.repository,
+          mode: EditEntryMode.incomeRule,
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Renda fixa atualizada deste mês em diante.'),
+        ),
+      );
+    }
+  }
+
+  /// Rendas fixas com atalho para alterar de vez (descontos, reajustes,
+  /// volta de férias), sem precisar cadastrar outra.
+  Widget _incomeSources(List<FinanceEntry> entries) {
+    final incomes = _fixedIncomes(entries);
+    final colors = AppColors.of(context);
+    final money = AppFormatters.currency.format;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Suas rendas fixas',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                if (widget.onAdd != null)
+                  TextButton.icon(
+                    onPressed: () => widget.onAdd!(AddChoice.income),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Nova'),
+                  ),
+              ],
+            ),
+            if (incomes.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(right: 8, bottom: 8),
+                child: Text(
+                  'Nenhuma renda fixa neste mês. Cadastre seu salário em "Renda" com a frequência "Todo mês".',
+                ),
+              ),
+            for (final income in incomes)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: colors.income.withValues(alpha: 0.15),
+                  foregroundColor: colors.income,
+                  child: const Icon(Icons.savings_outlined),
+                ),
+                title: Text(income.description),
+                subtitle: Text(
+                  '${money(income.amount)}${income.dueDate == null ? '' : ' · todo dia ${income.dueDate!.day}'}',
+                ),
+                trailing: OutlinedButton(
+                  onPressed: () => _changeIncome(income),
+                  child: const Text('Alterar'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _firstSteps() => Card(
     child: Padding(
       padding: const EdgeInsets.all(16),
@@ -191,13 +284,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           if (widget.onAdd != null) ...[
             const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.icon(
-                onPressed: widget.onAdd,
-                icon: const Icon(Icons.add),
-                label: const Text('Adicionar primeira conta ou renda'),
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: () => widget.onAdd!(AddChoice.income),
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text('Cadastrar renda'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => widget.onAdd!(AddChoice.expense),
+                  icon: const Icon(Icons.remove_circle_outline),
+                  label: const Text('Cadastrar despesa'),
+                ),
+              ],
             ),
           ],
         ],
@@ -207,9 +308,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     floatingActionButton: widget.onAdd == null
         ? null
-        : AddEntryButton(onPressed: widget.onAdd!),
+        : AddEntryButtons(onAdd: widget.onAdd!),
     body: SafeArea(
       child: AsyncPanel<List<FinanceEntry>>(
         future: _future,
@@ -235,6 +337,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 8),
                 _monthNavigation(),
                 _MonthSummaryCard(summary: summary),
+                if (!empty) _incomeSources(entries),
                 if (summary.expenses > 0 || previous.expenses > 0)
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -286,19 +389,34 @@ class _MonthSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Expanded(child: Text(label)),
+          Expanded(
+            child: Text(label, style: TextStyle(color: colors.onBrandMuted)),
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: TextStyle(fontWeight: FontWeight.w600, color: color),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: color ?? colors.onBrand,
+              ),
             ),
           ),
         ],
       ),
     );
-    return Card(
+    // Cartão principal com a cor da marca: é a identidade visual do Início.
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colors.brand, colors.brandDeep],
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -306,8 +424,14 @@ class _MonthSummaryCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Expanded(child: Text('Saldo previsto do mês')),
+                Expanded(
+                  child: Text(
+                    'Saldo previsto do mês',
+                    style: TextStyle(color: colors.onBrandMuted),
+                  ),
+                ),
                 IconButton(
+                  color: colors.onBrand,
                   tooltip: 'Como calculamos o saldo',
                   icon: const Icon(Icons.info_outline, size: 20),
                   onPressed: () => showDialog<void>(
@@ -334,10 +458,13 @@ class _MonthSummaryCard extends StatelessWidget {
               money(summary.predictedBalance),
               style: textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: colors.balance(summary.predictedBalance),
+                color: colors.brandBalance(summary.predictedBalance),
               ),
             ),
-            const Divider(height: 28),
+            Divider(
+              height: 28,
+              color: colors.onBrandMuted.withValues(alpha: 0.35),
+            ),
             row(
               'Rendas',
               '${money(summary.receivedIncome)} de ${money(summary.income)}',
@@ -350,13 +477,13 @@ class _MonthSummaryCard extends StatelessWidget {
               'Ainda a pagar',
               money(summary.expenses - summary.paidExpenses),
               color: summary.expenses > summary.paidExpenses
-                  ? colors.warning
+                  ? colors.brandWarning
                   : null,
             ),
             row(
               'Saldo confirmado',
               money(summary.availableBalance),
-              color: colors.balance(summary.availableBalance),
+              color: colors.brandBalance(summary.availableBalance),
             ),
           ],
         ),

@@ -82,9 +82,10 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
   bool get _hasActions => _callbacks.values.any((action) => action != null);
 
   String _label(_EntryAction action) => switch (action) {
-    _EntryAction.edit => 'Editar lançamento',
+    _EntryAction.edit =>
+      entry.isRecurring ? 'Editar só este mês' : 'Editar lançamento',
     _EntryAction.editAmount => 'Editar valor',
-    _EntryAction.editIncome => 'Editar nome, dia e categoria',
+    _EntryAction.editIncome => 'Alterar renda fixa (deste mês em diante)',
     _EntryAction.confirm =>
       entry.isIncome ? 'Confirmar recebimento' : 'Confirmar pagamento',
     _EntryAction.notReceived => 'Não recebi',

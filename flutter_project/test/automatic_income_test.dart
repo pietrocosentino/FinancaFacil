@@ -102,7 +102,7 @@ void main() {
         await t.tap(find.byType(PopupMenuButton<String>));
         await t.pumpAndSettle();
         expect(find.text('Corrigir confirmação'), findsNothing);
-        final edit = find.text('Editar lançamento');
+        final edit = find.text('Editar só este mês');
         await t.ensureVisible(edit);
         await t.pumpAndSettle();
         await t.tap(edit);

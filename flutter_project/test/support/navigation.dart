@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Botão "Adicionar" visível na aba atual (Início ou Extrato).
-final addButton = find.byTooltip('Adicionar conta, renda ou planilha');
+/// Botão "Despesa" visível na aba atual (Início ou Extrato).
+final addButton = find.byTooltip('Adicionar despesa');
 
-/// Abre o cadastro pelo botão "Adicionar" e escolhe a opção do menu:
-/// 'Conta ou despesa', 'Renda' ou 'Importar planilha'.
+/// Botão "Renda" visível na aba atual (Início ou Extrato).
+final addIncomeButton = find.byTooltip('Adicionar renda');
+
+/// Abre um cadastro: 'Conta ou despesa', 'Renda' ou 'Importar planilha'
+/// (este último fica no topo do Extrato).
 Future<void> openAdd(
   WidgetTester tester, [
   String option = 'Conta ou despesa',
 ]) async {
-  await tester.tap(addButton);
-  await tester.pumpAndSettle();
-  await tester.tap(find.text(option));
+  await tester.tap(switch (option) {
+    'Renda' => addIncomeButton,
+    'Importar planilha' => find.byTooltip('Importar planilha'),
+    _ => addButton,
+  });
   await tester.pumpAndSettle();
 }
 

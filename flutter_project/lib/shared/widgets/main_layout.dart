@@ -105,10 +105,10 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
         repository: _finance,
         reminders: _reminders,
         onNavigateToNotifications: _openNotifications,
-        onAdd: _chooseAndAdd,
+        onAdd: _addEntry,
         onOpenStatement: () => _onTabTapped(_statementTab),
       ),
-      TransactionsListScreen(repository: _finance, onAdd: _chooseAndAdd),
+      TransactionsListScreen(repository: _finance, onAdd: _addEntry),
       ProfileScreen(controller: _profile),
     ];
   }
@@ -193,9 +193,8 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
 
   Future<void> _openProfile() => _onTabTapped(_profileTab);
 
-  Future<void> _chooseAndAdd() => _choosing.run(() async {
-    final choice = await showAddChoiceSheet(context);
-    if (!mounted || choice == null) return;
+  void _addEntry(AddChoice choice) => _choosing.run(() async {
+    if (!mounted) return;
     switch (choice) {
       case AddChoice.expense:
         await _add();
@@ -241,7 +240,12 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           // Com o teclado aberto o cabeçalho sai para o formulário ter espaço
           // em telas pequenas; fica só a área da barra de status.
           if (MediaQuery.viewInsetsOf(context).bottom > 0)
-            SizedBox(height: MediaQuery.paddingOf(context).top)
+            BrandBar(
+              child: SizedBox(
+                height: MediaQuery.paddingOf(context).top,
+                width: double.infinity,
+              ),
+            )
           else
             MainHeader(
               profile: _profile,

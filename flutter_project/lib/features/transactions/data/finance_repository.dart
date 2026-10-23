@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/finance_updates.dart';
+import '../../../core/utils/finance_utils.dart';
 import '../domain/finance_models.dart';
 import '../domain/recurrence.dart';
 
@@ -18,6 +19,14 @@ abstract class FinanceRepository {
 
   /// Nome, categoria e dia de uma renda mensal (vale para toda a recorrência).
   Future<void> updateIncomeRule(String ruleId, IncomeRuleDetails details);
+
+  /// Altera de vez uma renda fixa (mensal ou do formato antigo) a partir de
+  /// [fromMonth]; meses anteriores ficam como estão.
+  Future<void> updateIncomeFromMonth(
+    FinanceEntry entry,
+    IncomeChange change,
+    DateTime fromMonth,
+  );
 
   /// Tira (ou devolve) um lançamento confirmado das somas, sem apagá-lo.
   Future<void> setInactive(String id, bool inactive);
@@ -232,6 +241,69 @@ class SupabaseFinanceRepository implements FinanceRepository {
           'p_due_day': details.dueDay,
         },
       );
+    } finally {
+      notifyFinanceChanged();
+    }
+  }
+
+  @override
+  Future<void> updateIncomeFromMonth(
+    FinanceEntry entry,
+    IncomeChange change,
+    DateTime fromMonth,
+  ) async {
+    final owner = _userId;
+    if (!entry.isIncome || !entry.isRecurring) {
+      throw const FormatException('Somente rendas fixas mudam de vez.');
+    }
+    final start = DateTime(fromMonth.year, fromMonth.month);
+    try {
+      final reference = RecurrenceReference.fromEntryId(entry.id);
+      if (reference != null) {
+        await _client.rpc(
+          'update_income_rule',
+          params: {
+            'p_rule_id': reference.ruleId,
+            'p_description': change.description,
+            'p_category_id': change.categoryId,
+            'p_due_day': change.dueDay,
+          },
+        );
+        if (change.amount != entry.amount) {
+          await _client.rpc(
+            'set_recurrence_future_amount',
+            params: {
+              'p_rule_id': reference.ruleId,
+              'p_from_month': monthKey(start),
+              'p_amount': change.amount,
+            },
+          );
+        }
+        return;
+      }
+      // Formato antigo: um registro por mês com o mesmo nome. Cada mês recebe
+      // o novo dia sem sair do próprio mês.
+      final rows = await _client
+          .from('transactions')
+          .select('id, due_date')
+          .eq('user_id', owner)
+          .eq('type', TransactionKind.income.databaseValue)
+          .eq('is_recurrent', true)
+          .eq('description', entry.description)
+          .gte('due_date', isoDate(start));
+      for (final row in rows) {
+        final due = DateTime.parse(row['due_date'].toString());
+        await _client
+            .from('transactions')
+            .update({
+              'description': change.description,
+              'amount': change.amount,
+              'category_id': change.categoryId,
+              'due_date': isoDate(monthlyDueDate(due, 0, day: change.dueDay)),
+            })
+            .eq('user_id', owner)
+            .eq('id', row['id']);
+      }
     } finally {
       notifyFinanceChanged();
     }

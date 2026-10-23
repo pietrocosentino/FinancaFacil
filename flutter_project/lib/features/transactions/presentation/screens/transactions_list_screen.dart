@@ -29,8 +29,9 @@ class TransactionsListScreen extends StatefulWidget {
   });
   final FinanceRepository repository;
 
-  /// Abre a escolha de cadastro; sem ele, o botão Adicionar não aparece.
-  final VoidCallback? onAdd;
+  /// Abre o cadastro de despesa, renda ou a importação de planilha; sem ele
+  /// os botões de cadastro não aparecem.
+  final ValueChanged<AddChoice>? onAdd;
   @override
   State<TransactionsListScreen> createState() => _TransactionsListScreenState();
 }
@@ -212,7 +213,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     if (saved == true && mounted) {
       _message(
         mode == EditEntryMode.incomeRule
-            ? 'Renda mensal atualizada.'
+            ? 'Renda fixa atualizada deste mês em diante.'
             : 'Lançamento atualizado.',
       );
     }
@@ -498,7 +499,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       ),
       onTap: when(editable && monthly, () => _editAmount(entry)),
       onEditIncome: when(
-        monthly && entry.isIncome,
+        entry.isIncome && entry.isRecurring,
         () => _openEditor(entry, EditEntryMode.incomeRule),
       ),
       onConfirm: when(pendingManual, () => _confirmOne(entry)),
@@ -565,10 +566,21 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   child: const Text('Limpar filtros'),
                 )
               else if (widget.onAdd != null)
-                TextButton.icon(
-                  onPressed: widget.onAdd,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Adicionar conta ou renda'),
+                Wrap(
+                  spacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => widget.onAdd!(AddChoice.expense),
+                      icon: const Icon(Icons.remove_circle_outline),
+                      label: const Text('Adicionar despesa'),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => widget.onAdd!(AddChoice.income),
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: const Text('Adicionar renda'),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -604,6 +616,14 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   _updateFilter(_filter.copyWith(query: ''));
                 },
         ),
+        if (widget.onAdd != null)
+          IconButton(
+            tooltip: 'Importar planilha',
+            icon: const Icon(Icons.upload_file_outlined),
+            onPressed: _processing
+                ? null
+                : () => widget.onAdd!(AddChoice.spreadsheet),
+          ),
         IconButton(
           tooltip: 'Baixar lançamentos em Excel',
           icon: const Icon(Icons.file_download_outlined),
@@ -625,9 +645,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
         ),
       ],
     ),
+    floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     floatingActionButton: widget.onAdd == null || _selectedIds.isNotEmpty
         ? null
-        : AddEntryButton(onPressed: widget.onAdd!),
+        : AddEntryButtons(onAdd: widget.onAdd!),
     bottomNavigationBar: _confirmationBar(context),
     body: SafeArea(
       top: false,

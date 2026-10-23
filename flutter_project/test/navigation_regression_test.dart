@@ -48,13 +48,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Cadastrar conta ou renda'), findsNothing);
     await tester.tap(addButton);
-    await tester.tap(addButton);
-    await tester.pumpAndSettle();
-    expect(find.text('Conta ou despesa'), findsOneWidget);
-    await tester.tap(find.text('Conta ou despesa'));
+    await tester.tap(addButton, warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('Nova conta'), findsOneWidget);
+    expect(find.byType(AddTransactionScreen), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Nova conta'), findsNothing);
