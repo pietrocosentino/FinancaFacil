@@ -164,105 +164,113 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
               : 'Editar conta',
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: FilledButton.icon(
-            onPressed: _saving ? null : _save,
-            icon: const Icon(Icons.check),
-            label: Text(_saving ? 'Salvando...' : 'Salvar alterações'),
-          ),
-        ),
-      ),
-      body: Form(
-        key: _form,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      // Botão no corpo para subir junto com o teclado.
+      body: SafeArea(
+        child: Column(
           children: [
-            Text(_intro),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _description,
-              enabled: !_saving,
-              maxLength: 120,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: _isIncome ? 'Nome da renda' : 'Nome da conta',
+            Expanded(child: _formBody()),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: const Icon(Icons.check),
+                  label: Text(_saving ? 'Salvando...' : 'Salvar alterações'),
+                ),
               ),
-              validator: (value) =>
-                  (value?.trim().isEmpty ?? true) ? 'Informe um nome.' : null,
             ),
-            if (!_isIncomeRule) ...[
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _amount,
-                enabled: !_saving,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(
-                  labelText: _isIncome ? 'Valor recebido' : 'Valor',
-                  prefixText: 'R\$ ',
-                ),
-                validator: (value) => parseMoney(value ?? '') == null
-                    ? 'Informe um valor maior que zero.'
-                    : null,
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _saving ? null : _pickDate,
-                icon: const Icon(Icons.calendar_month_outlined),
-                label: Text(
-                  '${_isIncome ? 'Recebimento' : 'Vencimento'}: ${AppFormatters.date.format(_dueDate)}',
-                ),
-              ),
-            ] else ...[
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                initialValue: _dueDay,
-                decoration: const InputDecoration(
-                  labelText: 'Dia do recebimento mensal',
-                ),
-                items: [
-                  for (var day = 1; day <= 31; day++)
-                    DropdownMenuItem(value: day, child: Text('Dia $day')),
-                ],
-                onChanged: _saving
-                    ? null
-                    : (day) => setState(() => _dueDay = day ?? _dueDay),
-              ),
-            ],
-            const SizedBox(height: 16),
-            CategoryField(
-              kind: _entry.kind,
-              categories: _categories,
-              controller: _category,
-              enabled: !_saving,
-              errorText: _categoryError,
-            ),
-            if (!_isIncomeRule) ...[
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _notes,
-                enabled: !_saving,
-                minLines: 1,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Observação (opcional)',
-                ),
-              ),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
           ],
         ),
       ),
+    ),
+  );
+
+  Widget _formBody() => Form(
+    key: _form,
+    child: ListView(
+      padding: const EdgeInsets.all(16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      children: [
+        Text(_intro),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: _description,
+          enabled: !_saving,
+          maxLength: 120,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            labelText: _isIncome ? 'Nome da renda' : 'Nome da conta',
+          ),
+          validator: (value) =>
+              (value?.trim().isEmpty ?? true) ? 'Informe um nome.' : null,
+        ),
+        if (!_isIncomeRule) ...[
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _amount,
+            enabled: !_saving,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: _isIncome ? 'Valor recebido' : 'Valor',
+              prefixText: 'R\$ ',
+            ),
+            validator: (value) => parseMoney(value ?? '') == null
+                ? 'Informe um valor maior que zero.'
+                : null,
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _pickDate,
+            icon: const Icon(Icons.calendar_month_outlined),
+            label: Text(
+              '${_isIncome ? 'Recebimento' : 'Vencimento'}: ${AppFormatters.date.format(_dueDate)}',
+            ),
+          ),
+        ] else ...[
+          const SizedBox(height: 8),
+          DropdownButtonFormField<int>(
+            initialValue: _dueDay,
+            decoration: const InputDecoration(
+              labelText: 'Dia do recebimento mensal',
+            ),
+            items: [
+              for (var day = 1; day <= 31; day++)
+                DropdownMenuItem(value: day, child: Text('Dia $day')),
+            ],
+            onChanged: _saving
+                ? null
+                : (day) => setState(() => _dueDay = day ?? _dueDay),
+          ),
+        ],
+        const SizedBox(height: 16),
+        CategoryField(
+          kind: _entry.kind,
+          categories: _categories,
+          controller: _category,
+          enabled: !_saving,
+          errorText: _categoryError,
+        ),
+        if (!_isIncomeRule) ...[
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _notes,
+            enabled: !_saving,
+            minLines: 1,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Observação (opcional)',
+            ),
+          ),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
+      ],
     ),
   );
 }

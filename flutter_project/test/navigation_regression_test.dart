@@ -4,9 +4,11 @@ import 'package:financafacil/features/notifications/presentation/screens/notific
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
 import 'package:financafacil/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:financafacil/features/transactions/presentation/screens/transactions_list_screen.dart';
+import 'package:financafacil/shared/widgets/main_header.dart';
 import 'package:financafacil/shared/widgets/main_layout.dart';
 import 'package:financafacil/shared/widgets/month_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -152,6 +154,9 @@ void main() {
     );
     await tester.ensureVisible(category);
     await tester.enterText(category, 'saúde');
+    // Fecha a lista de sugestões, como o primeiro toque fora dela no app.
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar conta'));
     await tester.pumpAndSettle();
     // Nome existente (sem diferenciar maiúsculas) usa a categoria da lista.
@@ -323,6 +328,7 @@ void _keyboardTests() {
     await tester.pumpWidget(app(300));
     await tester.pump();
     expect(find.byType(BottomNavigationBar), findsNothing);
+    expect(find.byType(MainHeader), findsNothing);
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
     expect(scaffold.resizeToAvoidBottomInset, false);
   });

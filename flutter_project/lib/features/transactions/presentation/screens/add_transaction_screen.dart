@@ -35,8 +35,6 @@ class _FormText {
     required this.notesHint,
     required this.save,
     required this.saveMonthly,
-    required this.saved,
-    required this.savedMonthly,
   });
 
   final String title;
@@ -58,8 +56,6 @@ class _FormText {
   final String notesHint;
   final String save;
   final String saveMonthly;
-  final String saved;
-  final String savedMonthly;
 
   static const expense = _FormText(
     title: 'Nova conta',
@@ -86,8 +82,6 @@ class _FormText {
     notesHint: 'Ex.: débito automático, pagar pelo app do banco',
     save: 'Salvar conta',
     saveMonthly: 'Salvar conta mensal',
-    saved: 'Conta salva.',
-    savedMonthly: 'Conta mensal salva. Consulte no Extrato.',
   );
 
   static const income = _FormText(
@@ -114,8 +108,6 @@ class _FormText {
     notesHint: 'Ex.: descontos do mês, adiantamento',
     save: 'Salvar renda',
     saveMonthly: 'Salvar renda mensal',
-    saved: 'Renda salva.',
-    savedMonthly: 'Renda mensal salva. Você pode alterá-la no Extrato.',
   );
 }
 
@@ -280,7 +272,6 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
         ),
       );
       if (!mounted) return;
-      _message(_recurring ? _text.savedMonthly : _text.saved);
       final action = await showDialog<String>(
         barrierDismissible: false,
         context: context,
@@ -402,184 +393,189 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
     },
     child: Scaffold(
       appBar: AppBar(title: Text(_text.title)),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-          child: ElevatedButton(
-            onPressed: _saving ? null : _save,
-            child: Text(
-              _saving
-                  ? 'Salvando...'
-                  : _recurring
-                  ? _text.saveMonthly
-                  : _text.save,
+      // O botão fica no corpo, logo abaixo do formulário: com o teclado aberto
+      // ele sobe junto e continua visível (a barra inferior ficaria atrás dele).
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(child: _formBody()),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _save,
+                  child: Text(
+                    _saving
+                        ? 'Salvando...'
+                        : _recurring
+                        ? _text.saveMonthly
+                        : _text.save,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: Form(
-            key: _form,
-            onChanged: () => setState(() {}),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _amount,
-                  enabled: !_saving,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    helperText: _hasInstallments ? _text.installmentHelp : null,
-                    labelText: _amountLabel,
-                    prefixText: 'R\$ ',
-                    hintText: '0,00',
-                  ),
-                  validator: (value) => parseMoney(value ?? '') == null
-                      ? 'Informe um valor válido maior que zero.'
-                      : null,
+    ),
+  );
+
+  Widget _formBody() => SingleChildScrollView(
+    padding: const EdgeInsets.all(20),
+    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+    child: Form(
+      key: _form,
+      onChanged: () => setState(() {}),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: _amount,
+            enabled: !_saving,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              helperText: _hasInstallments ? _text.installmentHelp : null,
+              labelText: _amountLabel,
+              prefixText: 'R\$ ',
+              hintText: '0,00',
+            ),
+            validator: (value) => parseMoney(value ?? '') == null
+                ? 'Informe um valor válido maior que zero.'
+                : null,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _description,
+            enabled: !_saving,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              labelText: _text.name,
+              hintText: _text.nameHint,
+            ),
+            textInputAction: TextInputAction.next,
+            validator: (value) =>
+                (value?.trim().isEmpty ?? true) ? _text.nameError : null,
+          ),
+          const SizedBox(height: 16),
+          const Text('Frequência'),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final MapEntry(key: frequency, value: label)
+                  in _text.frequencies.entries)
+                ChoiceChip(
+                  label: Text(label),
+                  selected: _frequency == frequency,
+                  onSelected: _saving
+                      ? null
+                      : (_) => setState(() => _frequency = frequency),
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _description,
-                  enabled: !_saving,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(
-                    labelText: _text.name,
-                    hintText: _text.nameHint,
-                  ),
-                  textInputAction: TextInputAction.next,
-                  validator: (value) =>
-                      (value?.trim().isEmpty ?? true) ? _text.nameError : null,
-                ),
-                const SizedBox(height: 16),
-                const Text('Frequência'),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final MapEntry(key: frequency, value: label)
-                        in _text.frequencies.entries)
-                      ChoiceChip(
-                        label: Text(label),
-                        selected: _frequency == frequency,
-                        onSelected: _saving
-                            ? null
-                            : (_) => setState(() => _frequency = frequency),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _saving ? null : _pickDate,
-                  icon: const Icon(Icons.calendar_month_outlined),
-                  label: Text(
-                    '${_recurring ? _text.firstDate : _text.date}: ${AppFormatters.date.format(_dueDate)}',
-                  ),
-                ),
-                if (!_recurring)
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(_text.alreadyConfirmed),
-                    subtitle: _text.alreadyConfirmedHelp == null
-                        ? null
-                        : Text(_text.alreadyConfirmedHelp!),
-                    value: _alreadyConfirmed,
-                    onChanged: _saving
-                        ? null
-                        : (value) => setState(
-                            () => _alreadyConfirmed = value ?? false,
-                          ),
-                  ),
-                if (_recurring) ...[
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    initialValue: _dueDay,
-                    decoration: InputDecoration(labelText: _text.monthlyDay),
-                    items: [
-                      for (var day = 1; day <= 31; day++)
-                        DropdownMenuItem(value: day, child: Text('Dia $day')),
-                    ],
-                    onChanged: _saving
-                        ? null
-                        : (day) {
-                            if (day == null) return;
-                            setState(() {
-                              _detailsChanged = true;
-                              _dueDay = day;
-                              _dueDate = monthlyDueDate(_dueDate, 0, day: day);
-                            });
-                          },
-                  ),
-                  if (_hasInstallments) ...[
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _installments,
-                      enabled: !_saving,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: _text.installmentsCount,
-                        helperText: _text.installmentsHelp,
-                        helperMaxLines: 3,
-                      ),
-                      validator: (value) {
-                        final count = int.tryParse(value ?? '');
-                        return count == null || count < 2 || count > 1200
-                            ? 'Informe de 2 a 1200 meses.'
-                            : null;
-                      },
-                    ),
-                  ],
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      _isIncome
-                          ? 'A renda aparece em cada mês e pode ser alterada a qualquer momento no Extrato.'
-                          : 'As previsões aparecem no mês consultado. Cada mês tem seu próprio pagamento.',
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                CategoryField(
-                  kind: _kind,
-                  categories: _categories,
-                  controller: _category,
-                  enabled: !_saving,
-                  errorText: _categoryError,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _notes,
-                  enabled: !_saving,
-                  minLines: 1,
-                  maxLines: 3,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(
-                    labelText: 'Observação (opcional)',
-                    hintText: _text.notesHint,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                if (_hasInstallments && _installmentCount != null)
-                  Text(
-                    '${_isIncome ? 'Último recebimento' : 'Última parcela'}: ${AppFormatters.date.format(monthlyDueDate(_dueDate, _installmentCount! - 1, day: _dueDay))}',
-                  ),
-                if (_amountValue != null)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(_previewText(_amountValue!)),
-                    ),
-                  ),
-              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _pickDate,
+            icon: const Icon(Icons.calendar_month_outlined),
+            label: Text(
+              '${_recurring ? _text.firstDate : _text.date}: ${AppFormatters.date.format(_dueDate)}',
             ),
           ),
-        ),
+          if (!_recurring)
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(_text.alreadyConfirmed),
+              subtitle: _text.alreadyConfirmedHelp == null
+                  ? null
+                  : Text(_text.alreadyConfirmedHelp!),
+              value: _alreadyConfirmed,
+              onChanged: _saving
+                  ? null
+                  : (value) =>
+                        setState(() => _alreadyConfirmed = value ?? false),
+            ),
+          if (_recurring) ...[
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              initialValue: _dueDay,
+              decoration: InputDecoration(labelText: _text.monthlyDay),
+              items: [
+                for (var day = 1; day <= 31; day++)
+                  DropdownMenuItem(value: day, child: Text('Dia $day')),
+              ],
+              onChanged: _saving
+                  ? null
+                  : (day) {
+                      if (day == null) return;
+                      setState(() {
+                        _detailsChanged = true;
+                        _dueDay = day;
+                        _dueDate = monthlyDueDate(_dueDate, 0, day: day);
+                      });
+                    },
+            ),
+            if (_hasInstallments) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _installments,
+                enabled: !_saving,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: _text.installmentsCount,
+                  helperText: _text.installmentsHelp,
+                  helperMaxLines: 3,
+                ),
+                validator: (value) {
+                  final count = int.tryParse(value ?? '');
+                  return count == null || count < 2 || count > 1200
+                      ? 'Informe de 2 a 1200 meses.'
+                      : null;
+                },
+              ),
+            ],
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                _isIncome
+                    ? 'A renda aparece em cada mês e pode ser alterada a qualquer momento no Extrato.'
+                    : 'As previsões aparecem no mês consultado. Cada mês tem seu próprio pagamento.',
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          CategoryField(
+            kind: _kind,
+            categories: _categories,
+            controller: _category,
+            enabled: !_saving,
+            errorText: _categoryError,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _notes,
+            enabled: !_saving,
+            minLines: 1,
+            maxLines: 3,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              labelText: 'Observação (opcional)',
+              hintText: _text.notesHint,
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (_hasInstallments && _installmentCount != null)
+            Text(
+              '${_isIncome ? 'Último recebimento' : 'Última parcela'}: ${AppFormatters.date.format(monthlyDueDate(_dueDate, _installmentCount! - 1, day: _dueDay))}',
+            ),
+          if (_amountValue != null)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(_previewText(_amountValue!)),
+              ),
+            ),
+        ],
       ),
     ),
   );

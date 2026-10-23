@@ -238,12 +238,17 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
       resizeToAvoidBottomInset: false,
       body: Column(
         children: [
-          MainHeader(
-            profile: _profile,
-            entries: _headerEntries,
-            onOpenProfile: _openProfile,
-            onOpenNotifications: _openNotifications,
-          ),
+          // Com o teclado aberto o cabeçalho sai para o formulário ter espaço
+          // em telas pequenas; fica só a área da barra de status.
+          if (MediaQuery.viewInsetsOf(context).bottom > 0)
+            SizedBox(height: MediaQuery.paddingOf(context).top)
+          else
+            MainHeader(
+              profile: _profile,
+              entries: _headerEntries,
+              onOpenProfile: _openProfile,
+              onOpenNotifications: _openNotifications,
+            ),
           // O cabeçalho já reserva a barra de status; sem isso cada tela
           // interna somaria o mesmo espaço de novo acima da própria AppBar.
           Expanded(
