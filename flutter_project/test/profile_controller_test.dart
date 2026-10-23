@@ -1,7 +1,9 @@
 import 'dart:typed_data';
+
 import 'package:financafacil/features/profile/data/profile_photo_store.dart';
 import 'package:financafacil/features/profile/presentation/profile_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'support/fake_repositories.dart';
 
 class _Photos extends ProfilePhotoStore {
@@ -27,30 +29,34 @@ class _Photos extends ProfilePhotoStore {
 }
 
 void main() {
-  test('avatar é carregado uma vez e compartilhado entre consumidores',
-      () async {
-    final store = _Photos();
-    final c = ProfileController(FakeProfileRepository(), photos: store);
-    addTearDown(c.dispose);
-    await Future.wait([c.loadPhoto(), c.loadPhoto()]);
-    await c.loadPhoto();
-    expect(store.loads, 1);
-  });
-  test('salvar/remover foto notifica estado somente depois de persistir',
-      () async {
-    final store = _Photos();
-    final c = ProfileController(FakeProfileRepository(), photos: store);
-    addTearDown(c.dispose);
-    var changes = 0;
-    c.addListener(() => changes++);
-    final bytes = Uint8List.fromList([1, 2, 3]);
-    await c.savePhoto(bytes);
-    expect(c.photo, bytes);
-    expect(changes, 1);
-    await c.removePhoto();
-    expect(c.photo, isNull);
-    expect(changes, 2);
-  });
+  test(
+    'avatar é carregado uma vez e compartilhado entre consumidores',
+    () async {
+      final store = _Photos();
+      final c = ProfileController(FakeProfileRepository(), photos: store);
+      addTearDown(c.dispose);
+      await Future.wait([c.loadPhoto(), c.loadPhoto()]);
+      await c.loadPhoto();
+      expect(store.loads, 1);
+    },
+  );
+  test(
+    'salvar/remover foto notifica estado somente depois de persistir',
+    () async {
+      final store = _Photos();
+      final c = ProfileController(FakeProfileRepository(), photos: store);
+      addTearDown(c.dispose);
+      var changes = 0;
+      c.addListener(() => changes++);
+      final bytes = Uint8List.fromList([1, 2, 3]);
+      await c.savePhoto(bytes);
+      expect(c.photo, bytes);
+      expect(changes, 1);
+      await c.removePhoto();
+      expect(c.photo, isNull);
+      expect(changes, 2);
+    },
+  );
   test('falha de persistência preserva avatar anterior', () async {
     final store = _Photos();
     final c = ProfileController(FakeProfileRepository(), photos: store);

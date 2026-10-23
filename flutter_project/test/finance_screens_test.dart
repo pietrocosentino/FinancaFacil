@@ -15,42 +15,54 @@ void main() {
   setUpAll(() async {
     await initializeDateFormatting('pt_BR');
   });
-  testWidgets('cartão não transborda com descrição longa e fonte grande',
-      (tester) async {
+  testWidgets('cartão não transborda com descrição longa e fonte grande', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(320, 700);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(
+      MaterialApp(
         home: MediaQuery(
-            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
-            child: Scaffold(
-                body: SingleChildScrollView(
-                    child: FinanceEntryCard(
-                        entry: FinanceEntry(
-              id: '1',
-              kind: TransactionKind.expense,
-              amount: 123456789,
-              description:
-                  'Descrição muito longa para uma conta recorrente de aluguel residencial',
-              dueDate: DateTime(2026, 10, 31),
-              categoryName: 'Moradia',
-              isPaid: false,
-              isRecurring: true,
-              installment: 3,
-              totalInstallments: 12,
-              lastDue: DateTime(2027, 7, 31),
-            )))))));
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: Scaffold(
+            body: SingleChildScrollView(
+              child: FinanceEntryCard(
+                entry: FinanceEntry(
+                  id: '1',
+                  kind: TransactionKind.expense,
+                  amount: 123456789,
+                  description: 'Descrição muito longa para uma conta recorrente de aluguel residencial',
+                  dueDate: DateTime(2026, 10, 31),
+                  categoryName: 'Moradia',
+                  isPaid: false,
+                  isRecurring: true,
+                  installment: 3,
+                  totalInstallments: 12,
+                  lastDue: DateTime(2027, 7, 31),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
     expect(tester.takeException(), isNull);
   });
-  testWidgets('menu permanece no novo lançamento e permite abrir perfil',
-      (tester) async {
+  testWidgets('menu permanece no novo lançamento e permite abrir perfil', (
+    tester,
+  ) async {
     final finance = FakeFinanceRepository();
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(
+      MaterialApp(
         theme: ThemeData.dark(),
         home: MainLayout(
-            financeRepository: finance,
-            profileRepository: FakeProfileRepository())));
+          financeRepository: finance,
+          profileRepository: FakeProfileRepository(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Finanças'));
     await tester.pumpAndSettle();
@@ -64,29 +76,36 @@ void main() {
     expect(find.text('pietro@example.com'), findsNothing);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('recorrência sem fim envia uma regra sem quantidade de parcelas',
-      (tester) async {
-    final repository = FakeFinanceRepository();
-    await tester.pumpWidget(
-        MaterialApp(home: AddTransactionScreen(repository: repository)));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-        find.widgetWithText(TextFormField, 'Valor'), '500,00');
-    await tester.enterText(
+  testWidgets(
+    'recorrência sem fim envia uma regra sem quantidade de parcelas',
+    (tester) async {
+      final repository = FakeFinanceRepository();
+      await tester.pumpWidget(
+        MaterialApp(home: AddTransactionScreen(repository: repository)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor'),
+        '500,00',
+      );
+      await tester.enterText(
         find.widgetWithText(TextFormField, 'Nome da conta ou renda'),
-        'Aluguel');
-    await tester.tap(find.text('Todo mês'));
-    await tester.pumpAndSettle();
-    final save = find.text('Salvar conta mensal');
-    await tester.ensureVisible(save);
-    await tester.tap(save);
-    await tester.pumpAndSettle();
-    expect(repository.saved?.isRecurring, true);
-    expect(repository.saved?.totalInstallments, isNull);
-    expect(repository.saved?.amount, 500);
-  });
-  testWidgets('dashboard estreito com fonte grande não transborda',
-      (tester) async {
+        'Aluguel',
+      );
+      await tester.tap(find.text('Todo mês'));
+      await tester.pumpAndSettle();
+      final save = find.text('Salvar conta mensal');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(repository.saved?.isRecurring, true);
+      expect(repository.saved?.totalInstallments, isNull);
+      expect(repository.saved?.amount, 500);
+    },
+  );
+  testWidgets('dashboard estreito com fonte grande não transborda', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(320, 700);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -94,30 +113,39 @@ void main() {
     final repository = FakeFinanceRepository();
     repository.entries = [
       FinanceEntry(
-          id: '1',
-          kind: TransactionKind.expense,
-          amount: 500,
-          description: 'Aluguel',
-          dueDate: DateTime.now(),
-          categoryName: 'Categoria com nome bastante longo',
-          isPaid: false)
+        id: '1',
+        kind: TransactionKind.expense,
+        amount: 500,
+        description: 'Aluguel',
+        dueDate: DateTime.now(),
+        categoryName: 'Categoria com nome bastante longo',
+        isPaid: false,
+      ),
     ];
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(
+      MaterialApp(
         home: MediaQuery(
-            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
-            child: DashboardScreen(
-                repository: repository))));
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: DashboardScreen(repository: repository),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
-  testWidgets('painel aceita inicialização concluída sem valor de retorno',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
+  testWidgets('painel aceita inicialização concluída sem valor de retorno', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
         home: AsyncPanel<void>(
-            future: Future<void>.value(),
-            onRetry: () {},
-            errorMessage: 'Falhou',
-            builder: (_) => const Text('Pronto'))));
+          future: Future<void>.value(),
+          onRetry: () {},
+          errorMessage: 'Falhou',
+          builder: (_) => const Text('Pronto'),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Pronto'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -127,16 +155,18 @@ void main() {
     final repository = FakeFinanceRepository();
     repository.entries = [
       FinanceEntry(
-          id: 'one',
-          kind: TransactionKind.expense,
-          amount: 500,
-          description: 'Aluguel',
-          dueDate: DateTime.now(),
-          categoryName: 'Moradia',
-          isPaid: false)
+        id: 'one',
+        kind: TransactionKind.expense,
+        amount: 500,
+        description: 'Aluguel',
+        dueDate: DateTime.now(),
+        categoryName: 'Moradia',
+        isPaid: false,
+      ),
     ];
     await tester.pumpWidget(
-        MaterialApp(home: TransactionsListScreen(repository: repository)));
+      MaterialApp(home: TransactionsListScreen(repository: repository)),
+    );
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byType(Checkbox));
     await tester.pumpAndSettle();
@@ -150,21 +180,24 @@ void main() {
     expect(repository.paidIds, {'one'});
     expect(tester.takeException(), isNull);
   });
-  testWidgets('edição de valor aceita centavos em formato brasileiro',
-      (tester) async {
+  testWidgets('edição de valor aceita centavos em formato brasileiro', (
+    tester,
+  ) async {
     final repository = FakeFinanceRepository();
     repository.entries = [
       FinanceEntry(
-          id: 'one',
-          kind: TransactionKind.expense,
-          amount: 500,
-          description: 'Aluguel',
-          dueDate: DateTime.now(),
-          categoryName: 'Moradia',
-          isPaid: false)
+        id: 'one',
+        kind: TransactionKind.expense,
+        amount: 500,
+        description: 'Aluguel',
+        dueDate: DateTime.now(),
+        categoryName: 'Moradia',
+        isPaid: false,
+      ),
     ];
     await tester.pumpWidget(
-        MaterialApp(home: TransactionsListScreen(repository: repository)));
+      MaterialApp(home: TransactionsListScreen(repository: repository)),
+    );
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byType(PopupMenuButton<String>));
     await tester.pumpAndSettle();

@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
+
 import '../domain/import_models.dart';
 
 /// Leitor limitado ao modelo de importação. Nunca executa fórmulas ou macros.
@@ -42,18 +44,24 @@ class XlsxImportReader {
       }
 
       final workbook = xml('xl/workbook.xml');
-      final sheets = workbook.named('sheet').where((sheet) =>
-          normalizeImportText(sheet.getAttribute('name') ?? '') ==
-          'lancamentos');
+      final sheets = workbook
+          .named('sheet')
+          .where(
+            (sheet) =>
+                normalizeImportText(sheet.getAttribute('name') ?? '') ==
+                'lancamentos',
+          );
       if (sheets.length != 1) {
         throw const FormatException('Use o modelo com a aba Lançamentos.');
       }
-      final relationship = sheets.single.getAttribute('id',
-          namespace:
-              'http://schemas.openxmlformats.org/officeDocument/2006/relationships');
+      final relationship = sheets.single.getAttribute(
+        'id',
+        namespace: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+      );
       final links = xml('xl/_rels/workbook.xml.rels').named('Relationship');
-      final matches =
-          links.where((link) => link.getAttribute('Id') == relationship);
+      final matches = links.where(
+        (link) => link.getAttribute('Id') == relationship,
+      );
       if (matches.length != 1 ||
           matches.single.getAttribute('TargetMode') == 'External') {
         throw const FormatException('Aba de lançamentos inválida.');
@@ -65,9 +73,9 @@ class XlsxImportReader {
       final path = target.startsWith('/') ? target.substring(1) : 'xl/$target';
       final shared = files.containsKey('xl/sharedStrings.xml')
           ? xml('xl/sharedStrings.xml')
-              .named('si')
-              .map((si) => si.named('t').map((t) => t.innerText).join())
-              .toList()
+                .named('si')
+                .map((si) => si.named('t').map((t) => t.innerText).join())
+                .toList()
           : <String>[];
       final date1904 = workbook
           .named('workbookPr')
@@ -98,7 +106,8 @@ class XlsxImportReader {
           }
           if (column > 100 || cells.containsKey(column)) {
             throw const FormatException(
-                'Use uma planilha com até 100 colunas.');
+              'Use uma planilha com até 100 colunas.',
+            );
           }
           final formula = cell.childrenNamed('f').isNotEmpty;
           if (formula) hasFormula = true;
@@ -133,15 +142,17 @@ class XlsxImportReader {
           }
           cells[column] = decoded;
         }
-        if (cells.values
-                .every((v) => v == null || v.toString().trim().isEmpty) &&
+        if (cells.values.every(
+              (v) => v == null || v.toString().trim().isEmpty,
+            ) &&
             !hasFormula) {
           continue;
         }
         if (!foundHeader) {
           if (hasFormula) {
             throw const FormatException(
-                'Cabeçalhos não podem conter fórmulas.');
+              'Cabeçalhos não podem conter fórmulas.',
+            );
           }
           for (final entry in cells.entries) {
             final field =
@@ -154,13 +165,14 @@ class XlsxImportReader {
           }
           if (!headers.values.take(7).every(mapping.containsValue)) {
             throw const FormatException(
-                'Cabeçalhos diferentes do modelo. Baixe o modelo de importação.');
+              'Cabeçalhos diferentes do modelo. Baixe o modelo de importação.',
+            );
           }
           foundHeader = true;
           continue;
         }
         final values = {
-          for (final entry in mapping.entries) entry.value: cells[entry.key]
+          for (final entry in mapping.entries) entry.value: cells[entry.key],
         };
         final serial = values['due_date'];
         if (serial is num &&
@@ -169,19 +181,21 @@ class XlsxImportReader {
             serial <= 73416 &&
             (date1904 || serial.floor() != 60)) {
           values['due_date'] = DateTime.utc(
-                  date1904 ? 1904 : 1899, date1904 ? 1 : 12, date1904 ? 1 : 30)
-              .add(Duration(days: serial.floor()));
+            date1904 ? 1904 : 1899,
+            date1904 ? 1 : 12,
+            date1904 ? 1 : 30,
+          ).add(Duration(days: serial.floor()));
         }
         final parsed = ImportLine(line, values);
         if (hasFormula) {
-          parsed.sourceError =
-              'Fórmula ou erro de Excel: substitua por valores na planilha e selecione o arquivo novamente.';
+          parsed.sourceError = 'Fórmula ou erro de Excel: substitua por valores na planilha e selecione o arquivo novamente.';
           parsed.selected = false;
         }
         result.add(parsed);
         if (result.length > maxRows) {
           throw const FormatException(
-              'Importe até 500 lançamentos por arquivo.');
+            'Importe até 500 lançamentos por arquivo.',
+          );
         }
       }
       if (result.isEmpty) {
@@ -192,7 +206,8 @@ class XlsxImportReader {
       rethrow;
     } catch (_) {
       throw const FormatException(
-          'Não foi possível ler este Excel. Use um arquivo .xlsx sem senha.');
+        'Não foi possível ler este Excel. Use um arquivo .xlsx sem senha.',
+      );
     }
   }
 
@@ -228,9 +243,11 @@ class XlsxImportReader {
       if (total > _maxExpandedBytes ||
           (data.getUint16(position + 8, Endian.little) & 1) != 0) {
         throw const FormatException(
-            'Excel muito grande ou protegido por senha.');
+          'Excel muito grande ou protegido por senha.',
+        );
       }
-      position += 46 +
+      position +=
+          46 +
           data.getUint16(position + 28, Endian.little) +
           data.getUint16(position + 30, Endian.little) +
           data.getUint16(position + 32, Endian.little);

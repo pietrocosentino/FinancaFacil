@@ -14,7 +14,9 @@ FutureAmountTarget? futureAmountTarget(FinanceEntry entry, DateTime now) {
   if (reference == null) return null;
   final current = DateTime(now.year, now.month);
   final start = DateTime(
-      reference.month.year, reference.month.month + (entry.isPaid ? 1 : 0));
+    reference.month.year,
+    reference.month.month + (entry.isPaid ? 1 : 0),
+  );
   final month = start.isBefore(current) ? current : start;
   final last = entry.lastDue;
   if (last != null && month.isAfter(DateTime(last.year, last.month))) {
@@ -27,6 +29,9 @@ FutureAmountTarget? futureAmountTarget(FinanceEntry entry, DateTime now) {
     return null;
   }
   final target = RecurrenceReference(reference.ruleId, month);
-  return FutureAmountTarget('r:${reference.ruleId}:${target.databaseMonth}',
-      month, !entry.isPaid && month == reference.month);
+  return FutureAmountTarget(
+    'r:${reference.ruleId}:${target.databaseMonth}',
+    month,
+    !entry.isPaid && month == reference.month,
+  );
 }

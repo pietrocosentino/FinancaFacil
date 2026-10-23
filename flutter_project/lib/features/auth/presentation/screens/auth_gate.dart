@@ -25,32 +25,36 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
     _session = AppServices.session;
-    _authSubscription = _session.changes.listen((event) {
-      if (!mounted) return;
-      setState(() {
-        _error = null;
-        if (event == SessionEvent.passwordRecovery) _recovery = true;
-        if (event == SessionEvent.signedOut) {
-          _recovery = false;
-          unawaited(AppServices.reminders.clear().catchError((Object _) {}));
-        }
-      });
-    }, onError: (Object error) {
-      if (mounted) {
+    _authSubscription = _session.changes.listen(
+      (event) {
+        if (!mounted) return;
         setState(() {
-          _recovery = false;
-          _error =
-              'Não foi possível validar o link. Solicite um novo e tente novamente.';
+          _error = null;
+          if (event == SessionEvent.passwordRecovery) _recovery = true;
+          if (event == SessionEvent.signedOut) {
+            _recovery = false;
+            unawaited(AppServices.reminders.clear().catchError((Object _) {}));
+          }
         });
-      }
-    });
+      },
+      onError: (Object error) {
+        if (mounted) {
+          setState(() {
+            _recovery = false;
+            _error = 'Não foi possível validar o link. Solicite um novo e tente novamente.';
+          });
+        }
+      },
+    );
     final links = AppLinks();
-    _linkSubscription =
-        links.uriLinkStream.listen(_handleLink, onError: (Object error) {
-      if (mounted) {
-        setState(() => _error = 'Não foi possível abrir o link de acesso.');
-      }
-    });
+    _linkSubscription = links.uriLinkStream.listen(
+      _handleLink,
+      onError: (Object error) {
+        if (mounted) {
+          setState(() => _error = 'Não foi possível abrir o link de acesso.');
+        }
+      },
+    );
     _readInitialLink(links);
   }
 
@@ -77,8 +81,10 @@ class _AuthGateState extends State<AuthGate> {
       if (mounted) setState(() => _recovery = false);
     } catch (_) {
       if (mounted) {
-        setState(() => _error =
-            'Não foi possível encerrar a recuperação. Tente novamente.');
+        setState(
+          () => _error =
+              'Não foi possível encerrar a recuperação. Tente novamente.',
+        );
       }
     }
   }
@@ -96,37 +102,50 @@ class _AuthGateState extends State<AuthGate> {
     final child = userId == null
         ? const LoginScreen(key: ValueKey('login'))
         : _recovery
-            ? LoginScreen(
-                key: const ValueKey('recovery'),
-                recovery: true,
-                onPasswordUpdated: () => setState(() => _recovery = false),
-                onRecoveryCancelled: _cancelRecovery)
-            : MainLayout(key: ValueKey(userId), userId: userId);
-    return Column(children: [
-      if (_error != null)
-        SafeArea(
+        ? LoginScreen(
+            key: const ValueKey('recovery'),
+            recovery: true,
+            onPasswordUpdated: () => setState(() => _recovery = false),
+            onRecoveryCancelled: _cancelRecovery,
+          )
+        : MainLayout(key: ValueKey(userId), userId: userId);
+    return Column(
+      children: [
+        if (_error != null)
+          SafeArea(
             bottom: false,
             child: Material(
               color: Theme.of(context).colorScheme.errorContainer,
               child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(children: [
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
                     Expanded(
-                        child: Semantics(
-                            liveRegion: true,
-                            child: Text(_error!,
-                                style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onErrorContainer)))),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          _error!,
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ),
                     IconButton(
-                        tooltip: 'Fechar aviso',
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                        onPressed: () => setState(() => _error = null),
-                        icon: const Icon(Icons.close)),
-                  ])),
-            )),
-      Expanded(child: child),
-    ]);
+                      tooltip: 'Fechar aviso',
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                      onPressed: () => setState(() => _error = null),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        Expanded(child: child),
+      ],
+    );
   }
 }

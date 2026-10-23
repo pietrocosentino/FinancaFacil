@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../core/utils/finance_updates.dart';
 import '../domain/finance_models.dart';
 import '../domain/recurrence.dart';
@@ -18,7 +19,7 @@ abstract class FinanceRepository {
 
 class SupabaseFinanceRepository implements FinanceRepository {
   SupabaseFinanceRepository(this._client, {DateTime Function()? now})
-      : _now = now ?? DateTime.now;
+    : _now = now ?? DateTime.now;
   final SupabaseClient _client;
   final DateTime Function() _now;
   static const _pageSize = 500;
@@ -30,7 +31,8 @@ class SupabaseFinanceRepository implements FinanceRepository {
   Future<_FinanceSnapshot> _snapshot() async {
     final owner = _userId;
     final revision = financeRevision.value;
-    final fresh = _snapshotLoadedAt != null &&
+    final fresh =
+        _snapshotLoadedAt != null &&
         _now().difference(_snapshotLoadedAt!) < const Duration(minutes: 2);
     if (_snapshotFuture == null ||
         _snapshotOwner != owner ||
@@ -59,12 +61,14 @@ class SupabaseFinanceRepository implements FinanceRepository {
       categories(TransactionKind.income),
     ]);
     return _FinanceSnapshot(
-        List<Map<String, dynamic>>.from(parts[0] as List),
-        List<Map<String, dynamic>>.from(parts[1] as List),
-        List<Map<String, dynamic>>.from(parts[2] as List), [
-      ...parts[3] as List<FinanceCategory>,
-      ...parts[4] as List<FinanceCategory>
-    ]);
+      List<Map<String, dynamic>>.from(parts[0] as List),
+      List<Map<String, dynamic>>.from(parts[1] as List),
+      List<Map<String, dynamic>>.from(parts[2] as List),
+      [
+        ...parts[3] as List<FinanceCategory>,
+        ...parts[4] as List<FinanceCategory>,
+      ],
+    );
   }
 
   String get _userId {
@@ -73,8 +77,10 @@ class SupabaseFinanceRepository implements FinanceRepository {
     return user.id;
   }
 
-  Future<List<Map<String, dynamic>>> _read(String table,
-      {String select = '*'}) async {
+  Future<List<Map<String, dynamic>>> _read(
+    String table, {
+    String select = '*',
+  }) async {
     final owner = _userId;
     final rows = <Map<String, dynamic>>[];
     var offset = 0;
@@ -124,20 +130,21 @@ class SupabaseFinanceRepository implements FinanceRepository {
     final overrides = snapshot.occurrences;
     final categoryRows = snapshot.categories;
     final names = {
-      for (final category in categoryRows) category.id: category.name
+      for (final category in categoryRows) category.id: category.name,
     };
     final projected = projectRecurrences(rules, overrides, through);
     for (final row in projected) {
       row['category'] = {
-        'name': names[row['category_id'].toString()] ?? 'Sem categoria'
+        'name': names[row['category_id'].toString()] ?? 'Sem categoria',
       };
     }
     final today = _now();
-    return [...legacy, ...projected]
-        .map((row) => FinanceEntry.fromMap(row, today: today))
-        .toList()
-      ..sort((a, b) =>
-          (b.dueDate ?? DateTime(0)).compareTo(a.dueDate ?? DateTime(0)));
+    return [
+      ...legacy,
+      ...projected,
+    ].map((row) => FinanceEntry.fromMap(row, today: today)).toList()..sort(
+      (a, b) => (b.dueDate ?? DateTime(0)).compareTo(a.dueDate ?? DateTime(0)),
+    );
   }
 
   @override
@@ -188,11 +195,14 @@ class SupabaseFinanceRepository implements FinanceRepository {
     if (reference == null) {
       throw const FormatException('Conta sem recorrência mensal.');
     }
-    await _client.rpc('set_recurrence_future_amount', params: {
-      'p_rule_id': reference.ruleId,
-      'p_from_month': reference.databaseMonth,
-      'p_amount': amount
-    });
+    await _client.rpc(
+      'set_recurrence_future_amount',
+      params: {
+        'p_rule_id': reference.ruleId,
+        'p_from_month': reference.databaseMonth,
+        'p_amount': amount,
+      },
+    );
     notifyFinanceChanged();
   }
 
@@ -222,16 +232,20 @@ class SupabaseFinanceRepository implements FinanceRepository {
             .select('id');
         if (updated.length != legacy.length) {
           throw StateError(
-              'Recarregue os lançamentos antes de tentar novamente.');
+            'Recarregue os lançamentos antes de tentar novamente.',
+          );
         }
       }
       for (final reference in recurring) {
-        await _client.rpc('set_recurrence_occurrence', params: {
-          'p_rule_id': reference.ruleId,
-          'p_due_month': reference.databaseMonth,
-          'p_is_paid': isPaid,
-          'p_amount': amount,
-        });
+        await _client.rpc(
+          'set_recurrence_occurrence',
+          params: {
+            'p_rule_id': reference.ruleId,
+            'p_due_month': reference.databaseMonth,
+            'p_is_paid': isPaid,
+            'p_amount': amount,
+          },
+        );
       }
     } finally {
       // Recarrega também quando apenas parte do lote foi confirmada.
@@ -262,7 +276,11 @@ class SupabaseFinanceRepository implements FinanceRepository {
 /// Apenas um conjunto de dados por conta/revisão, compartilhado entre consultas.
 class _FinanceSnapshot {
   const _FinanceSnapshot(
-      this.transactions, this.rules, this.occurrences, this.categories);
+    this.transactions,
+    this.rules,
+    this.occurrences,
+    this.categories,
+  );
   final List<Map<String, dynamic>> transactions;
   final List<Map<String, dynamic>> rules;
   final List<Map<String, dynamic>> occurrences;

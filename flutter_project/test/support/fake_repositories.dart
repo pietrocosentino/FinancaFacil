@@ -16,6 +16,7 @@ class FakeFinanceRepository implements FinanceRepository {
     deletedId = id;
     entries.removeWhere((entry) => entry.id == id);
   }
+
   @override
   Future<List<FinanceEntry>> transactions(DateTime through) async => entries;
   @override
@@ -32,27 +33,30 @@ class FakeFinanceRepository implements FinanceRepository {
   Future<void> markPaid(Set<String> ids) async {
     paidIds = ids;
     entries = entries
-        .map((entry) => FinanceEntry(
-              id: entry.id,
-              kind: entry.kind,
-              amount: entry.amount,
-              description: entry.description,
-              dueDate: entry.dueDate,
-              categoryName: entry.categoryName,
-              isPaid: ids.contains(entry.id) || entry.isPaid,
-              notes: entry.notes,
-              isRecurring: entry.isRecurring,
-              installment: entry.installment,
-              totalInstallments: entry.totalInstallments,
-              lastDue: entry.lastDue,
-            ))
+        .map(
+          (entry) => FinanceEntry(
+            id: entry.id,
+            kind: entry.kind,
+            amount: entry.amount,
+            description: entry.description,
+            dueDate: entry.dueDate,
+            categoryName: entry.categoryName,
+            isPaid: ids.contains(entry.id) || entry.isPaid,
+            notes: entry.notes,
+            isRecurring: entry.isRecurring,
+            installment: entry.installment,
+            totalInstallments: entry.totalInstallments,
+            lastDue: entry.lastDue,
+          ),
+        )
         .toList();
   }
 
   @override
   Future<void> markPending(Set<String> ids) async {
     entries = entries
-        .map((e) => FinanceEntry(
+        .map(
+          (e) => FinanceEntry(
             id: e.id,
             kind: e.kind,
             amount: e.amount,
@@ -64,7 +68,9 @@ class FakeFinanceRepository implements FinanceRepository {
             isRecurring: e.isRecurring,
             installment: e.installment,
             totalInstallments: e.totalInstallments,
-            lastDue: e.lastDue))
+            lastDue: e.lastDue,
+          ),
+        )
         .toList();
   }
 
@@ -84,11 +90,17 @@ class FakeFinanceRepository implements FinanceRepository {
 class FakeProfileRepository implements ProfileRepository {
   @override
   UserProfileData? currentProfile = const UserProfileData(
-      name: 'Pietro', email: 'pietro@example.com', phone: '11999999999');
+    name: 'Pietro',
+    email: 'pietro@example.com',
+    phone: '11999999999',
+  );
   @override
   Future<void> update(String name, String phone) async {
-    currentProfile =
-        UserProfileData(name: name, email: currentProfile!.email, phone: phone);
+    currentProfile = UserProfileData(
+      name: name,
+      email: currentProfile!.email,
+      phone: phone,
+    );
   }
 
   @override
@@ -99,10 +111,12 @@ class FakeProfileRepository implements ProfileRepository {
 
 class FakeReminderService implements ReminderService {
   @override
-  final status = ValueNotifier(const ReminderStatus(
+  final status = ValueNotifier(
+    const ReminderStatus(
       enabled: true,
-      message:
-          'Lembretes preparados. Abra o app periodicamente para renovar os próximos vencimentos.'));
+      message: 'Lembretes preparados. Abra o app periodicamente para renovar os próximos vencimentos.',
+    ),
+  );
   @override
   final openRequested = ValueNotifier(false);
   List<FinanceEntry>? cached;

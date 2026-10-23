@@ -20,10 +20,13 @@ List<Map<String, dynamic>> projectRecurrences(
     final dueDay = (rule['due_day'] as num?)?.toInt() ?? first.day;
     final count = (rule['total_installments'] as num?)?.toInt();
     final template = Map<String, dynamic>.from(rule['template'] as Map);
-    final futureAmounts = List<Map<String, dynamic>>.from(
-        template['future_amounts'] as List? ?? [])
-      ..sort((a, b) =>
-          a['from_month'].toString().compareTo(b['from_month'].toString()));
+    final futureAmounts =
+        List<Map<String, dynamic>>.from(
+          template['future_amounts'] as List? ?? [],
+        )..sort(
+          (a, b) =>
+              a['from_month'].toString().compareTo(b['from_month'].toString()),
+        );
     final months =
         (through.year - first.year) * 12 + through.month - first.month;
     if (months > 1200) throw StateError('Período de recorrência inválido.');

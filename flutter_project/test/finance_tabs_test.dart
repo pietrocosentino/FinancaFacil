@@ -5,17 +5,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'support/fake_repositories.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
   setUp(() => SharedPreferences.setMockInitialValues({}));
-  testWidgets('Finanças cadastra e Extrato consulta sem ações de cadastro',
-      (t) async {
-    await t.pumpWidget(MaterialApp(
+  testWidgets('Finanças cadastra e Extrato consulta sem ações de cadastro', (
+    t,
+  ) async {
+    await t.pumpWidget(
+      MaterialApp(
         home: MainLayout(
-            financeRepository: FakeFinanceRepository(),
-            profileRepository: FakeProfileRepository())));
+          financeRepository: FakeFinanceRepository(),
+          profileRepository: FakeProfileRepository(),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
     final nav = find.byType(BottomNavigationBar);
     expect(t.widget<BottomNavigationBar>(nav).items.length, 4);
@@ -27,10 +33,11 @@ void main() {
     await t.tap(find.text('Adicionar renda'));
     await t.pumpAndSettle();
     expect(
-        t
-            .widget<AddTransactionScreen>(find.byType(AddTransactionScreen))
-            .initialKind,
-        TransactionKind.income);
+      t
+          .widget<AddTransactionScreen>(find.byType(AddTransactionScreen))
+          .initialKind,
+      TransactionKind.income,
+    );
     await t.tap(find.descendant(of: nav, matching: find.text('Extrato')));
     await t.pumpAndSettle();
     expect(find.text('Adicionar conta'), findsNothing);

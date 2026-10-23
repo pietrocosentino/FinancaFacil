@@ -95,77 +95,81 @@ class ImportLine {
   }
 
   List<String> errors(List<FinanceCategory> categories) => [
-        if (sourceError != null) sourceError!,
-        if (text('description').isEmpty || text('description').length > 160)
-          'Descrição obrigatória, com até 160 caracteres.',
-        if (kind == null) 'Tipo deve ser Receita ou Despesa.',
-        if (amount == null) 'Valor positivo, com até duas casas decimais.',
-        if (due == null || due!.year < 2020 || due!.year > 2100)
-          'Vencimento válido entre 2020 e 2100: DD/MM/AAAA.',
-        if (recurring == null) 'Recorrente deve ser Sim ou Não.',
-        if (text('months').isNotEmpty &&
-            (months == null || months! < 2 || months! > 1200))
-          'Quantidade de meses: de 2 a 1200, ou vazia para não ter fim.',
-        if (recurring == false && text('months').isNotEmpty)
-          'Lançamento avulso não possui quantidade de meses.',
-        if (day == null || day! < 1 || day! > 31)
-          'Dia de vencimento deve ser de 1 a 31.',
-        if (recurring == false && text('due_day').isNotEmpty && day != due?.day)
-          'No lançamento avulso, o dia deve corresponder à data.',
-        if (recurring == true &&
-            due != null &&
-            day != null &&
-            day! >= 1 &&
-            day! <= 31 &&
-            monthlyDueDate(due!, 0, day: day).day != due!.day)
-          'O primeiro vencimento deve corresponder ao dia mensal escolhido.',
-        if (!categories.any((category) => category.id == categoryId))
-          'Escolha uma categoria para este tipo de lançamento.',
-        if (text('notes').length > 1000) 'Observações: até 1000 caracteres.',
-      ];
+    if (sourceError != null) sourceError!,
+    if (text('description').isEmpty || text('description').length > 160)
+      'Descrição obrigatória, com até 160 caracteres.',
+    if (kind == null) 'Tipo deve ser Receita ou Despesa.',
+    if (amount == null) 'Valor positivo, com até duas casas decimais.',
+    if (due == null || due!.year < 2020 || due!.year > 2100)
+      'Vencimento válido entre 2020 e 2100: DD/MM/AAAA.',
+    if (recurring == null) 'Recorrente deve ser Sim ou Não.',
+    if (text('months').isNotEmpty &&
+        (months == null || months! < 2 || months! > 1200))
+      'Quantidade de meses: de 2 a 1200, ou vazia para não ter fim.',
+    if (recurring == false && text('months').isNotEmpty)
+      'Lançamento avulso não possui quantidade de meses.',
+    if (day == null || day! < 1 || day! > 31)
+      'Dia de vencimento deve ser de 1 a 31.',
+    if (recurring == false && text('due_day').isNotEmpty && day != due?.day)
+      'No lançamento avulso, o dia deve corresponder à data.',
+    if (recurring == true &&
+        due != null &&
+        day != null &&
+        day! >= 1 &&
+        day! <= 31 &&
+        monthlyDueDate(due!, 0, day: day).day != due!.day)
+      'O primeiro vencimento deve corresponder ao dia mensal escolhido.',
+    if (!categories.any((category) => category.id == categoryId))
+      'Escolha uma categoria para este tipo de lançamento.',
+    if (text('notes').length > 1000) 'Observações: até 1000 caracteres.',
+  ];
 
   void matchCategory(List<FinanceCategory> categories) {
-    final matches = categories.where((category) =>
-        normalizeImportText(category.name) ==
-        normalizeImportText(text('category')));
+    final matches = categories.where(
+      (category) =>
+          normalizeImportText(category.name) ==
+          normalizeImportText(text('category')),
+    );
     categoryId = matches.length == 1 ? matches.single.id : null;
   }
 
   Map<String, Object?> get payload => {
-        'line': line,
-        'description': text('description'),
-        'type': kind!.databaseValue,
-        'amount': amount!,
-        'due_date': importDate(due!),
-        'due_day': day!,
-        'recurring': recurring!,
-        'months': months,
-        'category_id': categoryId!,
-        'notes': text('notes'),
-      };
+    'line': line,
+    'description': text('description'),
+    'type': kind!.databaseValue,
+    'amount': amount!,
+    'due_date': importDate(due!),
+    'due_day': day!,
+    'recurring': recurring!,
+    'months': months,
+    'category_id': categoryId!,
+    'notes': text('notes'),
+  };
 
   String get signature =>
       '${kind?.databaseValue}|${normalizeImportText(text('description'))}|$amount|${due == null ? '' : importDate(due!)}|$recurring|$months|$day|$categoryId';
 }
 
 class ImportBatch {
-  const ImportBatch(
-      {required this.id,
-      required this.name,
-      required this.count,
-      required this.createdAt,
-      required this.active});
+  const ImportBatch({
+    required this.id,
+    required this.name,
+    required this.count,
+    required this.createdAt,
+    required this.active,
+  });
   final String id;
   final String name;
   final int count;
   final DateTime createdAt;
   final bool active;
   factory ImportBatch.fromMap(Map<String, dynamic> map) => ImportBatch(
-      id: map['id'].toString(),
-      name: map['file_name'].toString(),
-      count: (map['row_count'] as num).toInt(),
-      createdAt: DateTime.parse(map['created_at'].toString()),
-      active: map['status'] == 'active');
+    id: map['id'].toString(),
+    name: map['file_name'].toString(),
+    count: (map['row_count'] as num).toInt(),
+    createdAt: DateTime.parse(map['created_at'].toString()),
+    active: map['status'] == 'active',
+  );
 }
 
 class ImportReceipt {

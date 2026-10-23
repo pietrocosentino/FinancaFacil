@@ -12,33 +12,37 @@ void main() {
 
   for (final dark in [false, true]) {
     testWidgets(
-        'ações visíveis e cadastro acessível no tema ${dark ? "escuro" : "claro"}',
-        (tester) async {
-      tester.view.physicalSize = const Size(360, 720);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(MaterialApp(
-        theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
-        home: TransactionsListScreen(repository: FakeFinanceRepository()),
-      ));
-      await tester.pumpAndSettle();
-      final upload = find.text('Importar planilha');
-      final add = find.text('Adicionar');
-      expect(upload.hitTestable(), findsOneWidget);
-      expect(add.hitTestable(), findsOneWidget);
-      final button = find.ancestor(
+      'ações visíveis e cadastro acessível no tema ${dark ? "escuro" : "claro"}',
+      (tester) async {
+        tester.view.physicalSize = const Size(360, 720);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
+            home: TransactionsListScreen(repository: FakeFinanceRepository()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final upload = find.text('Importar planilha');
+        final add = find.text('Adicionar');
+        expect(upload.hitTestable(), findsOneWidget);
+        expect(add.hitTestable(), findsOneWidget);
+        final button = find.ancestor(
           of: add,
-          matching: find.byWidgetPredicate((widget) => widget is FilledButton));
-      expect(tester.getSize(button).width, lessThan(260));
-      expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
-      await tester.pumpAndSettle();
-      expect(add.hitTestable(), findsOneWidget);
-      await tester.tap(add);
-      await tester.pumpAndSettle();
-      expect(find.byType(AddTransactionScreen), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+          matching: find.byWidgetPredicate((widget) => widget is FilledButton),
+        );
+        expect(tester.getSize(button).width, lessThan(260));
+        expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
+        await tester.pumpAndSettle();
+        expect(add.hitTestable(), findsOneWidget);
+        await tester.tap(add);
+        await tester.pumpAndSettle();
+        expect(find.byType(AddTransactionScreen), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 }

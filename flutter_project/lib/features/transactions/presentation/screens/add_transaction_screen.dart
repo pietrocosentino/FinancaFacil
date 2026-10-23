@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/services/app_services.dart';
 import '../../../../core/utils/finance_utils.dart';
 import '../../../../core/utils/formatters.dart';
@@ -16,11 +17,12 @@ enum _Frequency {
 }
 
 class AddTransactionScreen extends StatefulWidget {
-  const AddTransactionScreen(
-      {super.key,
-      this.repository,
-      this.onEnableReminders,
-      this.initialKind = TransactionKind.expense});
+  const AddTransactionScreen({
+    super.key,
+    this.repository,
+    this.onEnableReminders,
+    this.initialKind = TransactionKind.expense,
+  });
   final TransactionKind initialKind;
   final FinanceRepository? repository;
   final VoidCallback? onEnableReminders;
@@ -64,18 +66,22 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
     if (!_dirty) return true;
     _askingToLeave = true;
     final discard = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-                title: const Text('Descartar cadastro?'),
-                content: const Text('Você tem dados ainda não salvos.'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Continuar preenchendo')),
-                  TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Descartar'))
-                ]));
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Descartar cadastro?'),
+        content: const Text('Você tem dados ainda não salvos.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continuar preenchendo'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
     _askingToLeave = false;
     if (discard == true && mounted) setState(() => _allowExit = true);
     return discard == true;
@@ -144,14 +150,16 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
             context: context,
             initialDate: _dueDate,
             firstDate: DateTime(MonthRange.firstYear),
-            lastDate: DateTime(MonthRange.lastYear, 12, 31));
+            lastDate: DateTime(MonthRange.lastYear, 12, 31),
+          );
     final selected = await picker;
     if (selected != null && mounted) {
       setState(() {
         _detailsChanged = true;
         // O mês inicial muda, mas o dia mensal escolhido continua sendo respeitado.
-        _dueDate =
-            _recurring ? monthlyDueDate(selected, 0, day: _dueDay) : selected;
+        _dueDate = _recurring
+            ? monthlyDueDate(selected, 0, day: _dueDay)
+            : selected;
         if (!_recurring) _dueDay = selected.day;
       });
     }
@@ -165,7 +173,8 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
     setState(() => _saving = true);
     FocusScope.of(context).unfocus();
     try {
-      await _repository.save(TransactionDraft(
+      await _repository.save(
+        TransactionDraft(
           kind: _kind,
           amount: parseMoney(_amount.text)!,
           description: _description.text,
@@ -177,31 +186,45 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
           isRecurring: _recurring,
           totalInstallments: _recurring && _hasInstallments
               ? int.parse(_installments.text)
-              : null));
+              : null,
+        ),
+      );
       if (!mounted) return;
-      _message(_recurring
-          ? 'Conta mensal salva. Consulte em Finanças.'
-          : 'Lançamento salvo.');
+      _message(
+        _recurring
+            ? 'Conta mensal salva. Consulte em Finanças.'
+            : 'Lançamento salvo.',
+      );
       final action = await showDialog<String>(
-          barrierDismissible: false,
-          context: context,
-          builder: (context) => AlertDialog(
-                  title: const Text('Cadastro salvo'),
-                  content: Text(
-                      '${_description.text}\n${AppFormatters.currency.format(parseMoney(_amount.text))}\nPrimeiro vencimento: ${AppFormatters.date.format(_dueDate)}\n\n${_kind == TransactionKind.income && _recurring ? 'A renda será considerada recebida automaticamente na data de cada mês. Você pode editar o valor em Finanças.' : _kind == TransactionKind.income ? 'Consulte sua renda em Finanças.' : 'Confirme cada pagamento em Finanças. Ative os lembretes em Notificações para receber avisos.'}'),
-                  actions: [
-                    FilledButton(
-                        onPressed: () => Navigator.pop(context, 'exit'),
-                        child: const Text('Sair')),
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, 'another'),
-                        child: const Text('Cadastrar outra')),
-                    if (widget.onEnableReminders != null &&
-                        _kind == TransactionKind.expense)
-                      ElevatedButton(
-                          onPressed: () => Navigator.pop(context, 'reminders'),
-                          child: const Text('Configurar lembretes')),
-                  ]));
+        barrierDismissible: false,
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Cadastro salvo'),
+          content: Text(
+            '${_description.text}\n${AppFormatters.currency.format(parseMoney(_amount.text))}\nPrimeiro vencimento: ${AppFormatters.date.format(_dueDate)}\n\n${_kind == TransactionKind.income && _recurring
+                ? 'A renda será considerada recebida automaticamente na data de cada mês. Você pode editar o valor em Finanças.'
+                : _kind == TransactionKind.income
+                ? 'Consulte sua renda em Finanças.'
+                : 'Confirme cada pagamento em Finanças. Ative os lembretes em Notificações para receber avisos.'}',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context, 'exit'),
+              child: const Text('Sair'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'another'),
+              child: const Text('Cadastrar outra'),
+            ),
+            if (widget.onEnableReminders != null &&
+                _kind == TransactionKind.expense)
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'reminders'),
+                child: const Text('Configurar lembretes'),
+              ),
+          ],
+        ),
+      );
       if (!mounted) return;
       _form.currentState?.reset();
       _amount.clear();
@@ -227,7 +250,8 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
     } catch (_) {
       if (mounted) {
         _message(
-            'Não foi possível salvar. Verifique sua conexão e tente novamente.');
+          'Não foi possível salvar. Verifique sua conexão e tente novamente.',
+        );
       }
     } finally {
       if (mounted) {
@@ -236,216 +260,258 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  void _message(String message) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(message)));
+  void _message(String message) =>
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
 
   @override
   Widget build(BuildContext context) => PopScope(
-      canPop: _allowExit || (!_dirty && !_saving),
-      onPopInvokedWithResult: (didPop, result) async {
-        if (!didPop && await requestLeave() && mounted && context.mounted) {
-          await Future<void>.delayed(Duration.zero);
-          if (context.mounted) Navigator.of(context).pop();
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Novo lançamento')),
-        bottomNavigationBar: SafeArea(
-            top: false,
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                child: ElevatedButton(
-                    onPressed:
-                        _saving || _loadingCategories || _categories.isEmpty
+    canPop: _allowExit || (!_dirty && !_saving),
+    onPopInvokedWithResult: (didPop, result) async {
+      if (!didPop && await requestLeave() && mounted && context.mounted) {
+        await Future<void>.delayed(Duration.zero);
+        if (context.mounted) Navigator.of(context).pop();
+      }
+    },
+    child: Scaffold(
+      appBar: AppBar(title: const Text('Novo lançamento')),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          child: ElevatedButton(
+            onPressed: _saving || _loadingCategories || _categories.isEmpty
+                ? null
+                : _save,
+            child: Text(
+              _saving
+                  ? 'Salvando...'
+                  : _recurring
+                  ? 'Salvar conta mensal'
+                  : 'Salvar lançamento',
+            ),
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _form,
+            onChanged: () => setState(() {}),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    for (final kind in TransactionKind.values)
+                      ChoiceChip(
+                        label: Text(kind.label),
+                        selected: _kind == kind,
+                        onSelected: _saving ? null : (_) => _changeKind(kind),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _amount,
+                  enabled: !_saving,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    helperText: _hasInstallments
+                        ? 'Informe o valor de cada parcela.'
+                        : null,
+                    labelText: _hasInstallments ? 'Valor da parcela' : 'Valor',
+                    prefixText: 'R\$ ',
+                    hintText: '0,00',
+                  ),
+                  validator: (value) => parseMoney(value ?? '') == null
+                      ? 'Informe um valor válido maior que zero.'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _description,
+                  enabled: !_saving,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome da conta ou renda',
+                    hintText: 'Aluguel, conta de luz, salário...',
+                  ),
+                  textInputAction: TextInputAction.next,
+                  validator: (value) => (value?.trim().isEmpty ?? true)
+                      ? 'Informe um nome para reconhecer esta conta.'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _saving ? null : _pickDate,
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  label: Text(
+                    '${_recurring ? 'Primeiro vencimento' : 'Vencimento'}: ${AppFormatters.date.format(_dueDate)}',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Frequência'),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final frequency in _Frequency.values)
+                      ChoiceChip(
+                        label: Text(frequency.label),
+                        selected: _frequency == frequency,
+                        onSelected: _saving
                             ? null
-                            : _save,
-                    child: Text(_saving
-                        ? 'Salvando...'
-                        : _recurring
-                            ? 'Salvar conta mensal'
-                            : 'Salvar lançamento')))),
-        body: SafeArea(
-            child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _form,
-                  onChanged: () => setState(() {}),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Wrap(spacing: 12, runSpacing: 8, children: [
-                          for (final kind in TransactionKind.values)
-                            ChoiceChip(
-                                label: Text(kind.label),
-                                selected: _kind == kind,
-                                onSelected:
-                                    _saving ? null : (_) => _changeKind(kind)),
-                        ]),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                            controller: _amount,
-                            enabled: !_saving,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(
-                                helperText: _hasInstallments
-                                    ? 'Informe o valor de cada parcela.'
-                                    : null,
-                                labelText: _hasInstallments
-                                    ? 'Valor da parcela'
-                                    : 'Valor',
-                                prefixText: 'R\$ ',
-                                hintText: '0,00'),
-                            validator: (value) =>
-                                parseMoney(value ?? '') == null
-                                    ? 'Informe um valor válido maior que zero.'
-                                    : null),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                            controller: _description,
-                            enabled: !_saving,
-                            decoration: const InputDecoration(
-                                labelText: 'Nome da conta ou renda',
-                                hintText: 'Aluguel, conta de luz, salário...'),
-                            textInputAction: TextInputAction.next,
-                            validator: (value) => (value?.trim().isEmpty ??
-                                    true)
-                                ? 'Informe um nome para reconhecer esta conta.'
-                                : null),
-                        const SizedBox(height: 16),
-                        OutlinedButton.icon(
-                            onPressed: _saving ? null : _pickDate,
-                            icon: const Icon(Icons.calendar_month_outlined),
-                            label: Text(
-                                '${_recurring ? 'Primeiro vencimento' : 'Vencimento'}: ${AppFormatters.date.format(_dueDate)}')),
-                        const SizedBox(height: 12),
-                        const Text('Frequência'),
-                        Wrap(spacing: 8, children: [
-                          for (final frequency in _Frequency.values)
-                            ChoiceChip(
-                                label: Text(frequency.label),
-                                selected: _frequency == frequency,
-                                onSelected: _saving
-                                    ? null
-                                    : (_) => setState(() {
-                                          _frequency = frequency;
-                                        })),
-                        ]),
-                        if (!_recurring)
-                          CheckboxListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(_kind == TransactionKind.income
-                                  ? 'Já recebi esta renda'
-                                  : 'Já paguei esta conta'),
-                              value: _alreadyConfirmed,
-                              onChanged: _saving
-                                  ? null
-                                  : (value) => setState(() =>
-                                      _alreadyConfirmed = value ?? false)),
-                        if (_recurring) ...[
-                          DropdownButtonFormField<int>(
-                            initialValue: _dueDay,
-                            decoration: const InputDecoration(
-                                labelText: 'Dia de vencimento mensal'),
-                            items: [
-                              for (var day = 1; day <= 31; day++)
-                                DropdownMenuItem(
-                                    value: day, child: Text('Dia $day'))
-                            ],
-                            onChanged: _saving
-                                ? null
-                                : (day) {
-                                    if (day == null) return;
-                                    setState(() {
-                                      _detailsChanged = true;
-                                      _dueDay = day;
-                                      _dueDate =
-                                          monthlyDueDate(_dueDate, 0, day: day);
-                                    });
-                                  },
+                            : (_) => setState(() {
+                                _frequency = frequency;
+                              }),
+                      ),
+                  ],
+                ),
+                if (!_recurring)
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      _kind == TransactionKind.income
+                          ? 'Já recebi esta renda'
+                          : 'Já paguei esta conta',
+                    ),
+                    value: _alreadyConfirmed,
+                    onChanged: _saving
+                        ? null
+                        : (value) => setState(
+                            () => _alreadyConfirmed = value ?? false,
                           ),
-                          if (_hasInstallments)
-                            TextFormField(
-                                controller: _installments,
-                                enabled: !_saving,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                    labelText: 'Quantidade de meses restantes',
-                                    helperText:
-                                        'Se a compra já começou, informe os meses que ainda faltam e o próximo vencimento.'),
-                                validator: (value) {
-                                  final count = int.tryParse(value ?? '');
-                                  return count == null ||
-                                          count < 2 ||
-                                          count > 1200
-                                      ? 'Informe de 2 a 1200 parcelas.'
-                                      : null;
-                                }),
-                          const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12),
-                              child: Text(
-                                  'As previsões aparecem no mês consultado. Cada mês tem seu próprio pagamento.')),
-                        ],
-                        const SizedBox(height: 16),
-                        if (_loadingCategories)
-                          const Center(child: CircularProgressIndicator())
-                        else if (_categoryError != null || _categories.isEmpty)
-                          Column(children: [
-                            Text(_categoryError ??
-                                'Nenhuma categoria disponível para este tipo.'),
-                            TextButton.icon(
-                                onPressed: _saving ? null : _loadCategories,
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Recarregar categorias')),
-                          ])
-                        else
-                          DropdownButtonFormField<String>(
-                              key: ValueKey(_categoryId),
-                              initialValue: _categoryId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                  labelText: 'Categoria',
-                                  hintText: 'Selecione uma categoria'),
-                              validator: (value) => value == null
-                                  ? 'Escolha uma categoria.'
-                                  : null,
-                              items: [
-                                for (final category in _categories)
-                                  DropdownMenuItem(
-                                      value: category.id,
-                                      child: Text(category.name,
-                                          overflow: TextOverflow.ellipsis))
-                              ],
-                              onChanged: _saving
-                                  ? null
-                                  : (value) => setState(() {
-                                        _categoryId = value;
-                                        _detailsChanged = true;
-                                      })),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                            controller: _notes,
-                            enabled: !_saving,
-                            minLines: 1,
-                            maxLines: 3,
-                            decoration: const InputDecoration(
-                                labelText: 'Observação (opcional)',
-                                hintText:
-                                    'Ex.: transferir para meu pai até o dia 8')),
-                        const SizedBox(height: 24),
-                        if (_hasInstallments &&
-                            (int.tryParse(_installments.text) ?? 0) >= 2 &&
-                            (int.tryParse(_installments.text) ?? 0) <= 1200)
-                          Text(
-                              'Última parcela: ${AppFormatters.date.format(monthlyDueDate(_dueDate, int.parse(_installments.text) - 1, day: _dueDay))}'),
-                        if (parseMoney(_amount.text) != null)
-                          Card(
-                              child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Text(
-                                      '${AppFormatters.currency.format(parseMoney(_amount.text))} ${_recurring ? 'todo dia $_dueDay' : 'em ${AppFormatters.date.format(_dueDate)}'}${_hasInstallments ? ' · ${_installments.text} meses' : _recurring ? ' · sem data final' : ''}. ${_kind == TransactionKind.expense ? 'Lembretes começam 3 dias antes do vencimento, se ativados.' : 'Confirme o recebimento em Finanças.'}'))),
-                      ]),
-                ))),
-      ));
+                  ),
+                if (_recurring) ...[
+                  DropdownButtonFormField<int>(
+                    initialValue: _dueDay,
+                    decoration: const InputDecoration(
+                      labelText: 'Dia de vencimento mensal',
+                    ),
+                    items: [
+                      for (var day = 1; day <= 31; day++)
+                        DropdownMenuItem(value: day, child: Text('Dia $day')),
+                    ],
+                    onChanged: _saving
+                        ? null
+                        : (day) {
+                            if (day == null) return;
+                            setState(() {
+                              _detailsChanged = true;
+                              _dueDay = day;
+                              _dueDate = monthlyDueDate(_dueDate, 0, day: day);
+                            });
+                          },
+                  ),
+                  if (_hasInstallments)
+                    TextFormField(
+                      controller: _installments,
+                      enabled: !_saving,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Quantidade de meses restantes',
+                        helperText: 'Se a compra já começou, informe os meses que ainda faltam e o próximo vencimento.',
+                      ),
+                      validator: (value) {
+                        final count = int.tryParse(value ?? '');
+                        return count == null || count < 2 || count > 1200
+                            ? 'Informe de 2 a 1200 parcelas.'
+                            : null;
+                      },
+                    ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'As previsões aparecem no mês consultado. Cada mês tem seu próprio pagamento.',
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                if (_loadingCategories)
+                  const Center(child: CircularProgressIndicator())
+                else if (_categoryError != null || _categories.isEmpty)
+                  Column(
+                    children: [
+                      Text(
+                        _categoryError ??
+                            'Nenhuma categoria disponível para este tipo.',
+                      ),
+                      TextButton.icon(
+                        onPressed: _saving ? null : _loadCategories,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Recarregar categorias'),
+                      ),
+                    ],
+                  )
+                else
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(_categoryId),
+                    initialValue: _categoryId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Categoria',
+                      hintText: 'Selecione uma categoria',
+                    ),
+                    validator: (value) =>
+                        value == null ? 'Escolha uma categoria.' : null,
+                    items: [
+                      for (final category in _categories)
+                        DropdownMenuItem(
+                          value: category.id,
+                          child: Text(
+                            category.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: _saving
+                        ? null
+                        : (value) => setState(() {
+                            _categoryId = value;
+                            _detailsChanged = true;
+                          }),
+                  ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _notes,
+                  enabled: !_saving,
+                  minLines: 1,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Observação (opcional)',
+                    hintText: 'Ex.: transferir para meu pai até o dia 8',
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (_hasInstallments &&
+                    (int.tryParse(_installments.text) ?? 0) >= 2 &&
+                    (int.tryParse(_installments.text) ?? 0) <= 1200)
+                  Text(
+                    'Última parcela: ${AppFormatters.date.format(monthlyDueDate(_dueDate, int.parse(_installments.text) - 1, day: _dueDay))}',
+                  ),
+                if (parseMoney(_amount.text) != null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        '${AppFormatters.currency.format(parseMoney(_amount.text))} ${_recurring ? 'todo dia $_dueDay' : 'em ${AppFormatters.date.format(_dueDate)}'}${_hasInstallments
+                            ? ' · ${_installments.text} meses'
+                            : _recurring
+                            ? ' · sem data final'
+                            : ''}. ${_kind == TransactionKind.expense ? 'Lembretes começam 3 dias antes do vencimento, se ativados.' : 'Confirme o recebimento em Finanças.'}',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }

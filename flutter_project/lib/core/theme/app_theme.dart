@@ -20,88 +20,105 @@ class AppTheme {
     final background = dark ? scaffoldBackground : const Color(0xFFF3F5FC);
     final border = dark ? borderSubtle : const Color(0xFFDEE4F2);
     final scheme = ColorScheme.fromSeed(
-        seedColor: primary,
-        brightness: brightness,
-        primary: primary,
-        onPrimary: dark ? scaffoldBackground : Colors.white,
-        surface: surface,
-        secondary: dark ? const Color(0xFFC3B3FF) : const Color(0xFF7150BA),
-        tertiary: dark ? const Color(0xFFFFD18B) : const Color(0xFF986000));
+      seedColor: primary,
+      brightness: brightness,
+      primary: primary,
+      onPrimary: dark ? scaffoldBackground : Colors.white,
+      surface: surface,
+      secondary: dark ? const Color(0xFFC3B3FF) : const Color(0xFF7150BA),
+      tertiary: dark ? const Color(0xFFFFD18B) : const Color(0xFF986000),
+    );
     final base = ThemeData(useMaterial3: true, colorScheme: scheme);
-    final rounded =
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+    final rounded = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+    );
     return base.copyWith(
       scaffoldBackgroundColor: background,
       // A fonte do sistema está disponível mesmo sem conexão.
       textTheme: base.textTheme.copyWith(
         bodyLarge: base.textTheme.bodyLarge?.copyWith(fontSize: 16),
         bodySmall: base.textTheme.bodySmall?.copyWith(fontSize: 14),
-        titleMedium:
-            base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-        bodyMedium:
-            base.textTheme.bodyMedium?.copyWith(fontSize: 16, height: 1.4),
+        titleMedium: base.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        bodyMedium: base.textTheme.bodyMedium?.copyWith(
+          fontSize: 16,
+          height: 1.4,
+        ),
       ),
       appBarTheme: AppBarTheme(
-          backgroundColor: background,
-          foregroundColor: scheme.onSurface,
-          elevation: 0,
-          centerTitle: false),
+        backgroundColor: background,
+        foregroundColor: scheme.onSurface,
+        elevation: 0,
+        centerTitle: false,
+      ),
       cardTheme: CardThemeData(
-          color: surface,
-          elevation: 0,
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: border))),
+        color: surface,
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: border),
+        ),
+      ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: surface,
-          selectedItemColor: primary,
-          unselectedItemColor: dark ? textSecondary : const Color(0xFF515760),
-          showUnselectedLabels: true,
-          type: BottomNavigationBarType.fixed,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-          elevation: 0),
+        backgroundColor: surface,
+        selectedItemColor: primary,
+        unselectedItemColor: dark ? textSecondary : const Color(0xFF515760),
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        elevation: 0,
+      ),
       inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: surface,
-          contentPadding: const EdgeInsets.all(16),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: border)),
-          focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: primary, width: 2))),
+        filled: true,
+        fillColor: surface,
+        contentPadding: const EdgeInsets.all(16),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: primary, width: 2),
+        ),
+      ),
       filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-              minimumSize: const Size(48, 48),
-              shape: rounded,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10))),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          shape: rounded,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: primary,
-              foregroundColor: scheme.onPrimary,
-              minimumSize: const Size(48, 48),
-              shape: rounded,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10))),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-              minimumSize: const Size(48, 48),
-              shape: rounded,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8))),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        style: ElevatedButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: scheme.onPrimary,
-          elevation: 0,
-          focusElevation: 0,
-          hoverElevation: 0,
-          highlightElevation: 0,
-          shape: rounded),
+          minimumSize: const Size(48, 48),
+          shape: rounded,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          shape: rounded,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primary,
+        foregroundColor: scheme.onPrimary,
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
+        shape: rounded,
+      ),
       textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(minimumSize: const Size(48, 48))),
+        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+      ),
     );
   }
 

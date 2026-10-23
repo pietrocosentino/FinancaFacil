@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../data/profile_photo_store.dart';
 import '../data/profile_repository.dart';
 import '../domain/user_profile.dart';
@@ -6,7 +7,7 @@ import '../domain/user_profile.dart';
 /// Estado compartilhado do cabeçalho e do menu, sem consultas periódicas.
 class ProfileController extends ChangeNotifier {
   ProfileController(this.repository, {ProfilePhotoStore? photos})
-      : photos = photos ?? ProfilePhotoStore();
+    : photos = photos ?? ProfilePhotoStore();
   final ProfileRepository repository;
   final ProfilePhotoStore photos;
   Uint8List? photo;
@@ -24,7 +25,9 @@ class ProfileController extends ChangeNotifier {
     try {
       photo = await photos.load(account);
       refresh();
-    } catch (_) {/* Avatar indisponível não bloqueia a conta. */}
+    } catch (_) {
+      /* Avatar indisponível não bloqueia a conta. */
+    }
   }
 
   Future<void> savePhoto(Uint8List bytes) async {

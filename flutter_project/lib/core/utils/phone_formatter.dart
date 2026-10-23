@@ -16,14 +16,19 @@ String formatPhone(String value) {
 class PhoneInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (!newValue.composing.isCollapsed) return newValue;
     var digits = phoneDigits(newValue.text);
     if (digits.length > 15) return oldValue;
     final selection = newValue.selection;
-    var beforeCursor = phoneDigits(newValue.text.substring(0,
-            selection.isValid ? selection.extentOffset : newValue.text.length))
-        .length;
+    var beforeCursor = phoneDigits(
+      newValue.text.substring(
+        0,
+        selection.isValid ? selection.extentOffset : newValue.text.length,
+      ),
+    ).length;
 
     // Apagar um separador também apaga o dígito anterior, evitando uma máscara
     // que parece não responder ao backspace.
@@ -36,9 +41,11 @@ class PhoneInputFormatter extends TextInputFormatter {
     }
     final text = formatPhone(digits);
     return TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(
-            offset: _offsetAfterDigits(text, beforeCursor)));
+      text: text,
+      selection: TextSelection.collapsed(
+        offset: _offsetAfterDigits(text, beforeCursor),
+      ),
+    );
   }
 
   int _offsetAfterDigits(String text, int count) {

@@ -28,26 +28,25 @@ class FinanceCategory {
   const FinanceCategory({required this.id, required this.name});
   final String id;
   final String name;
-  factory FinanceCategory.fromMap(Map<String, dynamic> data) => FinanceCategory(
-        id: data['id'].toString(),
-        name: data['name'].toString(),
-      );
+  factory FinanceCategory.fromMap(Map<String, dynamic> data) =>
+      FinanceCategory(id: data['id'].toString(), name: data['name'].toString());
 }
 
 class FinanceEntry {
-  const FinanceEntry(
-      {required this.id,
-      required this.kind,
-      required this.amount,
-      required this.description,
-      required this.dueDate,
-      required this.categoryName,
-      required this.isPaid,
-      this.notes = '',
-      this.isRecurring = false,
-      this.installment,
-      this.totalInstallments,
-      this.lastDue});
+  const FinanceEntry({
+    required this.id,
+    required this.kind,
+    required this.amount,
+    required this.description,
+    required this.dueDate,
+    required this.categoryName,
+    required this.isPaid,
+    this.notes = '',
+    this.isRecurring = false,
+    this.installment,
+    this.totalInstallments,
+    this.lastDue,
+  });
   final String id;
   final TransactionKind kind;
   final double amount;
@@ -97,8 +96,11 @@ class FinanceEntry {
           : 'Sem categoria',
       isPaid: automaticIncome
           ? dueDate != null &&
-              !DateTime(dueDate.year, dueDate.month, dueDate.day)
-                  .isAfter(currentDay)
+                !DateTime(
+                  dueDate.year,
+                  dueDate.month,
+                  dueDate.day,
+                ).isAfter(currentDay)
           : data['is_paid'] == true,
       notes: data['notes']?.toString() ?? '',
       isRecurring: data['is_recurrent'] == true,
@@ -110,20 +112,21 @@ class FinanceEntry {
 }
 
 class TransactionDraft {
-  TransactionDraft(
-      {required this.kind,
-      required this.amount,
-      required String description,
-      required this.dueDate,
-      required this.categoryId,
-      this.notes = '',
-      this.alreadyConfirmed = false,
-      int? dueDay,
-      this.isRecurring = false,
-      this.totalInstallments})
-      : dueDay = dueDay ?? dueDate.day,
-        description =
-            description.trim().isEmpty ? 'Lançamento' : description.trim() {
+  TransactionDraft({
+    required this.kind,
+    required this.amount,
+    required String description,
+    required this.dueDate,
+    required this.categoryId,
+    this.notes = '',
+    this.alreadyConfirmed = false,
+    int? dueDay,
+    this.isRecurring = false,
+    this.totalInstallments,
+  }) : dueDay = dueDay ?? dueDate.day,
+       description = description.trim().isEmpty
+           ? 'Lançamento'
+           : description.trim() {
     if (!amount.isFinite || amount <= 0) {
       throw const FormatException('Informe um valor válido maior que zero.');
     }
@@ -132,7 +135,8 @@ class TransactionDraft {
     }
     if (isRecurring && alreadyConfirmed) {
       throw const FormatException(
-          'Confirme cada mês da recorrência em Finanças.');
+        'Confirme cada mês da recorrência em Finanças.',
+      );
     }
     if (categoryId.isEmpty) {
       throw const FormatException('Selecione uma categoria.');
@@ -153,24 +157,25 @@ class TransactionDraft {
   final bool isRecurring;
   final int? totalInstallments;
   Map<String, dynamic> get template => {
-        'type': kind.databaseValue,
-        'amount': amount,
-        'description': description,
-        'notes': notes.trim(),
-        'category_id': categoryId,
-      };
+    'type': kind.databaseValue,
+    'amount': amount,
+    'description': description,
+    'notes': notes.trim(),
+    'category_id': categoryId,
+  };
 }
 
 class RecurrencePlan {
-  const RecurrencePlan(
-      {required this.id,
-      required this.firstDue,
-      required this.description,
-      required this.amount,
-      this.dueDay,
-      this.totalInstallments,
-      this.endDate,
-      this.futureAmounts = const []});
+  const RecurrencePlan({
+    required this.id,
+    required this.firstDue,
+    required this.description,
+    required this.amount,
+    this.dueDay,
+    this.totalInstallments,
+    this.endDate,
+    this.futureAmounts = const [],
+  });
   final String id;
   final DateTime firstDue;
   final int? dueDay;
@@ -182,8 +187,11 @@ class RecurrencePlan {
   final List<Map<String, dynamic>> futureAmounts;
   double amountAt(DateTime month) {
     var result = amount;
-    final changes = [...futureAmounts]..sort((a, b) =>
-        a['from_month'].toString().compareTo(b['from_month'].toString()));
+    final changes = [...futureAmounts]
+      ..sort(
+        (a, b) =>
+            a['from_month'].toString().compareTo(b['from_month'].toString()),
+      );
     for (final change in changes) {
       if (change['from_month'].toString().compareTo(monthKey(month)) <= 0) {
         result = (change['amount'] as num).toDouble();
@@ -207,15 +215,17 @@ class RecurrencePlan {
   factory RecurrencePlan.fromMap(Map<String, dynamic> data) {
     final template = Map<String, dynamic>.from(data['template'] as Map);
     return RecurrencePlan(
-        id: data['id'].toString(),
-        firstDue: DateTime.parse(data['first_due'].toString()),
-        dueDay: (data['due_day'] as num?)?.toInt(),
-        description: template['description'].toString(),
-        amount: (template['amount'] as num).toDouble(),
-        totalInstallments: (data['total_installments'] as num?)?.toInt(),
-        endDate: DateTime.tryParse(data['end_date']?.toString() ?? ''),
-        futureAmounts: List<Map<String, dynamic>>.from(
-            template['future_amounts'] as List? ?? []));
+      id: data['id'].toString(),
+      firstDue: DateTime.parse(data['first_due'].toString()),
+      dueDay: (data['due_day'] as num?)?.toInt(),
+      description: template['description'].toString(),
+      amount: (template['amount'] as num).toDouble(),
+      totalInstallments: (data['total_installments'] as num?)?.toInt(),
+      endDate: DateTime.tryParse(data['end_date']?.toString() ?? ''),
+      futureAmounts: List<Map<String, dynamic>>.from(
+        template['future_amounts'] as List? ?? [],
+      ),
+    );
   }
 }
 

@@ -2,6 +2,7 @@ import 'package:financafacil/features/profile/presentation/screens/profile_scree
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'support/fake_repositories.dart';
 
 void main() {
@@ -51,8 +52,11 @@ void main() {
   testWidgets('cancelar saída mantém sessão', (t) async {
     final r = FakeProfileRepository();
     await show(t, r);
-    await t.scrollUntilVisible(find.text('Sair da conta'), 250,
-        scrollable: find.byType(Scrollable).first);
+    await t.scrollUntilVisible(
+      find.text('Sair da conta'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await t.tap(find.text('Sair da conta'));
     await t.pumpAndSettle();
     await t.tap(find.text('Cancelar'));

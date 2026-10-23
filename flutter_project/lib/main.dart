@@ -13,12 +13,14 @@ import 'shared/widgets/async_panel.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: AppTheme.surfaceCard,
-    systemNavigationBarIconBrightness: Brightness.light,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: AppTheme.surfaceCard,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
   runApp(const FinancaFacilApp());
 }
 
@@ -26,23 +28,25 @@ class FinancaFacilApp extends StatelessWidget {
   const FinancaFacilApp({super.key});
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
-      valueListenable: ReminderPreferences.themeMode,
-      builder: (_, mode, __) => MaterialApp(
-            title: 'FinançaFácil',
-            builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-                value: Theme.of(context).brightness == Brightness.dark
-                    ? SystemUiOverlayStyle.light
-                    : SystemUiOverlayStyle.dark,
-                child: child!),
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: mode,
-            locale: const Locale('pt', 'BR'),
-            supportedLocales: const [Locale('pt', 'BR')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
-            home: const _ApplicationStartup(),
-          ));
+    valueListenable: ReminderPreferences.themeMode,
+    builder: (_, mode, __) => MaterialApp(
+      title: 'FinançaFácil',
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: Theme.of(context).brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        child: child!,
+      ),
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: mode,
+      locale: const Locale('pt', 'BR'),
+      supportedLocales: const [Locale('pt', 'BR')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      home: const _ApplicationStartup(),
+    ),
+  );
 }
 
 class _ApplicationStartup extends StatefulWidget {
@@ -62,7 +66,9 @@ class _ApplicationStartupState extends State<_ApplicationStartup> {
   Future<void> _initialize() async {
     await initializeDateFormatting('pt_BR');
     await Supabase.initialize(
-        url: SupabaseConfig.url, publishableKey: SupabaseConfig.anonKey);
+      url: SupabaseConfig.url,
+      publishableKey: SupabaseConfig.anonKey,
+    );
     try {
       await ReminderPreferences.load();
       await AppServices.reminders.initialize();
@@ -73,12 +79,11 @@ class _ApplicationStartupState extends State<_ApplicationStartup> {
 
   @override
   Widget build(BuildContext context) => AsyncPanel<void>(
-        future: _initialization,
-        onRetry: () => setState(() {
-          _initialization = _initialize();
-        }),
-        errorMessage:
-            'Não foi possível iniciar o aplicativo. Verifique a conexão.',
-        builder: (_) => const AuthGate(),
-      );
+    future: _initialization,
+    onRetry: () => setState(() {
+      _initialization = _initialize();
+    }),
+    errorMessage: 'Não foi possível iniciar o aplicativo. Verifique a conexão.',
+    builder: (_) => const AuthGate(),
+  );
 }

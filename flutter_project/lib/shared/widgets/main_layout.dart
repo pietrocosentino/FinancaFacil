@@ -21,12 +21,13 @@ import '../../features/transactions/presentation/screens/transactions_list_scree
 
 /// As rotas internas ficam dentro do corpo; o menu permanece fora delas.
 class MainLayout extends StatefulWidget {
-  const MainLayout(
-      {super.key,
-      this.financeRepository,
-      this.profileRepository,
-      this.reminderService,
-      this.userId});
+  const MainLayout({
+    super.key,
+    this.financeRepository,
+    this.profileRepository,
+    this.reminderService,
+    this.userId,
+  });
   final FinanceRepository? financeRepository;
   final ProfileRepository? profileRepository;
   final ReminderService? reminderService;
@@ -51,13 +52,15 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    _profile =
-        ProfileController(widget.profileRepository ?? AppServices.profile);
+    _profile = ProfileController(
+      widget.profileRepository ?? AppServices.profile,
+    );
     _profile.loadPhoto();
     _headerEntries = (widget.financeRepository ?? AppServices.finance)
         .transactions(DateTime.now().add(const Duration(days: 3)));
     financeRevision.addListener(_reloadHeader);
-    _reminders = widget.reminderService ??
+    _reminders =
+        widget.reminderService ??
         (widget.financeRepository == null ? AppServices.reminders : null);
     WidgetsBinding.instance.addObserver(this);
     financeRevision.addListener(_syncReminders);
@@ -68,26 +71,32 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     });
     _screens = [
       DashboardScreen(
-          showHeader: false,
-          repository: widget.financeRepository,
-          reminders: _reminders,
-          onNavigateToNotifications: _openNotifications),
+        showHeader: false,
+        repository: widget.financeRepository,
+        reminders: _reminders,
+        onNavigateToNotifications: _openNotifications,
+      ),
       FinanceRegistrationScreen(
-          onAddExpense: () => _add(),
-          onAddIncome: () => _add(kind: TransactionKind.income),
-          onImport: () => _navigator.currentState?.push(MaterialPageRoute(
-              builder: (_) =>
-                  ImportScreen(finance: widget.financeRepository)))),
+        onAddExpense: () => _add(),
+        onAddIncome: () => _add(kind: TransactionKind.income),
+        onImport: () => _navigator.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => ImportScreen(finance: widget.financeRepository),
+          ),
+        ),
+      ),
       TransactionsListScreen(
-          showRegistration: false,
-          repository: widget.financeRepository,
-          addKey: _addKey,
-          onEnableReminders: _openNotifications),
+        showRegistration: false,
+        repository: widget.financeRepository,
+        addKey: _addKey,
+        onEnableReminders: _openNotifications,
+      ),
       ProfileScreen(
-          controller: _profile,
-          showIdentity: false,
-          repository: widget.profileRepository,
-          onNavigateToNotifications: _openNotifications),
+        controller: _profile,
+        showIdentity: false,
+        repository: widget.profileRepository,
+        onNavigateToNotifications: _openNotifications,
+      ),
     ];
   }
 
@@ -121,7 +130,8 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
         useSafeArea: true,
         clipBehavior: Clip.antiAlias,
         shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         builder: (sheetContext) => SizedBox(
           height: MediaQuery.sizeOf(sheetContext).height * 0.78,
           child: Navigator(
@@ -145,37 +155,56 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   }
 
   Widget _header() => SafeArea(
-      bottom: false,
-      child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(children: [
-            Expanded(
-                child:
-                    ProfileIdentity(controller: _profile, onTap: _openProfile)),
-            const SizedBox(width: 8),
-            Tooltip(
-                message: 'FinançaFácil',
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Image.asset('assets/icon/icon.png',
-                      width: 24, height: 24, cacheWidth: 48),
-                  const SizedBox(height: 2),
-                  Text('FinançaFácil',
-                      style: Theme.of(context).textTheme.labelMedium),
-                ])),
-            FutureBuilder<List<FinanceEntry>>(
-                future: _headerEntries,
-                builder: (_, snapshot) {
-                  final count =
-                      pendingBills(snapshot.data ?? [], DateTime.now()).length;
-                  return IconButton(
-                      tooltip: 'Notificações',
-                      onPressed: _openNotifications,
-                      icon: Badge(
-                          isLabelVisible: count > 0,
-                          label: Text('$count'),
-                          child: const Icon(Icons.notifications_outlined)));
-                }),
-          ])));
+    bottom: false,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: ProfileIdentity(controller: _profile, onTap: _openProfile),
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'FinançaFácil',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/icon/icon.png',
+                  width: 24,
+                  height: 24,
+                  cacheWidth: 48,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'FinançaFácil',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ],
+            ),
+          ),
+          FutureBuilder<List<FinanceEntry>>(
+            future: _headerEntries,
+            builder: (_, snapshot) {
+              final count = pendingBills(
+                snapshot.data ?? [],
+                DateTime.now(),
+              ).length;
+              return IconButton(
+                tooltip: 'Notificações',
+                onPressed: _openNotifications,
+                icon: Badge(
+                  isLabelVisible: count > 0,
+                  label: Text('$count'),
+                  child: const Icon(Icons.notifications_outlined),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -192,12 +221,15 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     if (_notificationsOpen || !mounted) return;
     _notificationsOpen = true;
     try {
-      await _navigator.currentState?.push(MaterialPageRoute(
+      await _navigator.currentState?.push(
+        MaterialPageRoute(
           builder: (_) => NotificationsScreen(
-                repository: widget.financeRepository ?? AppServices.finance,
-                reminders: _reminders,
-                owner: widget.userId,
-              )));
+            repository: widget.financeRepository ?? AppServices.finance,
+            reminders: _reminders,
+            owner: widget.userId,
+          ),
+        ),
+      );
     } finally {
       _notificationsOpen = false;
     }
@@ -223,11 +255,11 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
         if (mounted) {
           final previous = reminders.status.value;
           reminders.status.value = ReminderStatus(
-              enabled: previous.enabled,
-              coveredUntil: previous.coveredUntil,
-              scheduledDays: previous.scheduledDays,
-              message:
-                  'Não foi possível atualizar os lembretes. Confira a conexão e as permissões do aparelho.');
+            enabled: previous.enabled,
+            coveredUntil: previous.coveredUntil,
+            scheduledDays: previous.scheduledDays,
+            message: 'Não foi possível atualizar os lembretes. Confira a conexão e as permissões do aparelho.',
+          );
         }
       }
     } while (_syncAgain && mounted);
@@ -246,12 +278,16 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     if (_adding || !mounted) return;
     _adding = true;
     try {
-      await _navigator.currentState?.push(MaterialPageRoute(
+      await _navigator.currentState?.push(
+        MaterialPageRoute(
           builder: (_) => AddTransactionScreen(
-              key: _addKey,
-              initialKind: kind,
-              repository: widget.financeRepository,
-              onEnableReminders: _openNotifications)));
+            key: _addKey,
+            initialKind: kind,
+            repository: widget.financeRepository,
+            onEnableReminders: _openNotifications,
+          ),
+        ),
+      );
     } finally {
       _adding = false;
     }
@@ -259,47 +295,56 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) => NavigatorPopHandler(
-        onPopWithResult: (result) => _navigator.currentState?.maybePop(result),
-        child: Scaffold(
-          body: Column(children: [
-            _header(),
-            Expanded(
-              child: Navigator(
-                  key: _navigator,
-                  onGenerateRoute: (settings) => MaterialPageRoute(
-                        settings: settings,
-                        builder: (_) => ValueListenableBuilder<int>(
-                            valueListenable: _tab,
-                            builder: (_, index, __) =>
-                                IndexedStack(index: index, children: _screens)),
-                      )),
+    onPopWithResult: (result) => _navigator.currentState?.maybePop(result),
+    child: Scaffold(
+      body: Column(
+        children: [
+          _header(),
+          Expanded(
+            child: Navigator(
+              key: _navigator,
+              onGenerateRoute: (settings) => MaterialPageRoute(
+                settings: settings,
+                builder: (_) => ValueListenableBuilder<int>(
+                  valueListenable: _tab,
+                  builder: (_, index, __) =>
+                      IndexedStack(index: index, children: _screens),
+                ),
+              ),
             ),
-          ]),
-          bottomNavigationBar: ValueListenableBuilder<int>(
-              valueListenable: _tab,
-              builder: (_, index, __) => BottomNavigationBar(
-                    type: BottomNavigationBarType.fixed,
-                    currentIndex: index,
-                    onTap: _onTabTapped,
-                    items: const [
-                      BottomNavigationBarItem(
-                          icon: Icon(Icons.home_outlined),
-                          activeIcon: Icon(Icons.home),
-                          label: 'Início'),
-                      BottomNavigationBarItem(
-                          icon: Icon(Icons.add_circle_outline),
-                          activeIcon: Icon(Icons.add_circle),
-                          label: 'Finanças'),
-                      BottomNavigationBarItem(
-                          icon: Icon(Icons.receipt_long_outlined),
-                          activeIcon: Icon(Icons.receipt_long),
-                          label: 'Extrato'),
-                      BottomNavigationBarItem(
-                          icon: Icon(Icons.person_outline),
-                          activeIcon: Icon(Icons.person),
-                          label: 'Perfil'),
-                    ],
-                  )),
+          ),
+        ],
+      ),
+      bottomNavigationBar: ValueListenableBuilder<int>(
+        valueListenable: _tab,
+        builder: (_, index, __) => BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: index,
+          onTap: _onTabTapped,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Início',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.add_circle_outline),
+              activeIcon: Icon(Icons.add_circle),
+              label: 'Finanças',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long_outlined),
+              activeIcon: Icon(Icons.receipt_long),
+              label: 'Extrato',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Perfil',
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

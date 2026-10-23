@@ -1,6 +1,8 @@
 import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
+
 import '../../../core/files/selected_file_reader.dart';
 import 'xlsx_import_reader.dart';
 
@@ -19,11 +21,12 @@ class NativeImportFileGateway implements ImportFileGateway {
   @override
   Future<ImportFile?> pick() async {
     final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
-        allowMultiple: false,
-        withData: false,
-        withReadStream: true);
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+      allowMultiple: false,
+      withData: false,
+      withReadStream: true,
+    );
     if (result == null) return null;
     final selected = result.files.single;
     if (selected.size > XlsxImportReader.maxBytes ||
@@ -36,16 +39,20 @@ class NativeImportFileGateway implements ImportFileGateway {
 
   @override
   Future<bool> saveTemplate() async {
-    final asset =
-        await rootBundle.load('assets/import/modelo_financafacil.xlsx');
-    final bytes =
-        asset.buffer.asUint8List(asset.offsetInBytes, asset.lengthInBytes);
+    final asset = await rootBundle.load(
+      'assets/import/modelo_financafacil.xlsx',
+    );
+    final bytes = asset.buffer.asUint8List(
+      asset.offsetInBytes,
+      asset.lengthInBytes,
+    );
     final path = await FilePicker.platform.saveFile(
-        dialogTitle: 'Salvar modelo FinançaFácil',
-        fileName: 'modelo_financafacil.xlsx',
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
-        bytes: bytes);
+      dialogTitle: 'Salvar modelo FinançaFácil',
+      fileName: 'modelo_financafacil.xlsx',
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+      bytes: bytes,
+    );
     if (path == null) return false;
     // No mobile o plugin grava pelo seletor nativo; no desktop grava-se o caminho.
     if (!Platform.isAndroid && !Platform.isIOS) {

@@ -19,5 +19,8 @@ DateTime monthlyDueDate(DateTime start, int offset, {int? day}) {
   final lastDay = DateTime(first.year, first.month + 1, 0).day;
   final requestedDay = day ?? start.day;
   return DateTime(
-      first.year, first.month, requestedDay > lastDay ? lastDay : requestedDay);
+    first.year,
+    first.month,
+    requestedDay > lastDay ? lastDay : requestedDay,
+  );
 }

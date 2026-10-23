@@ -6,14 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'support/fake_repositories.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
   setUp(() => SharedPreferences.setMockInitialValues({}));
   testWidgets('dados separados ficam somente leitura até Alterar', (t) async {
-    await t.pumpWidget(MaterialApp(
-        home: PersonalDataScreen(repository: FakeProfileRepository())));
+    await t.pumpWidget(
+      MaterialApp(
+        home: PersonalDataScreen(repository: FakeProfileRepository()),
+      ),
+    );
     await t.pumpAndSettle();
     expect(find.byType(TextFormField), findsNothing);
     expect(find.text('Nome'), findsOneWidget);
@@ -25,24 +29,36 @@ void main() {
   });
   testWidgets('menu aceita nova opção sem alterar o cabeçalho', (t) async {
     var tapped = false;
-    await t.pumpWidget(MaterialApp(
-        home: ProfileScreen(repository: FakeProfileRepository(), extraItems: [
-      ProfileMenuItem(
-          title: 'Nova ideia',
-          icon: Icons.star_outline,
-          onTap: () => tapped = true)
-    ])));
+    await t.pumpWidget(
+      MaterialApp(
+        home: ProfileScreen(
+          repository: FakeProfileRepository(),
+          extraItems: [
+            ProfileMenuItem(
+              title: 'Nova ideia',
+              icon: Icons.star_outline,
+              onTap: () => tapped = true,
+            ),
+          ],
+        ),
+      ),
+    );
     await t.pumpAndSettle();
     await t.tap(find.text('Nova ideia'));
     expect(tapped, true);
     expect(find.text('Dados pessoais'), findsOneWidget);
   });
-  testWidgets('cabeçalho fixo abre menu e preserva sino e navegação',
-      (t) async {
-    await t.pumpWidget(MaterialApp(
+  testWidgets('cabeçalho fixo abre menu e preserva sino e navegação', (
+    t,
+  ) async {
+    await t.pumpWidget(
+      MaterialApp(
         home: MainLayout(
-            financeRepository: FakeFinanceRepository(),
-            profileRepository: FakeProfileRepository())));
+          financeRepository: FakeFinanceRepository(),
+          profileRepository: FakeProfileRepository(),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
     await t.tap(find.text('Pietro'));
     await t.pumpAndSettle();
@@ -65,10 +81,14 @@ void main() {
     expect(find.text('Pietro Ferreira'), findsNWidgets(2));
   });
   testWidgets('fechar menu sobreposto mantém a aba atual', (t) async {
-    await t.pumpWidget(MaterialApp(
+    await t.pumpWidget(
+      MaterialApp(
         home: MainLayout(
-            financeRepository: FakeFinanceRepository(),
-            profileRepository: FakeProfileRepository())));
+          financeRepository: FakeFinanceRepository(),
+          profileRepository: FakeProfileRepository(),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
     await t.tap(find.text('Pietro'));
     await t.pumpAndSettle();
@@ -77,26 +97,36 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(BottomSheet), findsNothing);
     expect(
-        t
-            .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
-            .currentIndex,
-        0);
+      t
+          .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
+          .currentIndex,
+      0,
+    );
     expect(find.text('Pietro'), findsOneWidget);
     await t.tap(find.text('Pietro'));
     await t.pumpAndSettle();
     expect(find.byType(BottomSheet), findsOneWidget);
   });
-  testWidgets('voltar com dados alterados pede descarte e preserva edição',
-      (t) async {
+  testWidgets('voltar com dados alterados pede descarte e preserva edição', (
+    t,
+  ) async {
     final r = FakeProfileRepository();
-    await t.pumpWidget(MaterialApp(
+    await t.pumpWidget(
+      MaterialApp(
         home: Builder(
-            builder: (context) => Scaffold(
-                body: TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => PersonalDataScreen(repository: r))),
-                    child: const Text('Abrir'))))));
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PersonalDataScreen(repository: r),
+                ),
+              ),
+              child: const Text('Abrir'),
+            ),
+          ),
+        ),
+      ),
+    );
     await t.tap(find.text('Abrir'));
     await t.pumpAndSettle();
     await t.tap(find.text('Alterar'));

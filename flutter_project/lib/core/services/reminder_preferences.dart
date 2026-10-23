@@ -4,8 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Preferências do aparelho; não alteram os valores ou as recorrências.
 class ReminderPreferences {
   static final themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
-  static final time =
-      ValueNotifier<TimeOfDay>(const TimeOfDay(hour: 9, minute: 0));
+  static final time = ValueNotifier<TimeOfDay>(
+    const TimeOfDay(hour: 9, minute: 0),
+  );
 
   static Future<void> setTheme(ThemeMode mode) async {
     final preferences = await SharedPreferences.getInstance();
@@ -16,7 +17,9 @@ class ReminderPreferences {
   static Future<void> setTime(TimeOfDay value) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(
-        'reminder_time', '${value.hour}:${value.minute}');
+      'reminder_time',
+      '${value.hour}:${value.minute}',
+    );
     time.value = value;
   }
 
@@ -25,8 +28,8 @@ class ReminderPreferences {
     final theme = preferences.getInt('theme_mode');
     themeMode.value =
         theme != null && theme >= 0 && theme < ThemeMode.values.length
-            ? ThemeMode.values[theme]
-            : ThemeMode.light;
+        ? ThemeMode.values[theme]
+        : ThemeMode.light;
     final savedTime = preferences.getString('reminder_time')?.split(':');
     if (savedTime != null && savedTime.length == 2) {
       final hour = int.tryParse(savedTime[0]);
@@ -43,9 +46,10 @@ class ReminderPreferences {
     }
     final legacyHour = preferences.getInt('reminder_hour');
     time.value = TimeOfDay(
-        hour: legacyHour != null && legacyHour >= 0 && legacyHour <= 23
-            ? legacyHour
-            : 9,
-        minute: 0);
+      hour: legacyHour != null && legacyHour >= 0 && legacyHour <= 23
+          ? legacyHour
+          : 9,
+      minute: 0,
+    );
   }
 }
