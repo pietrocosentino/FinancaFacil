@@ -33,7 +33,6 @@ Thumbs.db
 # Segredos locais
 .env
 .env.*
-!.env.example
 
 env.local.json
 

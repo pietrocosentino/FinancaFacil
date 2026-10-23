@@ -1,4 +1,4 @@
--- Aplicar após recorrencia.sql, experiencia.sql e editar_valores.sql.
+-- Aplicar após recorrencia.sql, lembretes.sql e editar_valores.sql.
 -- Pressupõe categories e transactions existentes, com RLS e permissões corretas.
 -- Não modifica lançamentos antigos nem políticas das tabelas financeiras base.
 begin;
