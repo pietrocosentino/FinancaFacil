@@ -30,6 +30,7 @@ class _OfflineRepository extends FakeFinanceRepository {
 
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
+  _keyboardTests();
 
   testWidgets('toques rápidos no cadastro abrem somente um formulário', (
     tester,
@@ -168,7 +169,10 @@ void main() {
       MaterialApp(home: AddTransactionScreen(repository: repository)),
     );
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextFormField, 'Valor da conta'), '500');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor da conta'),
+      '500',
+    );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Nome da conta'),
       'Aluguel',
@@ -294,5 +298,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(selected, DateTime(2100, 12));
     expect(tester.takeException(), isNull);
+  });
+}
+
+void _keyboardTests() {
+  testWidgets('teclado aberto esconde o menu inferior e não encolhe a base', (
+    tester,
+  ) async {
+    Widget app(double keyboard) => MaterialApp(
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(viewInsets: EdgeInsets.only(bottom: keyboard)),
+          child: MainLayout(
+            financeRepository: FakeFinanceRepository(),
+            profileRepository: FakeProfileRepository(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(app(0));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomNavigationBar), findsOneWidget);
+    await tester.pumpWidget(app(300));
+    await tester.pump();
+    expect(find.byType(BottomNavigationBar), findsNothing);
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+    expect(scaffold.resizeToAvoidBottomInset, false);
   });
 }

@@ -76,6 +76,8 @@ void main() {
       250,
       scrollable: find.byType(Scrollable).first,
     );
+    await t.ensureVisible(find.text('Sair da conta'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Sair da conta'));
     await t.pumpAndSettle();
     await t.tap(find.text('Cancelar'));

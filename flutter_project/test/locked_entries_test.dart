@@ -38,9 +38,10 @@ void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
   group('bloqueio após confirmação', () {
-    test('confirmado fica bloqueado; pendente e renda automática não', () {
+    test('conta paga fica bloqueada; pendente e renda não', () {
       expect(_entry('a').isLocked, true);
       expect(_entry('a', paid: false).isLocked, false);
+      expect(_entry('a', kind: TransactionKind.income).isLocked, false);
       final salary = _entry(
         'r:rule:2026-10-01',
         kind: TransactionKind.income,

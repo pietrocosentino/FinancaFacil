@@ -261,7 +261,10 @@ void main() {
       expect(find.text('Use de 2 a 40 caracteres.'), findsOneWidget);
       expect(repository.saved, isNull);
       await tester.enterText(category, 'Pet');
-      await tester.enterText(find.widgetWithText(TextFormField, 'Valor da conta'), '80');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor da conta'),
+        '80',
+      );
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Nome da conta'),
         'Ração',

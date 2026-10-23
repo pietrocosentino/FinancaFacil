@@ -72,16 +72,20 @@ void main() {
     return r;
   }
 
+  testWidgets('conta paga fica bloqueada: só inativar', (t) async {
+    await list(t, TransactionKind.expense);
+    expect(find.text('Editar valor'), findsNothing);
+    expect(find.text('Editar lançamento'), findsNothing);
+    expect(find.text('Excluir lançamento'), findsNothing);
+    expect(find.text('Inativar (confirmei por engano)'), findsOneWidget);
+  });
+  testWidgets('renda recebida continua editável', (t) async {
+    await list(t, TransactionKind.income);
+    expect(find.text('Editar lançamento'), findsOneWidget);
+    expect(find.text('Excluir lançamento'), findsOneWidget);
+    expect(find.text('Inativar (confirmei por engano)'), findsNothing);
+  });
   for (final kind in TransactionKind.values) {
-    testWidgets('${kind.label} confirmada fica bloqueada: só inativar', (
-      t,
-    ) async {
-      await list(t, kind);
-      expect(find.text('Editar valor'), findsNothing);
-      expect(find.text('Editar lançamento'), findsNothing);
-      expect(find.text('Excluir lançamento'), findsNothing);
-      expect(find.text('Inativar (confirmei por engano)'), findsOneWidget);
-    });
     testWidgets('${kind.label} pendente pode ser alterada e excluída', (
       t,
     ) async {
