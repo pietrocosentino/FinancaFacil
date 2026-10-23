@@ -42,7 +42,7 @@ void main() {
     expect(find.text('pietro@example.com'), findsNothing);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('correção exige confirmação e devolve conta para pendente', (
+  testWidgets('confirmado por engano é inativado e sai dos totais', (
     tester,
   ) async {
     final repository = FakeFinanceRepository()
@@ -65,15 +65,32 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(PopupMenuButton<String>));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Corrigir confirmação'));
+    expect(find.text('Excluir lançamento'), findsNothing);
+    expect(find.text('Editar lançamento'), findsNothing);
+    await tester.ensureVisible(find.text('Inativar (confirmei por engano)'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Corrigir confirmação'));
+    await tester.tap(find.text('Inativar (confirmei por engano)'));
     await tester.pumpAndSettle();
+    expect(repository.inactiveChanges, isEmpty);
+    await tester.tap(find.text('Inativar'));
+    await tester.pumpAndSettle();
+    expect(repository.inactiveChanges, {'one': true});
     expect(repository.entries.single.isPaid, true);
-    await tester.tap(find.text('Voltar para pendente'));
+    expect(find.text('Inativo · fora dos totais'), findsOneWidget);
+    expect(
+      find.textContaining(RegExp(r'^Despesas R\$\s0,00$')),
+      findsOneWidget,
+    );
+    expect(find.byType(Checkbox), findsNothing);
+
+    await tester.tap(find.byType(PopupMenuButton<String>));
     await tester.pumpAndSettle();
-    expect(repository.entries.single.isPaid, false);
-    expect(find.byType(Checkbox), findsOneWidget);
+    await tester.tap(find.text('Reativar lançamento'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reativar'));
+    await tester.pumpAndSettle();
+    expect(repository.inactiveChanges, {'one': false});
+    expect(find.text('Pago'), findsOneWidget);
   });
   test('mudança futura não altera mês anterior nem exceção confirmada', () {
     final result = projectRecurrences(

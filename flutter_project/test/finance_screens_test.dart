@@ -174,12 +174,16 @@ void main() {
     await tester.tap(find.text('Confirmar selecionados (1)'));
     await tester.pumpAndSettle();
     expect(repository.paidIds, isNull);
-    await tester.tap(find.text('Confirmar'));
+    expect(
+      find.textContaining('não poderá ser alterado nem excluído'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Tenho certeza, confirmar'));
     await tester.pumpAndSettle();
     expect(repository.paidIds, {'one'});
     expect(tester.takeException(), isNull);
   });
-  testWidgets('edição de valor aceita centavos em formato brasileiro', (
+  testWidgets('edição de pendente aceita centavos em formato brasileiro', (
     tester,
   ) async {
     final repository = FakeFinanceRepository();
@@ -190,7 +194,8 @@ void main() {
         amount: 500,
         description: 'Aluguel',
         dueDate: DateTime.now(),
-        categoryName: 'Moradia',
+        categoryName: 'Categoria de teste',
+        categoryId: '1',
         isPaid: false,
       ),
     ];
@@ -202,14 +207,19 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(PopupMenuButton<String>));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Editar valor'));
+    await tester.ensureVisible(find.text('Editar lançamento'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Editar valor'));
+    await tester.tap(find.text('Editar lançamento'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField), '550,50');
-    await tester.tap(find.text('Salvar'));
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor'),
+      '550,50',
+    );
+    await tester.tap(find.text('Salvar alterações'));
     await tester.pumpAndSettle();
-    expect(repository.updatedAmount, 550.50);
+    expect(repository.updatedDetails?.amount, 550.50);
+    expect(repository.updatedDetails?.categoryId, '1');
+    expect(find.text('Lançamento atualizado.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

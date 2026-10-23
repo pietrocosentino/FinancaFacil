@@ -161,7 +161,7 @@ void main() {
     expect(repository.paidIds, isNull);
     await tester.tap(find.text('Confirmar pagamento'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sim, paguei'));
+    await tester.tap(find.text('Tenho certeza, paguei'));
     await tester.pumpAndSettle();
     expect(repository.paidIds, {'optical'});
     expect(find.text('Confirmar pagamento'), findsNothing);
@@ -188,7 +188,7 @@ void main() {
     expect(find.text('Extrato'), findsOneWidget);
     await tester.tap(find.text('Confirmar pagamento'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sim, paguei'));
+    await tester.tap(find.text('Tenho certeza, paguei'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Início'));
     await tester.pumpAndSettle();
@@ -206,7 +206,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar pagamento'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sim, paguei'));
+    await tester.tap(find.text('Tenho certeza, paguei'));
     await tester.pumpAndSettle();
     expect(repository.entries.single.isPaid, false);
     expect(find.text('Confirmar pagamento'), findsOneWidget);

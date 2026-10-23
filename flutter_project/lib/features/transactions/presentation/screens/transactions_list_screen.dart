@@ -8,12 +8,15 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/month_picker.dart';
+import '../../../imports/presentation/export_entries.dart';
 import '../../data/finance_repository.dart';
 import '../../domain/amount_edit_scope.dart';
+import '../../domain/entry_status.dart';
 import '../../domain/finance_models.dart';
 import '../../domain/statement.dart';
 import 'add_choice_sheet.dart';
 import 'edit_amount_dialog.dart';
+import 'edit_entry_screen.dart';
 import 'finance_entry_card.dart';
 import 'recurrence_rules_screen.dart';
 
@@ -154,7 +157,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           'Recebimentos: ${AppFormatters.currency.format(totals.incomeCents / 100)}\n\n'
           '${selected.map((e) => e.description).join('\n')}\n\n'
           'Confirme somente os valores já pagos ou recebidos.',
-      confirmLabel: 'Confirmar',
+      warning: lockedAfterConfirmWarning,
+      confirmLabel: 'Tenho certeza, confirmar',
       prominent: true,
       scrollable: true,
     );
@@ -195,20 +199,44 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     }
   }
 
-  Future<void> _undo(FinanceEntry entry) async {
+  Future<void> _openEditor(FinanceEntry entry, EditEntryMode mode) async {
     if (_processing || _reviewing) return;
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            EditEntryScreen(entry: entry, repository: _repository, mode: mode),
+      ),
+    );
+    if (saved == true && mounted) {
+      _message(
+        mode == EditEntryMode.incomeRule
+            ? 'Renda mensal atualizada.'
+            : 'Lançamento atualizado.',
+      );
+    }
+  }
+
+  Future<void> _setInactive(FinanceEntry entry, bool inactive) async {
+    if (_processing || _reviewing) return;
+    final amount = AppFormatters.currency.format(entry.amount);
     final confirmed = await showConfirmDialog(
       context,
-      title: 'Voltar para pendente?',
-      message:
-          '${entry.description} voltará a exigir confirmação. Os lembretes de despesas serão recalculados.',
-      confirmLabel: 'Voltar para pendente',
+      title: inactive ? 'Inativar lançamento?' : 'Reativar lançamento?',
+      message: inactive
+          ? '${entry.description}\n$amount\n\n'
+                'Use quando a confirmação foi feita por engano. O lançamento continua no extrato, marcado como inativo, mas deixa de entrar na soma de receitas, despesas e saldo.'
+          : '${entry.description}\n$amount\n\n'
+                'O lançamento volta a entrar na soma de receitas, despesas e saldo, como confirmado.',
+      confirmLabel: inactive ? 'Inativar' : 'Reativar',
+      prominent: true,
     );
     if (!confirmed || !mounted) return;
     await _mutate(
-      () => _repository.markPending({entry.id}),
-      success: 'Registro voltou para pendente.',
-      failure: 'Não foi possível corrigir. Tente novamente.',
+      () => _repository.setInactive(entry.id, inactive),
+      success: inactive
+          ? 'Lançamento inativado. Ele não entra mais nos totais.'
+          : 'Lançamento reativado.',
+      failure: 'Não foi possível alterar. Confira a conexão e tente novamente.',
     );
   }
 
@@ -277,7 +305,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       message:
           '${entry.description}\n${AppFormatters.currency.format(entry.amount)}\n\n'
           '${entry.isIncome ? 'Confirme somente depois de o valor entrar na sua conta.' : 'Confirme somente depois de pagar. O aplicativo não realiza pagamentos.'}',
-      confirmLabel: entry.isIncome ? 'Sim, recebi' : 'Sim, paguei',
+      warning: lockedAfterConfirmWarning,
+      confirmLabel: entry.isIncome
+          ? 'Tenho certeza, recebi'
+          : 'Tenho certeza, paguei',
       cancelLabel: 'Ainda não',
       prominent: true,
     );
@@ -448,25 +479,39 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     );
   }
 
+  /// Pendente: alterar, excluir e confirmar. Confirmado: somente inativar e
+  /// encerrar a recorrência. Renda mensal automática continua editável.
   Widget _entryCard(FinanceEntry entry) {
-    final pendingManual =
-        !entry.isPaid && !entry.isAutomaticIncome && !_processing;
+    VoidCallback? when(bool allowed, VoidCallback action) =>
+        allowed && !_processing ? action : null;
+    final monthly = RecurrenceReference.fromEntryId(entry.id) != null;
+    final pendingManual = !entry.isPaid && !entry.isAutomaticIncome;
+    final editable = !entry.isLocked;
     return FinanceEntryCard(
       entry: entry,
       selected: _selectedIds.contains(entry.id),
-      onConfirm: pendingManual ? () => _confirmOne(entry) : null,
-      onUndo: entry.isPaid && !entry.isAutomaticIncome && !_processing
-          ? () => _undo(entry)
-          : null,
-      onNotReceived: entry.isAutomaticIncome && !_processing
-          ? () => _notReceived(entry)
-          : null,
-      onDelete: _processing ? null : () => _delete(entry),
-      onStop: _processing || RecurrenceReference.fromEntryId(entry.id) == null
-          ? null
-          : () => _stop(entry),
-      onTap: _processing ? null : () => _editAmount(entry),
-      onSelected: pendingManual
+      onEdit: when(
+        pendingManual && !monthly,
+        () => _openEditor(entry, EditEntryMode.pendingEntry),
+      ),
+      onTap: when(
+        editable && (monthly || entry.isAutomaticIncome),
+        () => _editAmount(entry),
+      ),
+      onEditIncome: when(
+        editable && monthly && entry.isIncome,
+        () => _openEditor(entry, EditEntryMode.incomeRule),
+      ),
+      onConfirm: when(pendingManual, () => _confirmOne(entry)),
+      onNotReceived: when(entry.isAutomaticIncome, () => _notReceived(entry)),
+      onInactivate: when(
+        entry.isLocked && !entry.isInactive,
+        () => _setInactive(entry, true),
+      ),
+      onReactivate: when(entry.isInactive, () => _setInactive(entry, false)),
+      onDelete: when(editable, () => _delete(entry)),
+      onStop: when(monthly, () => _stop(entry)),
+      onSelected: pendingManual && !_processing
           ? (value) => _toggleSelection(entry, value)
           : null,
     );
@@ -559,6 +604,13 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   _searchOpen = !_searchOpen;
                   _updateFilter(_filter.copyWith(query: ''));
                 },
+        ),
+        IconButton(
+          tooltip: 'Baixar lançamentos em Excel',
+          icon: const Icon(Icons.file_download_outlined),
+          onPressed: _processing
+              ? null
+              : () => exportEntries(context, _repository),
         ),
         IconButton(
           tooltip: 'Contas recorrentes e parcelas',

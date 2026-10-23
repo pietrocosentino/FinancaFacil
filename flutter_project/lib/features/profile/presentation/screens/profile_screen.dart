@@ -67,13 +67,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Escolher da galeria'),
+              title: const Text('Galeria do celular'),
               onTap: () => Navigator.pop(context, 'select'),
             ),
             ListTile(
+              leading: const Icon(Icons.photo_outlined),
+              title: const Text('Google Fotos'),
+              onTap: () => Navigator.pop(context, 'photos'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_to_drive_outlined),
+              title: const Text('Google Drive'),
+              onTap: () => Navigator.pop(context, 'drive'),
+            ),
+            ListTile(
               leading: const Icon(Icons.folder_open_outlined),
-              title: const Text('Arquivos do aparelho ou nuvem'),
-              subtitle: const Text('Google Drive e outros locais disponíveis'),
+              title: const Text('Arquivos do celular'),
               onTap: () => Navigator.pop(context, 'files'),
             ),
             if (_controller.photo != null)
@@ -99,9 +108,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await _controller.removePhoto();
         _message('Foto removida.');
       } else {
-        final Uint8List? bytes = action == 'files'
-            ? await _photos.fromFiles()
-            : await _photos.fromGallery();
+        final Uint8List? bytes = switch (action) {
+          'files' => await _photos.fromFiles(),
+          'photos' => await _photos.fromGooglePhotos(),
+          'drive' => await _photos.fromDrive(),
+          _ => await _photos.fromGallery(),
+        };
         if (bytes == null) return;
         if (bytes.length > ProfilePhotoStore.maxBytes) {
           _message('Escolha uma imagem menor, de até 200 KB após a redução.');
@@ -173,7 +185,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             for (final mode in ThemeMode.values)
               ListTile(
+                leading: Icon(switch (mode) {
+                  ThemeMode.system => Icons.brightness_auto_outlined,
+                  ThemeMode.light => Icons.light_mode_outlined,
+                  ThemeMode.dark => Icons.dark_mode_outlined,
+                }),
                 title: Text(_themeName(mode)),
+                subtitle: Text(switch (mode) {
+                  ThemeMode.system =>
+                    'Acompanha o celular · agora: ${MediaQuery.platformBrightnessOf(context) == Brightness.dark ? 'escuro' : 'claro'}',
+                  ThemeMode.light => 'Fundo claro e suave, sem branco puro',
+                  ThemeMode.dark => 'Fundo grafite, confortável à noite',
+                }),
                 trailing: mode == DevicePreferences.themeMode.value
                     ? const Icon(Icons.check)
                     : null,
@@ -312,7 +335,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     content: const Text(
                       'Toque em Adicionar para cadastrar uma conta, uma renda ou importar uma planilha.\n\n'
                       'Contas: os lembretes começam três dias antes do vencimento. Depois de pagar, confirme pelo sino ou no Extrato. O app não faz pagamentos.\n\n'
-                      'Rendas mensais: entram no saldo automaticamente na data cadastrada. Se não recebeu, abra o lançamento no Extrato e escolha "Não recebi"; ele fica pendente até você confirmar.\n\n'
+                      'Enquanto estiver pendente, o lançamento pode ser alterado ou excluído. Depois de confirmado, fica bloqueado: se confirmou por engano, use "Inativar" para tirá-lo dos totais. Em contas mensais, você também pode encerrar os próximos meses.\n\n'
+                      'Rendas mensais: entram no saldo automaticamente na data cadastrada e podem ser alteradas a qualquer momento (valor, nome, dia e categoria). Se não recebeu, abra o lançamento no Extrato e escolha "Não recebi"; ele fica pendente até você confirmar.\n\n'
+                      'Planilhas: em Adicionar → Importar planilha, envie o Excel do celular ou do Google Drive. Para baixar seus lançamentos, use o ícone de download no Extrato.\n\n'
                       'Para receber alertas com o app fechado, permita as notificações nas configurações do aparelho.',
                     ),
                     actions: [

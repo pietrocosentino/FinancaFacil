@@ -5,7 +5,17 @@ import '../../../../core/utils/formatters.dart';
 import '../../domain/entry_status.dart';
 import '../../domain/finance_models.dart';
 
-enum _EntryAction { edit, confirm, undo, notReceived, delete, stop }
+enum _EntryAction {
+  edit,
+  editAmount,
+  editIncome,
+  confirm,
+  notReceived,
+  inactivate,
+  reactivate,
+  delete,
+  stop,
+}
 
 /// Cartão de um lançamento. Tocar no cartão ou em "⋮" abre as ações
 /// disponíveis; somente as ações com callback aparecem.
@@ -15,11 +25,14 @@ class FinanceEntryCard extends StatefulWidget {
     required this.entry,
     this.selected = false,
     this.onSelected,
+    this.onEdit,
     this.onTap,
+    this.onEditIncome,
     this.onConfirm,
     this.onDelete,
     this.onStop,
-    this.onUndo,
+    this.onInactivate,
+    this.onReactivate,
     this.onNotReceived,
     this.notice,
     this.actions,
@@ -28,12 +41,19 @@ class FinanceEntryCard extends StatefulWidget {
   final bool selected;
   final ValueChanged<bool?>? onSelected;
 
+  /// Editar nome, valor, data, categoria e observação (avulso pendente).
+  final VoidCallback? onEdit;
+
   /// Editar valor.
   final VoidCallback? onTap;
+
+  /// Editar nome, categoria e dia da renda mensal.
+  final VoidCallback? onEditIncome;
   final VoidCallback? onConfirm;
   final VoidCallback? onDelete;
   final VoidCallback? onStop;
-  final VoidCallback? onUndo;
+  final VoidCallback? onInactivate;
+  final VoidCallback? onReactivate;
   final VoidCallback? onNotReceived;
   final String? notice;
   final Widget? actions;
@@ -48,10 +68,13 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
   FinanceEntry get entry => widget.entry;
 
   Map<_EntryAction, VoidCallback?> get _callbacks => {
-    _EntryAction.edit: widget.onTap,
+    _EntryAction.edit: widget.onEdit,
+    _EntryAction.editAmount: widget.onTap,
+    _EntryAction.editIncome: widget.onEditIncome,
     _EntryAction.confirm: widget.onConfirm,
-    _EntryAction.undo: widget.onUndo,
     _EntryAction.notReceived: widget.onNotReceived,
+    _EntryAction.inactivate: widget.onInactivate,
+    _EntryAction.reactivate: widget.onReactivate,
     _EntryAction.delete: widget.onDelete,
     _EntryAction.stop: widget.onStop,
   };
@@ -59,21 +82,27 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
   bool get _hasActions => _callbacks.values.any((action) => action != null);
 
   String _label(_EntryAction action) => switch (action) {
-    _EntryAction.edit => 'Editar valor',
+    _EntryAction.edit => 'Editar lançamento',
+    _EntryAction.editAmount => 'Editar valor',
+    _EntryAction.editIncome => 'Editar nome, dia e categoria',
     _EntryAction.confirm =>
       entry.isIncome ? 'Confirmar recebimento' : 'Confirmar pagamento',
-    _EntryAction.undo => 'Corrigir confirmação',
     _EntryAction.notReceived => 'Não recebi',
+    _EntryAction.inactivate => 'Inativar (confirmei por engano)',
+    _EntryAction.reactivate => 'Reativar lançamento',
     _EntryAction.delete =>
       entry.isRecurring ? 'Excluir somente este mês' : 'Excluir lançamento',
     _EntryAction.stop => 'Encerrar próximos meses',
   };
 
   IconData _icon(_EntryAction action) => switch (action) {
-    _EntryAction.edit => Icons.edit_outlined,
+    _EntryAction.edit => Icons.edit_note,
+    _EntryAction.editAmount => Icons.edit_outlined,
+    _EntryAction.editIncome => Icons.edit_calendar_outlined,
     _EntryAction.confirm => Icons.check_circle_outline,
-    _EntryAction.undo => Icons.undo,
     _EntryAction.notReceived => Icons.money_off_outlined,
+    _EntryAction.inactivate => Icons.visibility_off_outlined,
+    _EntryAction.reactivate => Icons.visibility_outlined,
     _EntryAction.delete => Icons.delete_outline,
     _EntryAction.stop => Icons.stop_circle_outlined,
   };
@@ -81,6 +110,7 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
   static Color _urgencyColor(AppColors colors, EntryUrgency urgency) =>
       switch (urgency) {
         EntryUrgency.settled => colors.positive,
+        EntryUrgency.inactive => colors.muted,
         EntryUrgency.overdue => colors.danger,
         EntryUrgency.dueSoon => colors.warning,
         EntryUrgency.normal => colors.muted,
@@ -173,6 +203,10 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
+                        color: entry.isInactive ? color : null,
+                        decoration: entry.isInactive
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -181,7 +215,11 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Icon(
-                          entry.isPaid
+                          entry.isInactive
+                              ? Icons.visibility_off_outlined
+                              : entry.isLocked
+                              ? Icons.lock_outline
+                              : entry.isPaid
                               ? Icons.check_circle_outline
                               : Icons.schedule,
                           color: color,

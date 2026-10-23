@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:financafacil/core/files/cloud_files.dart';
 import 'package:financafacil/features/imports/data/import_file_gateway.dart';
 import 'package:financafacil/features/imports/data/import_repository.dart';
 import 'package:financafacil/features/imports/data/xlsx_import_reader.dart';
@@ -24,12 +27,16 @@ class _Files implements ImportFileGateway {
   ImportFile? file = ImportFile('contas.xlsx', workbook(header + validRow(2)));
   int downloads = 0;
   @override
-  Future<ImportFile?> pick() async => file;
+  Future<ImportFile?> pick(FileLocation from) async => file;
   @override
-  Future<bool> saveTemplate() async {
+  Future<bool> saveTemplate(FileLocation to) async {
     downloads++;
     return true;
   }
+
+  @override
+  Future<bool> saveFile(String name, Uint8List bytes, FileLocation to) async =>
+      true;
 }
 
 class _Imports implements ImportRepository {
@@ -81,7 +88,7 @@ void main() {
   }
 
   Future<void> choose(WidgetTester tester) async {
-    await tester.tap(find.text('Escolher planilha'));
+    await tester.tap(find.text('Do celular'));
     await tester.pumpAndSettle();
   }
 
@@ -102,6 +109,8 @@ void main() {
   testWidgets('baixar modelo não importa dados', (tester) async {
     await open(tester);
     await tester.tap(find.text('Baixar modelo Excel'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('No celular'));
     await tester.pumpAndSettle();
     expect(files.downloads, 1);
     expect(imports.saves, 0);
@@ -158,7 +167,11 @@ void main() {
       ),
     );
     expect(button.onPressed, isNull);
-    await tester.ensureVisible(find.byType(CheckboxListTile));
+    Scrollable.ensureVisible(
+      tester.element(find.byType(CheckboxListTile)),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Importar 1 lançamentos'));

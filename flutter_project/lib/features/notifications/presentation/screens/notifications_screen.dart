@@ -9,6 +9,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../transactions/data/finance_repository.dart';
+import '../../../transactions/domain/entry_status.dart';
 import '../../../transactions/domain/finance_models.dart';
 import '../../../transactions/presentation/screens/finance_entry_card.dart';
 import '../../data/reminder_service.dart';
@@ -104,8 +105,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           '${entry.description}\n${AppFormatters.currency.format(entry.amount)}\n'
           'Vencimento: ${AppFormatters.date.format(entry.dueDate!)}\n\n'
           'Confirme somente após pagar ou transferir o valor. O aplicativo não realiza pagamentos.',
+      warning: lockedAfterConfirmWarning,
       cancelLabel: 'Ainda não',
-      confirmLabel: 'Sim, paguei',
+      confirmLabel: 'Tenho certeza, paguei',
       prominent: true,
       scrollable: true,
     );

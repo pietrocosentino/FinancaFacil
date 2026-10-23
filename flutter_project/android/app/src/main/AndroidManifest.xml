@@ -52,6 +52,17 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Compartilha com o Google Drive a planilha gerada pelo app. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/cloud_file_paths" />
+        </provider>
+
     </application>
 
     <queries>
@@ -59,6 +70,9 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Abrir Google Drive e Google Fotos diretamente para escolher arquivos. -->
+        <package android:name="com.google.android.apps.docs" />
+        <package android:name="com.google.android.apps.photos" />
     </queries>
 
 </manifest>

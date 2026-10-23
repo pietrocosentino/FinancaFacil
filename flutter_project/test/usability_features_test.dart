@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:financafacil/core/files/cloud_files.dart';
 import 'package:financafacil/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:financafacil/features/imports/data/import_file_gateway.dart';
 import 'package:financafacil/features/imports/data/import_repository.dart';
@@ -40,10 +43,13 @@ FinanceEntry _entry(
 
 class _Files implements ImportFileGateway {
   @override
-  Future<ImportFile?> pick() async =>
+  Future<ImportFile?> pick(FileLocation from) async =>
       ImportFile('contas.xlsx', workbook(header + validRow(2)));
   @override
-  Future<bool> saveTemplate() async => true;
+  Future<bool> saveTemplate(FileLocation to) async => true;
+  @override
+  Future<bool> saveFile(String name, Uint8List bytes, FileLocation to) async =>
+      true;
 }
 
 class _Imports implements ImportRepository {
@@ -175,7 +181,7 @@ void main() {
       expect(find.text('Receita pendente'), findsOneWidget);
       expect(find.byType(Checkbox), findsOneWidget);
       await action(tester, 'Confirmar recebimento');
-      await tester.tap(find.text('Sim, recebi'));
+      await tester.tap(find.text('Tenho certeza, recebi'));
       await tester.pumpAndSettle();
       expect(repository.paidIds, {repository.notReceivedIds.single});
       expect(find.text('Recebido'), findsOneWidget);
@@ -187,7 +193,7 @@ void main() {
       await tester.tap(find.text('Aluguel'));
       await tester.pumpAndSettle();
       expect(find.text('Confirmar pagamento'), findsOneWidget);
-      expect(find.text('Editar valor'), findsOneWidget);
+      expect(find.text('Editar lançamento'), findsOneWidget);
       expect(find.text('Excluir lançamento'), findsOneWidget);
     });
 
@@ -287,7 +293,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Escolher planilha'));
+      await tester.tap(find.text('Do celular'));
       await tester.pumpAndSettle();
       expect(find.text('Importar 0 lançamentos'), findsOneWidget);
       // A lista é preguiçosa: rola até a linha ser construída.

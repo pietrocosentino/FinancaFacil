@@ -11,8 +11,16 @@ abstract class FinanceRepository {
   Future<List<RecurrencePlan>> plans();
   Future<void> save(TransactionDraft draft);
   Future<void> markPaid(Set<String> ids);
-  Future<void> markPending(Set<String> ids);
   Future<void> updateAmount(String id, double amount);
+
+  /// Altera um lançamento avulso ainda pendente.
+  Future<void> updateDetails(String id, EntryDetails details);
+
+  /// Nome, categoria e dia de uma renda mensal (vale para toda a recorrência).
+  Future<void> updateIncomeRule(String ruleId, IncomeRuleDetails details);
+
+  /// Tira (ou devolve) um lançamento confirmado das somas, sem apagá-lo.
+  Future<void> setInactive(String id, bool inactive);
   Future<void> updateFutureAmount(String id, double amount);
   Future<void> stopPlan(String id);
   Future<void> deleteEntry(String id);
@@ -184,8 +192,64 @@ class SupabaseFinanceRepository implements FinanceRepository {
   Future<void> markPaid(Set<String> ids) => _update(ids.toList(), isPaid: true);
 
   @override
-  Future<void> markPending(Set<String> ids) =>
-      _update(ids.toList(), isPaid: false);
+  Future<void> updateDetails(String id, EntryDetails details) async {
+    final owner = _userId;
+    if (RecurrenceReference.fromEntryId(id) != null) {
+      throw const FormatException('Use Editar valor para contas mensais.');
+    }
+    try {
+      final updated = await _client
+          .from('transactions')
+          .update(details.toMap())
+          .eq('user_id', owner)
+          .eq('id', id)
+          .eq('is_paid', false)
+          .select('id');
+      if (updated.length != 1) {
+        throw StateError(
+          'Lançamentos confirmados não podem ser alterados. Atualize a lista.',
+        );
+      }
+    } finally {
+      notifyFinanceChanged();
+    }
+  }
+
+  @override
+  Future<void> updateIncomeRule(
+    String ruleId,
+    IncomeRuleDetails details,
+  ) async {
+    _ensureSignedIn();
+    try {
+      await _client.rpc(
+        'update_income_rule',
+        params: {
+          'p_rule_id': ruleId,
+          'p_description': details.description,
+          'p_category_id': details.categoryId,
+          'p_due_day': details.dueDay,
+        },
+      );
+    } finally {
+      notifyFinanceChanged();
+    }
+  }
+
+  @override
+  Future<void> setInactive(String id, bool inactive) async {
+    _ensureSignedIn();
+    if (id.isEmpty) throw const FormatException('Registro inválido.');
+    RecurrenceReference.fromEntryId(id);
+    try {
+      await _client.rpc(
+        'set_entry_inactive',
+        params: {'p_entry_id': id, 'p_inactive': inactive},
+      );
+    } finally {
+      notifyFinanceChanged();
+    }
+  }
 
   @override
   Future<void> updateAmount(String id, double amount) {

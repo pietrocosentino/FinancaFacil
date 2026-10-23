@@ -5,14 +5,26 @@ import 'finance_models.dart';
 /// vencimento; o mesmo prazo vale para os lembretes.
 const attentionWindowDays = 3;
 
+/// Aviso exibido antes de toda confirmação de pagamento ou recebimento.
+const lockedAfterConfirmWarning =
+    'Depois de confirmar, este lançamento não poderá ser alterado nem excluído. '
+    'Se confirmar por engano, você poderá apenas inativá-lo para que não entre '
+    'nos totais. Em contas mensais, também será possível encerrar os próximos meses.';
+
 /// Nível de atenção de um lançamento; a interface escolhe a cor a partir dele.
-enum EntryUrgency { settled, overdue, dueSoon, normal }
+enum EntryUrgency { settled, inactive, overdue, dueSoon, normal }
 
 /// Situação de um lançamento em uma data, sem dependência de interface.
 class EntryStatus {
   const EntryStatus(this.label, this.urgency);
 
   factory EntryStatus.of(FinanceEntry entry, DateTime today) {
+    if (entry.isInactive) {
+      return const EntryStatus(
+        'Inativo · fora dos totais',
+        EntryUrgency.inactive,
+      );
+    }
     if (entry.isPaid) {
       return EntryStatus(
         entry.isAutomaticIncome

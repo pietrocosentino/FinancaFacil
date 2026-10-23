@@ -3,8 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/errors/app_log.dart';
+import '../../../core/files/cloud_files.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
+import '../../../shared/widgets/file_location_sheet.dart';
 import '../../transactions/data/finance_repository.dart';
 import '../../transactions/domain/finance_models.dart';
 import '../../transactions/presentation/screens/new_category_dialog.dart';
@@ -12,6 +14,7 @@ import '../data/import_file_gateway.dart';
 import '../data/import_repository.dart';
 import '../data/xlsx_import_reader.dart';
 import '../domain/import_models.dart';
+import 'export_entries.dart';
 import 'import_error_message.dart';
 import 'import_history_screen.dart';
 import 'import_line_dialog.dart';
@@ -65,14 +68,14 @@ class _ImportScreenState extends State<ImportScreen> {
       _selected.isNotEmpty &&
       _selected.every((line) => _errors(line).isEmpty);
 
-  Future<void> _choose() async {
+  Future<void> _choose(FileLocation from) async {
     if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final file = await _files.pick();
+      final file = await _files.pick(from);
       if (file == null) return;
       final lines =
           await (widget.reader?.call(file.bytes) ??
@@ -150,15 +153,25 @@ class _ImportScreenState extends State<ImportScreen> {
   }
 
   Future<void> _template() async {
+    if (_busy) return;
+    final to = await showSaveLocationSheet(
+      context,
+      title: 'Onde salvar o modelo?',
+    );
+    if (to == null || !mounted) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      if (await _files.saveTemplate() && mounted) {
+      if (await _files.saveTemplate(to) && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Modelo salvo. Preencha a aba Lançamentos.'),
+          SnackBar(
+            content: Text(
+              to == FileLocation.drive
+                  ? 'Confirme o envio no Google Drive. Depois, preencha a aba Lançamentos.'
+                  : 'Modelo salvo. Preencha a aba Lançamentos.',
+            ),
           ),
         );
       }
@@ -443,12 +456,40 @@ class _ImportScreenState extends State<ImportScreen> {
             icon: const Icon(Icons.download_outlined),
             label: const Text('Baixar modelo Excel'),
           ),
-          FilledButton.icon(
-            onPressed: _busy ? null : _choose,
-            icon: const Icon(Icons.upload_file),
-            label: Text(
-              _lines.isEmpty ? 'Escolher planilha' : 'Escolher outra planilha',
-            ),
+          const SizedBox(height: 12),
+          Text(
+            _lines.isEmpty
+                ? 'Enviar planilha preenchida'
+                : 'Escolher outra planilha',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _busy ? null : () => _choose(FileLocation.device),
+                  icon: const Icon(Icons.phone_android),
+                  label: Text(FileLocation.device.pickLabel),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: _busy ? null : () => _choose(FileLocation.drive),
+                  icon: const Icon(Icons.add_to_drive_outlined),
+                  label: Text(FileLocation.drive.pickLabel),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _busy
+                ? null
+                : () => exportEntries(context, _finance, files: _files),
+            icon: const Icon(Icons.table_view_outlined),
+            label: const Text('Baixar meus lançamentos em Excel'),
           ),
           if (_busy)
             const Padding(

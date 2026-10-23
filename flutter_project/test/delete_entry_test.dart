@@ -43,7 +43,7 @@ void main() {
             description: 'Crédito',
             dueDate: DateTime.now(),
             categoryName: 'Renda',
-            isPaid: true,
+            isPaid: false,
           ),
         ];
         await t.pumpWidget(

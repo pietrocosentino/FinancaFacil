@@ -24,7 +24,9 @@ class FinanceSummary {
     var receivedIncome = 0;
     var paidExpenses = 0;
     final categories = <String, int>{};
-    for (final entry in entries.where((entry) => entry.belongsToMonth(month))) {
+    for (final entry in entries.where(
+      (entry) => entry.belongsToMonth(month) && entry.countsInTotals,
+    )) {
       if (entry.isIncome) {
         income += entry.amountInCents;
         if (entry.isPaid) receivedIncome += entry.amountInCents;

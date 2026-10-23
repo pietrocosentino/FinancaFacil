@@ -38,13 +38,39 @@ class FakeFinanceRepository implements FinanceRepository {
     _setPaid(ids, true);
   }
 
-  @override
-  Future<void> markPending(Set<String> ids) async => _setPaid(ids, false);
-
   void _setPaid(Set<String> ids, bool paid) {
     entries = [
       for (final entry in entries)
         ids.contains(entry.id) ? entry.copyWith(isPaid: paid) : entry,
+    ];
+    notifyFinanceChanged();
+  }
+
+  EntryDetails? updatedDetails;
+  IncomeRuleDetails? updatedIncomeRule;
+  final inactiveChanges = <String, bool>{};
+
+  @override
+  Future<void> updateDetails(String id, EntryDetails details) async {
+    updatedDetails = details;
+    notifyFinanceChanged();
+  }
+
+  @override
+  Future<void> updateIncomeRule(
+    String ruleId,
+    IncomeRuleDetails details,
+  ) async {
+    updatedIncomeRule = details;
+    notifyFinanceChanged();
+  }
+
+  @override
+  Future<void> setInactive(String id, bool inactive) async {
+    inactiveChanges[id] = inactive;
+    entries = [
+      for (final entry in entries)
+        entry.id == id ? entry.copyWith(isInactive: inactive) : entry,
     ];
     notifyFinanceChanged();
   }

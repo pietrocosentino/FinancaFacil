@@ -67,12 +67,13 @@ List<FinanceEntry> monthStatement(
 }
 
 /// Totais em centavos, evitando acumular erros de ponto flutuante.
+/// Lançamentos inativados não entram na soma.
 ({int incomeCents, int expenseCents}) totalsInCents(
   Iterable<FinanceEntry> entries,
 ) {
   var income = 0;
   var expense = 0;
-  for (final entry in entries) {
+  for (final entry in entries.where((entry) => entry.countsInTotals)) {
     if (entry.isIncome) {
       income += entry.amountInCents;
     } else {

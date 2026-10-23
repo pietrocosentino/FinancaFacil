@@ -25,6 +25,10 @@ class _FakePhotoSource implements ProfilePhotoSource {
   Future<Uint8List?> fromFiles() => _pick();
   @override
   Future<Uint8List?> fromGallery() => _pick();
+  @override
+  Future<Uint8List?> fromGooglePhotos() => _pick();
+  @override
+  Future<Uint8List?> fromDrive() => _pick();
 }
 
 void main() {
@@ -126,7 +130,7 @@ void main() {
     ) async {
       final (controller, source) = await openProfile(tester);
       source.next = Uint8List.fromList([1, 2, 3]);
-      await choose(tester, 'Escolher da galeria');
+      await choose(tester, 'Galeria do celular');
       expect(source.calls, 1);
       expect(controller.photo, [1, 2, 3]);
       expect(find.text('Foto atualizada.'), findsOneWidget);
@@ -136,7 +140,7 @@ void main() {
 
     testWidgets('cancelar a escolha não altera a foto', (tester) async {
       final (controller, source) = await openProfile(tester);
-      await choose(tester, 'Arquivos do aparelho ou nuvem');
+      await choose(tester, 'Arquivos do celular');
       expect(source.calls, 1);
       expect(controller.photo, isNull);
       expect(find.text('Foto atualizada.'), findsNothing);
@@ -147,7 +151,7 @@ void main() {
     ) async {
       final (controller, source) = await openProfile(tester);
       source.next = Uint8List(200 * 1024 + 1);
-      await choose(tester, 'Escolher da galeria');
+      await choose(tester, 'Galeria do celular');
       expect(controller.photo, isNull);
       expect(
         find.text('Escolha uma imagem menor, de até 200 KB após a redução.'),
@@ -158,7 +162,7 @@ void main() {
     testWidgets('arquivo inválido mostra a mensagem do leitor', (tester) async {
       final (controller, source) = await openProfile(tester);
       source.error = const FormatException('Escolha uma imagem de até 5 MB.');
-      await choose(tester, 'Arquivos do aparelho ou nuvem');
+      await choose(tester, 'Arquivos do celular');
       expect(controller.photo, isNull);
       expect(find.text('Escolha uma imagem de até 5 MB.'), findsOneWidget);
     });

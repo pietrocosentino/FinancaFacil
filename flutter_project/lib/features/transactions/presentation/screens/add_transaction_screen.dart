@@ -427,6 +427,9 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
                           ? 'Já recebi esta renda'
                           : 'Já paguei esta conta',
                     ),
+                    subtitle: const Text(
+                      'Lançamentos confirmados não podem ser alterados nem excluídos depois.',
+                    ),
                     value: _alreadyConfirmed,
                     onChanged: _saving
                         ? null

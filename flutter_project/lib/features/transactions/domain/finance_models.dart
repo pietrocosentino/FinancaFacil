@@ -48,8 +48,13 @@ class FinanceEntry {
     this.totalInstallments,
     this.lastDue,
     this.manualReceipt = false,
+    this.isInactive = false,
+    this.categoryId = '',
   });
   final String id;
+
+  /// Vazio quando o registro não informa a categoria.
+  final String categoryId;
   final TransactionKind kind;
   final double amount;
   final String description;
@@ -65,6 +70,16 @@ class FinanceEntry {
   /// Mês de renda recorrente marcado como "Não recebi": deixa de ser
   /// automático e passa a exigir confirmação, como uma conta.
   final bool manualReceipt;
+
+  /// Confirmação feita por engano: continua no histórico, mas sai dos totais.
+  final bool isInactive;
+
+  /// Depois de confirmado, o lançamento não pode ser alterado nem excluído;
+  /// resta inativar. A renda mensal automática é a exceção: continua editável.
+  bool get isLocked => isPaid && !isAutomaticIncome;
+
+  /// Entra nas somas de receitas, despesas e saldo.
+  bool get countsInTotals => !isInactive;
   int get amountInCents => (amount * 100).round();
   bool get isIncome => kind == TransactionKind.income;
   bool get isAutomaticIncome => isIncome && isRecurring && !manualReceipt;
@@ -81,30 +96,35 @@ class FinanceEntry {
     'notes': notes,
     'due_date': dueDate?.toIso8601String(),
     'category': {'name': categoryName},
+    'category_id': categoryId,
     'is_paid': isPaid,
     'is_recurrent': isRecurring,
     '_installment': installment,
     '_total_installments': totalInstallments,
     '_last_due': lastDue?.toIso8601String(),
     '_manual_receipt': manualReceipt,
+    'is_inactive': isInactive,
   };
 
   /// Cópia com confirmação ou valor alterados; os demais dados são mantidos.
-  FinanceEntry copyWith({bool? isPaid, double? amount}) => FinanceEntry(
-    id: id,
-    kind: kind,
-    amount: amount ?? this.amount,
-    description: description,
-    dueDate: dueDate,
-    categoryName: categoryName,
-    isPaid: isPaid ?? this.isPaid,
-    notes: notes,
-    isRecurring: isRecurring,
-    installment: installment,
-    totalInstallments: totalInstallments,
-    lastDue: lastDue,
-    manualReceipt: manualReceipt,
-  );
+  FinanceEntry copyWith({bool? isPaid, double? amount, bool? isInactive}) =>
+      FinanceEntry(
+        id: id,
+        kind: kind,
+        amount: amount ?? this.amount,
+        description: description,
+        dueDate: dueDate,
+        categoryName: categoryName,
+        categoryId: categoryId,
+        isPaid: isPaid ?? this.isPaid,
+        notes: notes,
+        isRecurring: isRecurring,
+        installment: installment,
+        totalInstallments: totalInstallments,
+        lastDue: lastDue,
+        manualReceipt: manualReceipt,
+        isInactive: isInactive ?? this.isInactive,
+      );
 
   String get recurrenceDescription {
     if (installment == null) return isRecurring ? 'Recorrência antiga' : '';
@@ -152,8 +172,67 @@ class FinanceEntry {
       totalInstallments: (data['_total_installments'] as num?)?.toInt(),
       lastDue: DateTime.tryParse(data['_last_due']?.toString() ?? ''),
       manualReceipt: manualReceipt,
+      isInactive: data['is_inactive'] == true,
+      categoryId: data['category_id']?.toString() ?? '',
     );
   }
+}
+
+/// Dados editáveis de um lançamento avulso pendente.
+class EntryDetails {
+  EntryDetails({
+    required String description,
+    required this.amount,
+    required this.dueDate,
+    required this.categoryId,
+    String notes = '',
+  }) : description = description.trim(),
+       notes = notes.trim() {
+    if (this.description.isEmpty || this.description.length > 120) {
+      throw const FormatException('Informe um nome de até 120 caracteres.');
+    }
+    if (!amount.isFinite || amount <= 0) {
+      throw const FormatException('Informe um valor válido maior que zero.');
+    }
+    if (categoryId.isEmpty) {
+      throw const FormatException('Selecione uma categoria.');
+    }
+  }
+  final String description;
+  final double amount;
+  final DateTime dueDate;
+  final String categoryId;
+  final String notes;
+
+  Map<String, dynamic> toMap() => {
+    'description': description,
+    'amount': amount,
+    'due_date': isoDate(dueDate),
+    'category_id': categoryId,
+    'notes': notes,
+  };
+}
+
+/// Dados de uma renda mensal que valem para todos os meses.
+class IncomeRuleDetails {
+  IncomeRuleDetails({
+    required String description,
+    required this.categoryId,
+    required this.dueDay,
+  }) : description = description.trim() {
+    if (this.description.isEmpty || this.description.length > 120) {
+      throw const FormatException('Informe um nome de até 120 caracteres.');
+    }
+    if (dueDay < 1 || dueDay > 31) {
+      throw const FormatException('Informe um dia de 1 a 31.');
+    }
+    if (categoryId.isEmpty) {
+      throw const FormatException('Selecione uma categoria.');
+    }
+  }
+  final String description;
+  final String categoryId;
+  final int dueDay;
 }
 
 class TransactionDraft {
