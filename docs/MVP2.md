@@ -1,9 +1,3 @@
-# Atualização 2.0.4
-
-A entrega atual inclui 191 testes Flutter na cópia adaptada ao SDK disponível e 98 verificações PostgreSQL. Requer a migração excluir_lancamentos.sql além das migrações anteriores. README.md contém as instruções atuais de instalação e as limitações de validação.
-
-Perfil: estado compartilhado via ProfileController, opções extensíveis via ProfileMenuItem, foto/nome fixos no cabeçalho, dados separados e edição de Nome/Telefone via Alterar. Ações dos lançamentos ficam no menu; informações adicionais em Detalhes. Cache financeiro por conta/revisão com expiração de dois minutos, sem consulta periódica; cache com erro é descartado para permitir nova tentativa.
-
 # MVP2 — importação de Excel
 
 ## Entrega
@@ -39,16 +33,7 @@ O desfazer usa uma função restrita à conta autenticada, com verificação dos
 1. Atualize os arquivos locais preservando .git e android/local.properties.
 2. Execute flutter pub get e reinicie totalmente o app; file_picker é um plugin nativo novo.
 3. Se as migrações anteriores já estão aplicadas, execute somente supabase/importacao_mvp2.sql no SQL Editor do Supabase.
-4. Em um banco existente ainda sem recorrência, confira e aplique a sequência recorrencia.sql, lembretes.sql, experiencia.sql, editar_valores.sql e importacao_mvp2.sql. Elas pressupõem as tabelas base existentes; não criam um banco novo completo.
+4. Em um banco existente ainda sem recorrência, confira e aplique a sequência descrita em flutter_project/supabase/README.md. Elas pressupõem as tabelas base existentes; não criam um banco novo completo.
 5. Teste com duas linhas reais, confira a prévia, importe e consulte o mês do primeiro vencimento.
 
-## Validação
-
-- 163 testes Flutter passaram, incluindo os 129 anteriores e 34 novos testes de importação, leitura Excel, validação, interface e contratos HTTP.
-- 72 verificações PostgreSQL passaram em PGlite com esquemas de teste usando IDs UUID e inteiros: rollback integral, reenvio idempotente, campos obrigatórios, categorias, pagamentos, parcelas, isolamento entre usuários e desfazer protegido. A migração foi aplicada duas vezes para verificar sua repetibilidade.
-- Análise estática dos arquivos de importação sem erros ou avisos após a limpeza final.
-- Modelo Excel exportado e inspecionado visualmente; exemplos usam valores e datas tipados.
-
-O ambiente de testes Flutter disponível é 3.24.5. Foi usada uma cópia temporária com adaptações de SDK, intl, CardTheme, callback de navegação e initialValue dos dropdowns antigos para executar a regressão. O código entregue permanece direcionado ao Flutter 3.47.6 informado pelo usuário. Os pacotes reais image_picker e file_picker foram resolvidos; as chamadas ao seletor nativo são substituídas por interfaces de teste nas telas.
-
-Não foram realizados build Android/iOS, interação com seletores nativos no aparelho, teste concorrente com múltiplas conexões, execução no Supabase real ou validação das políticas existentes do banco remoto. Os jobs do GitHub executam testes PostgreSQL e Flutter antes de gerar os builds.
+Testes e cobertura atuais: veja `docs/TESTES-REGRESSAO.md`.

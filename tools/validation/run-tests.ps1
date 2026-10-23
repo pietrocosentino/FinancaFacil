@@ -27,6 +27,8 @@ try {
     Push-Location 'flutter_project'
     try {
         Run-Checked 'dependencies' $Flutter @('pub', 'get')
+        $Dart = Join-Path (Split-Path $Flutter) 'dart.bat'
+        Run-Checked 'format' $Dart @('format', '--output=none', '--set-exit-if-changed', 'lib', 'test')
         Run-Checked 'analysis' $Flutter @('analyze', '--no-fatal-infos')
         Run-Checked 'flutter-tests' $Flutter @('test', '--coverage', '--reporter', 'expanded')
         Copy-Item 'coverage/lcov.info' (Join-Path $Results 'lcov.info')

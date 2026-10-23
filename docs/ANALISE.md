@@ -1,136 +1,133 @@
-# Análise do FinançaFácil
+# Análise ponta a ponta — FinançaFácil 2.0.7
 
-Revisão de 08/10/2026, baseada no ZIP `financafacil-main(2).zip` enviado pelo usuário. A entrega revisada é **1.2.1+7**. O escopo foi o aplicativo Flutter, seus testes, scripts Supabase, configurações nativas e workflow; os arquivos do protótipo web foram identificados como externos ao aplicativo compilado.
+Revisão de 22/10/2026 sobre o `main` em `1e4e3f4`. Escopo: app Flutter (`flutter_project/lib`), testes, scripts Supabase, ferramentas de validação e CI. As mudanças estão no branch `refactor/analise-clean-code-solid`.
 
-## Diagnóstico priorizado
+## Resumo
 
-### Crítico
+O app tem uma base melhor do que a média de projetos desse tamanho: separação por funcionalidade, repositórios com interface, regras de recorrência bem pensadas (projeção em memória, sem parcelas antecipadas), validações sérias na importação e uma suíte de testes grande. Os principais riscos não estão no código de tela, e sim em volta dele: **o app não pode ser publicado na Play Store hoje** (alvo API 34), **o esquema base do banco não está versionado**, e **cada alteração baixa o histórico financeiro inteiro**, o que vai pesar conforme o uso cresce. Na experiência, o problema central é a navegação: as ações mais frequentes estão a dois ou três toques e há entradas duplicadas para as mesmas telas.
 
-**Corrigido — voltar pelo Android podia descartar um cadastro sem perguntar.** O navegador interno usava `pop()`, que contornava a proteção do formulário. Agora usa `maybePop()`. O teste de regressão falhou na versão enviada e passou na corrigida. Alterações de tipo, data, categoria e dia mensal também entram na proteção de dados não salvos.
+## 1. Visão de líder técnico
 
-**Corrigido — projetos duplicados dificultavam atualizar a versão efetivamente compilada.** O repositório tinha plataformas, pubspec e testes tanto na raiz quanto em `flutter_project`, além de arquivos React/Vite e ZIPs antigos. O workflow compila somente `flutter_project`. A entrega foi consolidada nessa estrutura; atualizar uma cópia fora dela não muda o aplicativo gerado.
+### Arquitetura
 
-**Pendente de implantação — o estado real do Supabase não foi validado.** Os scripts distribuídos não criam o esquema inicial de `categories` e `transactions`; pressupõem um banco existente. Sem essas tabelas, permissões, relacionamento de categoria e migrações de recorrência, consultas e gravações falham. Isso impede reproduzir uma instalação do zero apenas executando os scripts atuais. O arquivo `supabase/diagnostico.sql` foi ampliado, mas não foi executado no seu projeto. Também é necessário confirmar RLS nas tabelas financeiras base e o isolamento entre dois usuários. Esta pendência não é uma afirmação de que seu banco atual esteja incorreto.
+**Pontos fortes.** Pastas por funcionalidade (`auth`, `transactions`, `imports`, `notifications`, `profile`, `dashboard`) com `data`/`domain`/`presentation`. Interfaces de repositório (`FinanceRepository`, `ImportRepository`, `ProfileRepository`, `AuthGateway`, `ReminderService`) permitem testar telas sem Supabase. Lógica financeira sensível (centavos, recorrência, reajustes) está em funções puras e testadas.
 
-### Importante
+**Problemas encontrados (e o que foi feito):**
 
-| Problema encontrado | Resultado da revisão |
+| Problema | Situação |
 |---|---|
-| Setas de mês sem limite e calendário com data final em janeiro de 2100 | Seletor próprio de mês e limites coerentes entre 2020 e dezembro de 2100. |
-| Escolher outro mês podia trocar o dia mensal por um dia de calendário | O mês inicial e o dia mensal são tratados separadamente; dia 31 continua 31, com vencimento ajustado ao fim dos meses curtos. |
-| Categoria não selecionada deixava o botão sem explicação | Validação explícita na categoria; o botão permite mostrar o que falta preencher. |
-| Categoria do cadastro anterior podia ficar escondida no estado após limpar o formulário | Estado e campo são reiniciados juntos; seleção automática permanece apenas quando existe uma única categoria. |
-| Toques rápidos no cadastro podiam abrir duas rotas com a mesma chave global | Guarda de abertura evita formularios duplicados. |
-| Filtros fixos da lista podiam consumir a tela com teclado ou fonte grande | Filtros e lançamentos compartilham uma rolagem; teste em 320 px e escala de texto 2 nos dois temas. |
-| Configuração de lembretes desaparecia se a consulta falhasse | Permissões ficam fora do resultado da consulta e continuam acessíveis sem conexão. |
-| Máscara de telefone mandava o cursor para o fim | Cursor preservado na edição; backspace em separador e composição do teclado tratados. |
-| Valores ambíguos, como `1.2,3`, ou notação científica podiam ser aceitos | Validação de entrada conserva formatos monetários válidos e rejeita os ambíguos. Os cálculos e o arredondamento em centavos foram preservados. |
-| Alterar somente os minutos não notificava observadores do horário | Preferência passou a representar hora e minuto juntos. Valores inválidos usam os padrões, com compatibilidade para a preferência antiga. |
-| Cache de notificações com estrutura inválida podia lançar erro ao ser consultado | Cache inválido é descartado; não é tratado como confirmação ou atualização do banco. |
-| Identificador mensal podia normalizar mês inválido para outra data | Exigido o formato mensal canônico antes de enviar a ocorrência à RPC. |
-| Tipografia dependia de download por `google_fonts` | Fonte do sistema, com hierarquia consistente; dependência e transitivas exclusivas removidas pelo resolvedor. |
-| Workflow não executava análise ou testes e recriava a estrutura Android a cada build | Verificação obrigatória antes dos builds, lockfile obrigatório e remoção de `flutter create` do CI. |
+| Telas buscavam dependências sozinhas (`widget.repository ?? AppServices.finance`): localizador de serviço escondido em 8 telas | **Corrigido.** Telas recebem tudo pelo construtor; `AppServices` só aparece em `main`, `AuthGate` e `MainLayout` |
+| `MainLayout` com cerca de 300 linhas: cabeçalho, sincronização de lembretes, navegação e três flags de toque duplo | **Corrigido.** `ReminderSynchronizer`, `MainHeader` e `SingleFlight` extraídos |
+| Regra de situação do lançamento (atrasada, vence hoje, recebido automático) dentro do widget do cartão | **Corrigido.** `EntryStatus` no domínio |
+| Cálculo de reajuste futuro duplicado entre a regra e a projeção | **Corrigido.** `AmountSchedule` único |
+| Formatação de data `AAAA-MM-DD` repetida em 3 lugares; `daysUntil` morando no resumo do painel e importado por notificações e transações | **Corrigido.** `core/utils/dates.dart` |
+| 11 `AlertDialog` de confirmação copiados | **Corrigido.** `showConfirmDialog` |
+| Parâmetros só usados por testes (`showRegistration`, `showHeader`, `showIdentity`, `photoStore`): ramos inteiros de tela que nunca rodavam em produção | **Removidos**; testes passaram a exercitar o fluxo real |
+| `financeRevision` e `ReminderPreferences` são `ValueNotifier` globais e mutáveis | Mantido. Funciona no tamanho atual; ver recomendações |
+| `ReminderPreferences` guarda também o tema | Mantido; o nome engana. Renomear para `DevicePreferences` quando mexer na área |
+| `AppTheme.semanticColor` decide a cor comparando `Color` por igualdade (`color == Colors.amber`) | Mantido; frágil. Trocar por tokens semânticos no `ThemeExtension` |
+| Dinheiro em `double` no domínio (convertido para centavos nas somas) | Mantido. Sem erro visível hoje, mas o correto é inteiro em centavos de ponta a ponta |
 
-**Pendente — validação nativa e em aparelho.** A revisão executou os testes, a análise e a compilação do bundle Flutter. Não executou `assembleRelease`, Xcode ou CocoaPods nesta máquina. Portanto, os builds finais Android/iOS dependem da execução do workflow e os lembretes precisam ser conferidos em aparelhos reais.
+### Dados e desempenho — gargalos
 
-**Pendente para distribuição pública.** O Android continua usando a chave de depuração no build release, adequada para os testes atuais, mas deve usar uma chave de publicação para distribuição definitiva. O artefato iOS de dispositivo continua sem assinatura por desenho do workflow. Não foram inventadas credenciais de assinatura.
+1. **Cada invalidação baixa todo o histórico.** `SupabaseFinanceRepository._loadSnapshot` lê `transactions`, `recurrence_rules`, `recurrence_occurrences` e categorias duas vezes, paginando de 500 em 500, **sem filtro de data**. O cache dura 2 minutos, mas é descartado a cada alteração e a cada retorno do app ao primeiro plano. Com alguns anos de uso, abrir o app passa a custar dezenas de requisições.
+   - **Corrigido nesta revisão:** telas chamavam `notifyFinanceChanged()` depois de o repositório já ter chamado — editar um valor ou confirmar um pagamento baixava o histórico **duas vezes**. `plans()` fazia uma consulta própria em vez de usar o snapshot. Mudar o horário dos lembretes invalidava os dados financeiros só para reagendar.
+   - **Recomendado:** filtrar `transactions` por intervalo (`due_date` do mês consultado ± horizonte), mover a projeção de recorrência para uma RPC ou view, e só invalidar ao retomar o app se o snapshot tiver mais de alguns minutos.
+2. **Projeção repetida.** Início, cabeçalho, Extrato e Notificações chamam `transactions()` a cada revisão; o snapshot é compartilhado, mas a projeção e o `fromMap` de todo o histórico rodam 3–4 vezes. Barato hoje, linear no histórico.
+3. **Lembretes:** `planReminders` ordenava a lista inteira para cada um dos 90 dias; agora só conta.
 
-### Melhorias
+### Banco (Supabase)
 
-**Aplicadas:** títulos alinhados, paleta compartilhada, botões com áreas de toque maiores, botão “Novo lançamento” com texto em Finanças, categoria nos cartões, estados de filtro legíveis, ícones e rótulos nas três abas, explicação do saldo expansível, avisos com contraste nos dois temas e atualização por gesto em Notificações.
+- **Esquema base fora do repositório.** `categories` e `transactions` (com suas políticas RLS) não estão em nenhum script. Não dá para recriar o banco do zero nem revisar as políticas dessas tabelas. É o maior risco de operação. O esquema usado nos testes (`tools/database/schema.mjs`) é um bom ponto de partida para versionar com a Supabase CLI.
+- **Migrações sem numeração** e com duplicação: `experiencia.sql` repetia exatamente uma função de `editar_valores.sql` (**removido**). A ordem agora está em `supabase/README.md`.
+- **Fuso inconsistente (corrigido):** `set_recurrence_future_amount` usava `current_date` (UTC do servidor) e `stop_finance_plan` usava São Paulo. Entre 21h e 0h do último dia do mês, um reajuste "a partir deste mês" era recusado.
+- RLS por `user_id` e RPCs `security invoker` estão corretas; as duas `security definer` (`delete_finance_entry`, `undo_finance_import`) verificam o dono e fixam `search_path`. Boas práticas.
+- RPCs de recorrência não tinham nenhum teste de banco: **criados 24** (confirmação, correção de valor, reajuste não retroativo, parcelas, encerramento, isolamento entre contas, anônimo).
 
-**Aplicadas em clean code:** composição de serviços preservada; enums para frequência e filtros; navegação de mês centralizada; estado assíncrono em listas reutilizado; fonte de dados de teste HTTP compartilhada; remoção de constante não usada, espaçamento duplicado, busca repetida de índice e ordenação de reajustes dentro do loop de meses.
+### Plataforma e entrega
 
-**Para evolução:** versionar o esquema inicial do banco com migrações verificáveis; testar as RPCs em PostgreSQL com dois usuários; testar login, recuperação, notificações e retorno de links em dispositivos; otimizar leituras de todo o histórico quando a base crescer. Não foi adicionada uma estrutura de gerenciamento de estado apenas para aumentar a complexidade do projeto.
+- **Bloqueante para publicar:** `targetSdkVersion 34`. Desde 31/08/2026 a Google Play exige API 36 para apps novos e atualizações (com extensão possível até 01/11/2026). Subir para 36 exige testar edge-to-edge e o gesto de voltar preditivo em aparelho; não foi alterado aqui por não haver como validar em dispositivo.
+- APK de release assinado com a chave de debug; iOS sem assinatura. Precisa de keystore própria e de um job de release antes de qualquer distribuição.
+- Dependências fixadas em versões antigas (`flutter_local_notifications` 17.x, `file_picker` 8.x, `archive` 3.x, `flutter_timezone` 3.x, `flutter_lints` 4.x). Rodar `flutter pub outdated` e atualizar uma por vez, com o CI.
+- A URL do projeto Supabase e a chave pública ficam como padrão no código. A chave `anon` é pública por natureza, mas um build de testes aponta para produção se ninguém passar `--dart-define`.
+- Erros são engolidos com `catch (_)` em quase toda a apresentação, sem registro. Não há telemetria de falhas; quando algo falhar com um usuário real, não haverá rastro.
 
-## Arquitetura atual
+### Qualidade e testes
 
-O projeto é organizado por funcionalidade, com separação entre apresentação, acesso a dados e regras de domínio. Usa `StatefulWidget` para estado das telas e `ValueNotifier` para tema, horário e atualização financeira. Não é uma implementação integral da chamada Clean Architecture.
+| | Antes | Depois |
+|---|---|---|
+| Testes Flutter | 214 (1 falhando, dependia da data) | **247, todos passando** |
+| Cobertura de linhas | 81,8% | **86,2%** |
+| Verificações de banco (PGlite) | 278 | **302** |
+| Análise estática | sem erros | sem erros, avisos ou infos |
+| Formatação | 78 de 87 arquivos fora do padrão | **padrão `dart format`, verificado no CI** |
 
-- `lib/main.dart`: inicialização, localidade brasileira, temas e entrada na autenticação.
-- `lib/core`: configuração, composição de serviços, preferências, erros e utilitários.
-- `lib/features/auth`: sessão, gateway Supabase e formulários de acesso.
-- `lib/features/transactions`: modelos, projeção mensal, repositório e telas financeiras.
-- `lib/features/dashboard`: cálculo de resumo mensal e início.
-- `lib/features/notifications`: seleção de pendências, planejamento local e lista de avisos.
-- `lib/features/profile`: leitura e edição de metadados do usuário.
-- `lib/shared/widgets`: layout com navegador interno, painéis assíncronos e seletor de mês.
+O CI agora publica análise, testes com falha (nome e mensagem) e cobertura como anotações do PR — antes era preciso baixar o log. A suíte cumpriu o papel de regressão: pegou dois erros que eu mesmo introduzi na refatoração (`setState` recebendo um `Future` no Início e no cabeçalho), e ao procurar o mesmo padrão apareceu um defeito antigo no Histórico de importações (erro ao desfazer um lote ou ao tentar novamente, em modo debug). O teste do dia 31 falhava em parte dos dias do mês porque dependia da data atual.
 
-As telas recebem interfaces de repositórios, o que permite testar comportamento sem chamar o Supabase. Em produção, `AppServices` fornece os adapters. O navegador interno mantém o menu fixo; `IndexedStack` preserva as abas.
+## 2. Visão de UX
 
-`financeRevision` provoca novas consultas após alterações e ao retornar ao aplicativo. É simples e apropriado para o tamanho atual, mas pode gerar consultas repetidas e merece revisão se o aplicativo crescer.
+### Navegação e arquitetura de informação
 
-## Telas e funções
+- **A aba Finanças é só um menu** com três opções. Cadastrar uma despesa — a ação mais frequente do app — custa dois toques e uma tela intermediária. Um botão flutuante "+" no Início e no Extrato resolveria; Finanças poderia sumir ou virar "Importar".
+- **Três portas para o perfil**: foto no cabeçalho (abre o perfil numa folha sobreposta), aba Perfil e, dentro dele, "Minhas notificações". **Três portas para notificações**: sino, cartão do Início e item do perfil. Redundância confunde mais do que ajuda; o cabeçalho já tem foto e sino, a aba Perfil pode sair.
+- O cabeçalho fixo com foto, marca e sino ocupa altura permanente em todas as telas, inclusive nas que já têm `AppBar` própria — em celulares pequenos são duas barras empilhadas.
 
-| Área | Funções existentes |
-|---|---|
-| Acesso | Entrar com e-mail/senha, criar conta com nome/e-mail/telefone opcional, pedir recuperação e definir nova senha. |
-| Início | Pendências prioritárias, notificações com contagem, saldos confirmado e previsto, total a pagar, recebido/pago e despesas por categoria. |
-| Finanças | Consulta por mês, busca, filtro por receita/despesa e status, seleção de pagamentos, revisão antes de confirmar e correção da confirmação. |
-| Novo lançamento | Valor, nome, vencimento, categoria, observação, receita/despesa, avulso/mensal/parcelado e confirmação inicial apenas para avulsos. |
-| Edição de valor | Alterar um mês ou aplicar aos meses seguintes de uma recorrência elegível. |
-| Contas mensais e parcelas | Consultar regras, última parcela e reajustes; encerrar após o mês atual preservando histórico. |
-| Notificações | Atrasadas, vencendo hoje e nos próximos três dias; confirmar pagamento ou manter pendente; configuração de permissão e consulta de cache offline. |
-| Perfil | Nome, e-mail, telefone, edição, aparência, horário dos lembretes e saída da sessão. |
+### Início
 
-## Regras de negócio preservadas
+- Três cartões de saldo (confirmado, previsto, a pagar) mais a explicação "Como calculamos o saldo?". O conceito de dois saldos que **não acumulam entre meses** é contraintuitivo para quem pensa em conta bancária; vale um único número principal com o detalhamento abaixo.
+- Não há navegação de mês no Início: para ver outubro em novembro é preciso ir ao Extrato, que não mostra resumo.
+- "Para onde vai o seu dinheiro?" funciona, mas com barras sem cor por categoria e sem comparação com o mês anterior.
 
-- Saldo confirmado: rendas recebidas menos despesas pagas **no mês**.
-- Saldo previsto: rendas menos despesas previstas **no mês**; não acumula saldo bancário de meses anteriores.
-- Recorrências são regras; as parcelas são projetadas em memória para a consulta. Uma compra de dez parcelas não insere dez transações antecipadamente.
-- Contas sem fim, como aluguel, mantêm quantidade de meses opcional.
-- Parcelamentos continuam aceitando de 2 a 1200 meses, conforme a regra existente.
-- O dia mensal é conservado; em mês curto, usa-se o último dia disponível.
-- O pagamento é manual e individual por ocorrência. Abrir uma notificação não paga a conta.
-- Avisos começam três dias antes e incluem pendências atrasadas. Pagamentos confirmados saem da lista.
-- O agendamento mantém horizonte de 90 dias e limite de 60 dias com notificações; é renovado ao abrir/retomar o aplicativo e após mudanças.
-- Reajustes futuros preservam valores de ocorrências já confirmadas. Encerrar uma regra mantém o histórico confirmado.
+### Cadastro
 
-A validação de entrada foi endurecida para rejeitar valores ou identificadores inválidos, sem mudar essas regras financeiras.
+- Bom: validação clara, aviso de descarte, dia 31 preservado, prévia do valor e da última parcela.
+- "Uma vez / Todo mês / Parcelado" + "Quantidade de meses restantes" + "Dia de vencimento" + data do primeiro vencimento: quatro controles para uma ideia. Parcelado poderia pedir só "em quantas vezes" e derivar o resto.
+- **Categorias não podem ser criadas no app.** Se a lista do banco não tiver a categoria certa, o usuário fica preso — inclusive na importação, que recusa categorias novas.
+- Textos diziam "Consulte em Finanças" depois de a consulta ter mudado para o Extrato (**corrigido**), e a prévia pedia para confirmar o recebimento de renda recorrente, que é automático (**corrigido**).
 
-## Supabase
+### Extrato
 
-`Supabase.initialize` usa o endereço do projeto informado e uma chave de papel `anon`. Nome e telefone ficam nos metadados de `auth.users`; o código não usa uma tabela `profiles`.
+- O painel de filtros (busca, tipo, mês, "Mês atual", três chips, link de recorrências) empurra a lista para baixo; em 360×720 sobra pouco espaço para lançamentos. Filtros poderiam ficar numa linha rolável.
+- Ações do lançamento escondidas no menu "⋮" e um `ExpansionTile` "Detalhes" em cada cartão: muitos toques para tarefas comuns. Tocar no cartão não faz nada.
+- Confirmação em lote com revisão antes de gravar é um acerto.
 
-O gateway usa autenticação por senha, cadastro, recuperação e atualização de senha. Os callbacks configurados são `com.pietro.financafacil://login-callback` e `com.pietro.financafacil://reset-password`. Esses endereços precisam estar autorizados na configuração Auth do Supabase para confirmação e recuperação funcionarem no aplicativo.
+### Notificações
 
-O repositório financeiro consulta:
+- "Manter pendente" só mostra uma mensagem; não adia nem silencia nada. Ou vira "Lembrar amanhã" de verdade, ou sai.
+- Renda recorrente é marcada como **recebida automaticamente** na data. Se o salário atrasar, o saldo confirmado mente sem aviso. Pelo menos um "Não recebi" deveria existir.
 
-- `transactions`: lançamentos avulsos e legados, com categoria por relacionamento.
-- `categories`: categorias por `transaction_type`, usando `EXPENSE`/`INCOME`.
-- `recurrence_rules`: início, dia mensal, quantidade opcional, encerramento e template.
-- `recurrence_occurrences`: confirmação e valor específico de um mês.
+### Perfil, acessibilidade e consistência
 
-Os tipos financeiros do template são `despesa`/`receita`; o parser também reconhece `EXPENSE`/`INCOME` para dados legados. As consultas financeiras usam o usuário da sessão e paginação de 500 registros. As categorias são compartilhadas conforme as políticas do banco.
+- Tema padrão é sempre claro; o padrão esperado hoje é seguir o sistema.
+- Foto de perfil só no aparelho: some ao trocar de celular, e o texto avisa isso só dentro do seletor.
+- Acessibilidade acima da média: áreas de toque de 48 px, rótulos semânticos, testes com fonte 2× e tela de 320 px nos dois temas.
+- Mensagens de erro são genéricas ("Verifique sua conexão") mesmo quando o problema é outro (ex.: script SQL não aplicado).
 
-As RPCs `set_recurrence_occurrence` e `set_recurrence_future_amount` atualizam ocorrências e reajustes. São `security invoker`, verificam usuário e usam RLS. As operações de lote não são uma transação única: se parte falhar, a interface informa e recarrega. Isso foi preservado e testado.
+## 3. O que foi feito nesta revisão
 
-Ordem existente dos scripts: `recorrencia.sql`, `lembretes.sql`, `experiencia.sql`. Antes, é necessário que o esquema base exista. O arquivo `diagnostico.sql` contém apenas consultas de leitura e pode ajudar a conferir tabelas, constraints, políticas, grants e funções. A revisão não alterou os scripts de gravação nem executou migrações remotamente.
+1. **Limpeza:** 13 arquivos obsoletos ou duplicados removidos (histórico e relatórios de validação antigos, instruções de pacotes ZIP, manifesto SHA desatualizado, script SQL duplicado, ícone duplicado, saída de ferramenta, `.env.example` que o Flutter não lê) e os ramos de tela que só existiam para testes (botão Adicionar e importação no Extrato, cabeçalho alternativo do Início, identidade duplicada no Perfil). Nenhuma dependência do `pubspec.yaml` estava sem uso: todas são importadas ou usadas pelo CI (`flutter_launcher_icons`).
+2. **Clean code e SOLID:** responsabilidade única (`ReminderSynchronizer`, `MainHeader`, `EntryStatus`, `statement.dart`), aberto/fechado mantido em `ProfileMenuItem`, substituição de Liskov no repositório de teste (agora notifica alterações como o real), segregação de interface em `ProfilePhotoSource` e inversão de dependência em todas as telas. Diálogos, datas e reajustes sem duplicação.
+3. **Testes:** 33 novos testes Flutter (domínio, sincronização de lembretes, diálogo, foto de perfil, histórico de importações, ações visíveis no fluxo real) e 24 verificações de banco para recorrência. Suíte completa usada como regressão a cada commit no CI.
+4. **Correções de comportamento:** `setState` com `Future` no Histórico de importações, fuso no reajuste futuro, textos de aba desatualizados, prévia de renda recorrente, recarga dupla do histórico.
 
-## Android
+## 4. Avaliação crítica e próximos passos
 
-Identificador `com.pietro.financafacil`; `compileSdk`/`targetSdk` 34; mínimo 23; AGP 8.1.0; Gradle 8.3; Kotlin 1.9.0; Java 17 no CI e alvo de bytecode 1.8. Desugaring está configurado para notificações.
+**Prioridade 1 — impede uso real**
+1. Subir `targetSdkVersion` para 36 e testar em aparelho (prazo da Play: 01/11/2026 com extensão).
+2. Versionar o esquema base (`categories`, `transactions`, políticas) e migrar os scripts para a Supabase CLI com numeração.
+3. Keystore de release e job de publicação; remover a URL de produção como padrão de builds de teste.
 
-O manifesto inclui internet, permissão de notificações, retomada após boot, receivers do plugin e os callbacks de autenticação. O ícone próprio de notificação e sua regra de preservação existem. O wrapper Gradle foi conferido estruturalmente; o workflow garante permissão de execução do script.
+**Prioridade 2 — vai doer com o crescimento**
+4. Consultas por intervalo de datas e projeção de recorrência no banco, em vez de baixar tudo a cada mudança.
+5. Registro de erros (Sentry ou Crashlytics) no lugar dos `catch (_)` silenciosos.
+6. Dinheiro em centavos inteiros no domínio.
 
-`app_links` 6.3.2 possui `compileSdk 34` explícito no código do pacote instalado. A configuração problemática por dependência de `flutter.compileSdkVersion` de outras versões não está nessa versão. O pin e o lockfile foram mantidos; isto não equivale a comprovar o build Gradle final.
+**Prioridade 3 — produto e UX**
+7. Botão "+" global e fim da aba-menu Finanças; uma porta só para perfil e notificações.
+8. Criação de categorias pelo usuário (inclusive na importação).
+9. "Não recebi" para renda automática e um "Lembrar amanhã" real.
+10. Navegação de mês e comparação com o mês anterior no Início; tema padrão seguindo o sistema.
 
-`google-services.json` foi removido porque não há integração Firebase, plugin Google Services ou dependência Firebase no aplicativo. Os lembretes são locais.
+**O que não faz sentido hoje:** a aba Finanças como menu; o botão "Manter pendente"; dois saldos mensais que não acumulam sem um saldo geral; o perfil acessível por cabeçalho e por aba ao mesmo tempo; e a renda considerada recebida sem nenhuma forma de contestar.
 
-## iOS
-
-Identificador `com.pietro.financafacil`; deployment target 13.0. O Podfile contém apenas o target existente `Runner`. Não há referência ao `RunnerTests` inexistente que causou o erro anterior.
-
-Os xcconfig Debug/Release incluem as configurações Pods e Flutter; Profile usa a configuração Release. As fases Flutter Build e Embed existem. `AppDelegate` usa a assinatura correta de `didFinishLaunchingWithOptions`, registra os plugins e configura o delegate de notificações. Info.plist declara o esquema dos callbacks e desativa o processamento paralelo de deep links do Flutter.
-
-Plists, esquemas, storyboards e demais XMLs foram verificados quanto à sintaxe. A integração nativa e a instalação no iPhone precisam da validação em Mac/aparelho; não foram executadas nesta revisão.
-
-## Dependências e testes
-
-O ambiente declarado Dart >=3.5.0 é coerente com Flutter 3.24.5/Dart 3.5.4 usado na validação. `intl` 0.19.0 está compatível com `flutter_localizations` dessa versão. As dependências de Supabase, links, notificações, timezone e preferências têm usos no código.
-
-`google_fonts` foi removido após trocar para fonte do sistema. `http` foi declarado em dev_dependencies porque é usado diretamente nos testes dos adapters; não depende mais de uma importação transitive implícita. `flutter_launcher_icons` continua necessário para gerar os ícones Android/iOS e foi executado com sucesso.
-
-Os 75 testes recebidos estavam passando. Eles protegem cenários financeiros relevantes, mas não provavam o funcionamento completo dos adapters ou da navegação. A suíte revisada tem novos testes de regressão, armazenamento local e contratos HTTP do SDK. Não foi descartado teste útil para forçar resultado verde.
-
-Consulte `VALIDACAO.md` para a contagem final, cobertura de linhas e o que ainda não foi testado.
+**Limites desta revisão:** testes rodaram no CI (Linux, Flutter 3.47.6) com repositórios simulados e PostgreSQL em memória. Não houve execução em aparelho, em Supabase real nem medição de desempenho com histórico grande.

@@ -1,57 +1,38 @@
-# Validação ampliada — 13/10/2026
+# Testes e regressão
 
-## Executado nesta revisão
+Toda alteração enviada ao GitHub (push no `main` ou pull request) passa pelo workflow `.github/workflows/build.yml` antes dos builds Android e iOS. O resultado aparece como anotações no próprio PR: análise estática, nome e mensagem de cada teste que falhar, total de testes e cobertura.
 
-278 verificações PostgreSQL passaram em PGlite local, com IDs UUID e inteiros. Incluem autorização por usuário, importação, atomicidade, duplicatas, desfazer protegido, exclusão mensal, encerramento e limites. Os cenários novos usam 500 linhas fictícias, erro na última linha e tentativa de 501 linhas.
+| Etapa | Comando | O que garante |
+|---|---|---|
+| Contratos | `node tools/validation/contracts.test.mjs` | RPCs usadas pelo app existem no SQL e em `docs/endpoints.openapi.json`; variáveis de ambiente; identificadores do projeto iOS |
+| Banco | `npm test --prefix tools/database` | Importação (UUID e IDs inteiros, 500 linhas, rollback, duplicatas, desfazer) e recorrência (confirmação, correção, reajuste, parcelas, encerramento), sempre com RLS e duas contas |
+| Formatação | `dart format --output=none --set-exit-if-changed lib test` | Estilo único do formatador oficial |
+| Análise | `dart analyze` | Regras de `flutter_lints` e ordenação de imports |
+| Flutter | `flutter test --coverage` | Domínio, repositórios contra HTTP simulado, telas e fluxos de navegação |
 
-Tempo total do cenário de carga (importar + reenvio + desfazer + falhas): UUID 1048 ms; inteiro 924 ms. Não representa latência da nuvem, concorrência real PostgreSQL nem desempenho no celular.
+Resultado em 22/10/2026 (CI, Flutter 3.47.6): **247 testes Flutter aprovados**, cobertura de **86,2%** das linhas de `lib`, análise sem nenhum aviso e **302 verificações PostgreSQL** (278 de importação, 24 de recorrência).
 
-46 verificações de contratos dos sete endpoints e variáveis de ambiente passaram. A carga adicional inclui cinco lotes de 100 linhas com gerador determinístico (semente 42), conferência da soma em centavos e 27 variações inválidas, sempre verificando rollback.
+## Onde estão os testes
 
-## Supabase remoto — executado
+- **Regras puras:** `domain_helpers_test`, `business_rules_unit_test`, `recurrence_test`, `finance_summary_test`, `amount_edit_scope_test`, `import_models_test`, `finance_utils_test`, `auth_validators_test`, `input_helpers_test`.
+- **Adapters (SDK Supabase real, HTTP simulado):** `finance_repository_contract_test`, `import_repository_contract_test`, `auth_profile_contract_test`, `finance_cache_test`.
+- **Serviços locais:** `reminder_service_test`, `reminder_synchronizer_test`, `reminder_preferences_test`, `profile_photo_store_test`, `profile_image_decoder_test`, `selected_file_reader_test`, `xlsx_import_reader_test`.
+- **Telas e fluxos:** `navigation_regression_test`, `ux_flows_test`, `finance_screens_test`, `finance_tabs_test`, `finance_actions_visibility_test`, `automatic_income_test`, `edit_confirmed_amount_test`, `delete_entry_test`, `reminders_test`, `import_flow_test`, `import_history_screen_test`, `login_screen_test`, `profile_*_test`, `shared_widgets_test`.
+- **Carga e limites:** `stress_regression_test` (500/501 linhas, 100 mil lançamentos, 1200 parcelas, calendário 2020–2100).
 
-Projeto Finança Fácil: ACTIVE_HEALTHY. As sete funções RPC existem, com os parâmetros esperados, search_path restrito e execução bloqueada para anon/permitida para authenticated. As seis tabelas financeiras têm RLS ativo e políticas presentes; isso não substitui teste completo de cada política com sessões reais.
+Os repositórios simulados de `test/support` seguem o mesmo contrato dos reais: toda alteração chama `notifyFinanceChanged()`.
 
-Chamadas HTTP reais a preview_finance_import e delete_finance_entry com chave pública, sem sessão de usuário: ambas retornaram 401. Não houve alteração de dados remotos. Resultados em http-smoke-results.json.
+## Executar localmente
 
-## Criado e ainda não executado nesta revisão
+No Windows, na raiz: `powershell -ExecutionPolicy Bypass -File .\tools\validation\run-tests.ps1` (use `-Flutter CAMINHO` se o SDK não estiver em `C:\dev\flutter`). Logs e cobertura ficam em `test-results`.
 
-`test/stress_regression_test.dart`: limite Excel 500/501, soma de 100 mil lançamentos, 100 leituras concorrentes com cinco requisições, 1200 parcelas únicas, calendário 2020–2100, valores não finitos/zero/negativos.
+Manualmente: na raiz, `npm ci --prefix tools/database` e `npm test --prefix tools/database`; em `flutter_project`, `flutter pub get`, `dart format lib test`, `flutter analyze` e `flutter test --coverage`.
 
-Foram adicionados cinco testes de contrato para HTTP 401/403/429/500/503 e nova tentativa idempotente. O SDK Flutter não está instalado neste ambiente; a tentativa de obtenção do SDK retornou 404. Os números de testes Flutter das entregas anteriores não são uma execução desta revisão. A revisão remota verificou estrutura/permissões SQL e duas chamadas HTTP sem sessão. Nenhum teste com usuário autenticado ou em aparelho foi realizado.
+Para apontar para outro projeto Supabase, copie `env.example.json` para `env.local.json` e rode `flutter run --dart-define-from-file=env.local.json`. Nunca coloque a chave `service_role` no app.
 
-## Execução completa no Windows
+## O que os testes automáticos não cobrem
 
-Na raiz do projeto, execute no PowerShell: `powershell -ExecutionPolicy Bypass -File .\tools\validation\run-tests.ps1`. O script usa C:\dev\flutter\bin\flutter.bat; para outro SDK, passe `-Flutter CAMINHO`. Requer Node/npm. Ele interrompe na primeira falha e salva logs, cobertura e resultado do build Android em test-results. O APK fica no diretório habitual do Flutter. O build iOS exige macOS e está no workflow. O script não foi executado neste Linux sem Flutter/PowerShell.
-
-## Como executar
-
-Na raiz: `npm ci --prefix tools/database` e `npm test --prefix tools/database`.
-Na pasta flutter_project: `flutter pub get`, `flutter analyze --no-fatal-infos` e `flutter test --coverage`.
-O workflow existente executa banco, análise, suíte Flutter e cobertura antes do build.
-
-## Ambiente e endpoints
-
-Os endpoints RPC existentes estão descritos em `docs/endpoints.openapi.json`. Eles são publicados pelo Supabase ao executar os scripts SQL já fornecidos; não foi criado outro servidor nem aplicado SQL remoto nesta revisão.
-
-Copie `env.example.json` para `env.local.json`, preencha URL e chave pública e rode:
-`flutter run --debug -d emulator-5554 --dart-define-from-file=env.local.json`.
-O arquivo `.env.example` documenta as variáveis; Flutter não lê `.env` automaticamente. Sem parâmetros, permanece a configuração pública atual para compatibilidade. Nunca coloque service_role ou senha do banco no app. As alterações de variáveis exigem reconstrução.
-
-## Homologação pendente
-
-- Android e iOS: compilação, instalação, seletor de arquivo e notificações reais.
-- Telas pequenas/fontes ampliadas, temas claro/escuro, teclado e leitor de tela.
-- Login, recuperação, troca de conta e expiração da sessão.
-- Finanças cadastra; Extrato consulta/edita/exclui; perfil abre sobre a tela atual.
-- Perda de rede durante gravação e retomada; cliques repetidos na confirmação.
-- Planilhas inválidas, fórmulas, datas/valores brasileiros e categorias incompatíveis.
-- Importação de 500 linhas em homologação e isolamento entre duas contas fictícias.
-- Concorrência real de duas importações com mesmo hash e duas edições do mesmo mês.
-- Medição de memória/CPU e fluidez em modo profile no aparelho, com histórico extenso.
-
-Não há promessa de todos os cenários possíveis: testes locais não substituem validação nativa, rede e banco real.
-
-## Correção após análise no Windows
-
-Corrigidos os oito avisos reportados: bloco no leitor Excel, initialValue nos três dropdowns e ordenação dos imports no teste de carga. O runner captura o código de saída mesmo quando o Windows PowerShell 5.1 recebe stderr nativo. A análise Flutter e o script PowerShell corrigidos ainda precisam ser reexecutados no Windows.
+- Execução em aparelho Android/iOS: notificações reais, seletores de arquivo e galeria, links de login e recuperação.
+- Supabase real: políticas das tabelas base (`categories`, `transactions`), concorrência entre conexões, latência.
+- Desempenho com histórico grande em modo profile.
+- Leitor de tela e navegação por teclado físico.
