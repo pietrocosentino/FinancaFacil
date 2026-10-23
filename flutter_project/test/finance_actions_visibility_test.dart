@@ -39,12 +39,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      for (final tab in ['Início', 'Extrato']) {
-        await openTab(tester, tab);
-        for (final button in [addButton, addIncomeButton]) {
-          expect(button.hitTestable(), findsOneWidget);
-          expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
-        }
+      // Cadastro só no Início; o Extrato não mostra os botões.
+      await openTab(tester, 'Extrato');
+      expect(addButton, findsNothing);
+      expect(addIncomeButton, findsNothing);
+      await openTab(tester, 'Início');
+      for (final button in [addButton, addIncomeButton]) {
+        expect(button.hitTestable(), findsOneWidget);
+        expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
       }
       await tester.tap(addButton);
       await tester.pumpAndSettle();

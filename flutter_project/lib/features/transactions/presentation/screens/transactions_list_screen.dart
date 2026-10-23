@@ -29,8 +29,8 @@ class TransactionsListScreen extends StatefulWidget {
   });
   final FinanceRepository repository;
 
-  /// Abre o cadastro de despesa, renda ou a importação de planilha; sem ele
-  /// os botões de cadastro não aparecem.
+  /// Abre a importação de planilha. Despesa e renda são cadastradas só no
+  /// Início, por isso o Extrato não mostra esses botões.
   final ValueChanged<AddChoice>? onAdd;
   @override
   State<TransactionsListScreen> createState() => _TransactionsListScreenState();
@@ -648,9 +648,6 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       top: false,
       child: Column(
         children: [
-          // Fixa no topo, acima dos totais: não rola com a lista.
-          if (widget.onAdd != null && _selectedIds.isEmpty)
-            QuickAddBar(onAdd: widget.onAdd!),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _refresh,

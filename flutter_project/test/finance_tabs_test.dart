@@ -28,7 +28,7 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  testWidgets('três abas e botão Adicionar no Início e no Extrato', (t) async {
+  testWidgets('três abas e cadastro somente no Início', (t) async {
     await showApp(t);
     final nav = find.byType(BottomNavigationBar);
     expect(t.widget<BottomNavigationBar>(nav).items.map((item) => item.label), [
@@ -39,7 +39,9 @@ void main() {
     expect(addButton, findsOneWidget);
     await openTab(t, 'Extrato');
     expect(t.widget<BottomNavigationBar>(nav).currentIndex, 1);
-    expect(addButton, findsOneWidget);
+    expect(addButton, findsNothing);
+    expect(addIncomeButton, findsNothing);
+    expect(find.byTooltip('Importar planilha'), findsOneWidget);
     await openTab(t, 'Perfil');
     expect(addButton, findsNothing);
     expect(t.takeException(), isNull);
