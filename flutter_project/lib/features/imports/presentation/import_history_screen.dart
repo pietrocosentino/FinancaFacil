@@ -22,7 +22,10 @@ class _ImportHistoryScreenState extends State<ImportHistoryScreen> {
     _future = widget.repository.history();
   }
 
-  void _reload() => setState(() => _future = widget.repository.history());
+  // O corpo em bloco evita devolver o Future ao setState (proibido pelo framework).
+  void _reload() => setState(() {
+    _future = widget.repository.history();
+  });
 
   Future<void> _undo(ImportBatch batch) async {
     final accepted = await showConfirmDialog(

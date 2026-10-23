@@ -49,7 +49,7 @@ declare
   changes jsonb;
 begin
   if auth.uid() is null then raise exception 'Sessão expirada'; end if;
-  if p_from_month is null or extract(day from p_from_month) <> 1 or p_from_month < date_trunc('month', current_date)::date then raise exception 'Escolha o mês atual ou um mês futuro'; end if;
+  if p_from_month is null or extract(day from p_from_month) <> 1 or p_from_month < date_trunc('month', timezone('America/Sao_Paulo', now()))::date then raise exception 'Escolha o mês atual ou um mês futuro'; end if;
   if p_amount is null or p_amount <= 0 or p_amount::text in ('NaN','Infinity','-Infinity') then raise exception 'Valor inválido'; end if;
   select * into strict rule from public.recurrence_rules where id = p_rule_id and user_id = auth.uid() for update;
   offset_month := (extract(year from p_from_month)::integer - extract(year from rule.first_due)::integer) * 12 + extract(month from p_from_month)::integer - extract(month from rule.first_due)::integer;

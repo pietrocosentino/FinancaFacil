@@ -40,7 +40,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   );
 
   void _reload() {
-    if (mounted) setState(() => _future = _load());
+    if (!mounted) return;
+    setState(() {
+      _future = _load();
+    });
   }
 
   Future<void> _refresh() async {

@@ -132,7 +132,9 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
 
   void _onFinanceChanged() {
     if (!mounted) return;
-    setState(() => _headerEntries = _loadHeaderEntries());
+    setState(() {
+      _headerEntries = _loadHeaderEntries();
+    });
     _syncReminders();
   }
 

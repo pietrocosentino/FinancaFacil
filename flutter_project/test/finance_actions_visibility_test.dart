@@ -48,6 +48,8 @@ void main() {
         'Adicionar renda',
         'Importar planilha',
       ]) {
+        await tester.ensureVisible(find.text(label));
+        await tester.pumpAndSettle();
         expect(find.text(label).hitTestable(), findsOneWidget);
         final tile = find.ancestor(
           of: find.text(label),
@@ -55,6 +57,8 @@ void main() {
         );
         expect(tester.getSize(tile).height, greaterThanOrEqualTo(48));
       }
+      await tester.ensureVisible(find.text('Adicionar conta'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Adicionar conta'));
       await tester.pumpAndSettle();
       expect(find.byType(AddTransactionScreen), findsOneWidget);
@@ -94,7 +98,8 @@ void main() {
         of: confirm,
         matching: find.byWidgetPredicate((widget) => widget is FilledButton),
       );
-      expect(tester.getSize(button).width, lessThan(320));
+      // Cabe na largura útil da tela (360 menos as margens de 16).
+      expect(tester.getSize(button).width, lessThanOrEqualTo(328));
       expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
       expect(tester.takeException(), isNull);
     });

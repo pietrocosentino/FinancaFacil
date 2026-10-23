@@ -184,11 +184,10 @@ void main() {
     await tester.ensureVisible(day);
     await tester.tap(day);
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Dia 31'),
-      150,
-      scrollable: find.byType(Scrollable).last,
-    );
+    // O menu abre centralizado no dia atual; ensureVisible rola até o dia 31
+    // em qualquer data, sem depender da posição inicial da lista.
+    await tester.ensureVisible(find.text('Dia 31').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dia 31').last);
     await tester.pumpAndSettle();
     final first = find.textContaining('Primeiro vencimento:');
