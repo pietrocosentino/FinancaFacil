@@ -44,10 +44,31 @@ jobs:
           cache: true
       - name: Instalar dependências
         run: flutter pub get
+      - name: Verificar formatação
+        run: dart format --output=none --set-exit-if-changed lib test
       - name: Analisar código
-        run: flutter analyze --no-fatal-infos
+        # O formato "machine" vira anotações no PR, sem depender do download do log.
+        run: |
+          set -o pipefail
+          dart analyze --format=machine 2>&1 | tee analysis.txt | awk -F'|' '
+            NF >= 8 {
+              level = ($1 == "ERROR") ? "error" : ($1 == "WARNING") ? "warning" : "notice"
+              file = $4; sub(".*/flutter_project/", "flutter_project/", file)
+              printf "::%s file=%s,line=%s,col=%s::%s %s\n", level, file, $5, $6, $3, $8
+            }'
       - name: Executar testes com cobertura
-        run: flutter test --coverage
+        run: flutter test --coverage --reporter github --file-reporter json:test-results.json
+      - name: Resumir testes e cobertura
+        if: always()
+        run: |
+          if [ -f test-results.json ]; then
+            jq -s '[.[] | select(.type == "testDone" and .hidden == false)] |
+              "::notice title=Testes Flutter::\(map(select(.result == "success" and .skipped == false)) | length) aprovados, \(map(select(.result != "success")) | length) com falha, \(map(select(.skipped)) | length) ignorados"' \
+              -r test-results.json
+          fi
+          if [ -f coverage/lcov.info ]; then
+            awk -F: '/^LF:/{f+=$2} /^LH:/{h+=$2} END{if(f>0) printf "::notice title=Cobertura::%.1f%% (%d de %d linhas)\n", 100*h/f, h, f}' coverage/lcov.info
+          fi
       - name: Disponibilizar cobertura
         uses: actions/upload-artifact@v4
         with:
