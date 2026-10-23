@@ -1,76 +1,54 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/services/app_services.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/month_picker.dart';
-import '../../../imports/presentation/import_screen.dart';
 import '../../data/finance_repository.dart';
 import '../../domain/amount_edit_scope.dart';
 import '../../domain/finance_models.dart';
-import 'add_transaction_screen.dart';
+import '../../domain/statement.dart';
 import 'edit_amount_dialog.dart';
 import 'finance_entry_card.dart';
 import 'recurrence_rules_screen.dart';
 
-enum _EntryFilter {
-  all('Todas'),
-  pending('Pendentes'),
-  confirmed('Confirmadas');
-
-  const _EntryFilter(this.label);
-  final String label;
-}
-
+/// Extrato mensal: consulta, filtros, confirmação, edição e exclusão.
+/// O cadastro de novos lançamentos fica na aba Finanças.
 class TransactionsListScreen extends StatefulWidget {
-  const TransactionsListScreen({
-    super.key,
-    this.repository,
-    this.addKey,
-    this.onEnableReminders,
-    this.showRegistration = true,
-  });
-  final bool showRegistration;
-  final FinanceRepository? repository;
-  final VoidCallback? onEnableReminders;
-  final GlobalKey<AddTransactionScreenState>? addKey;
+  const TransactionsListScreen({super.key, required this.repository});
+  final FinanceRepository repository;
   @override
   State<TransactionsListScreen> createState() => _TransactionsListScreenState();
 }
 
 class _TransactionsListScreenState extends State<TransactionsListScreen> {
-  late final FinanceRepository _repository;
   late Future<List<FinanceEntry>> _future;
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   final _selectedIds = <String>{};
   bool _processing = false;
   bool _reviewing = false;
-  bool _adding = false;
-  _EntryFilter _filter = _EntryFilter.all;
   bool _searchOpen = false;
-  String _query = '';
-  TransactionKind? _kind;
+  StatementFilter _filter = const StatementFilter();
+
+  FinanceRepository get _repository => widget.repository;
+
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ?? AppServices.finance;
     _future = _load();
     financeRevision.addListener(_reload);
   }
 
+  @override
+  void dispose() {
+    financeRevision.removeListener(_reload);
+    super.dispose();
+  }
+
   Future<List<FinanceEntry>> _load() async {
     final month = _month;
-    final entries = (await _repository.transactions(month))
-        .where((entry) => entry.belongsToMonth(month))
-        .toList();
-    entries.sort((a, b) {
-      if (a.isPaid != b.isPaid) return a.isPaid ? 1 : -1;
-      return (a.dueDate ?? DateTime(2100)).compareTo(
-        b.dueDate ?? DateTime(2100),
-      );
-    });
-    return entries;
+    return monthStatement(await _repository.transactions(month), month);
   }
 
   void _reload() {
@@ -103,10 +81,34 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    financeRevision.removeListener(_reload);
-    super.dispose();
+  void _updateFilter(StatementFilter filter) => setState(() {
+    _filter = filter;
+    _selectedIds.clear();
+  });
+
+  void _message(String message) =>
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+
+  /// Executa uma alteração bloqueando novas ações e recarregando a lista ao
+  /// final, com sucesso ou falha.
+  Future<void> _mutate(
+    Future<void> Function() action, {
+    required String success,
+    required String failure,
+  }) async {
+    setState(() => _processing = true);
+    try {
+      await action();
+      if (mounted) _message(success);
+    } catch (_) {
+      if (mounted) _message(failure);
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+        _reload();
+      }
+    }
   }
 
   Future<void> _paySelected() async {
@@ -125,63 +127,33 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       }
       return;
     }
-    if (!mounted) return;
+    if (!mounted) {
+      _reviewing = false;
+      return;
+    }
     final selected = entries.where((entry) => ids.contains(entry.id)).toList();
-    final expense =
-        selected
-            .where((e) => !e.isIncome)
-            .fold<int>(0, (sum, e) => sum + e.amountInCents) /
-        100;
-    final income =
-        selected
-            .where((e) => e.isIncome)
-            .fold<int>(0, (sum, e) => sum + e.amountInCents) /
-        100;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Revisar confirmações'),
-        scrollable: true,
-        content: Text(
-          '${selected.length} registros selecionados\nPagamentos: ${AppFormatters.currency.format(expense)}\nRecebimentos: ${AppFormatters.currency.format(income)}\n\n${selected.map((e) => e.description).join('\n')}\n\nConfirme somente os valores já pagos ou recebidos.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
+    final totals = totalsInCents(selected);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Revisar confirmações',
+      message:
+          '${selected.length} registros selecionados\n'
+          'Pagamentos: ${AppFormatters.currency.format(totals.expenseCents / 100)}\n'
+          'Recebimentos: ${AppFormatters.currency.format(totals.incomeCents / 100)}\n\n'
+          '${selected.map((e) => e.description).join('\n')}\n\n'
+          'Confirme somente os valores já pagos ou recebidos.',
+      confirmLabel: 'Confirmar',
+      prominent: true,
+      scrollable: true,
     );
     _reviewing = false;
-    if (confirmed != true || !mounted) return;
-    setState(() => _processing = true);
-    try {
-      await _repository.markPaid(ids);
-      if (mounted) {
-        _message('Pagamentos/recebimentos confirmados.');
-      }
-    } catch (_) {
-      if (mounted) {
-        _message(
-          'Não foi possível confirmar todos os pagamentos. Recarregue a lista antes de tentar novamente.',
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _processing = false);
-        _reload();
-      }
-    }
+    if (!confirmed || !mounted) return;
+    await _mutate(
+      () => _repository.markPaid(ids),
+      success: 'Pagamentos/recebimentos confirmados.',
+      failure: 'Não foi possível confirmar todos os pagamentos. Recarregue a lista antes de tentar novamente.',
+    );
   }
-
-  void _message(String message) =>
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _editAmount(FinanceEntry entry) async {
     if (_processing || _reviewing) return;
@@ -201,10 +173,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
               : (amount) => _repository.updateFutureAmount(future.id, amount),
         ),
       );
-      if (saved == true && mounted) {
-        notifyFinanceChanged();
-        _message('Valor atualizado.');
-      }
+      // O repositório já sinaliza a alteração para as demais telas.
+      if (saved == true && mounted) _message('Valor atualizado.');
     } finally {
       if (mounted) {
         setState(() => _processing = false);
@@ -214,131 +184,103 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   }
 
   Future<void> _undo(FinanceEntry entry) async {
-    if (_processing) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Voltar para pendente?'),
-        content: Text(
+    if (_processing || _reviewing) return;
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Voltar para pendente?',
+      message:
           '${entry.description} voltará a exigir confirmação. Os lembretes de despesas serão recalculados.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Voltar para pendente'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Voltar para pendente',
     );
-    if (confirmed != true || !mounted) return;
-    setState(() => _processing = true);
-    try {
-      await _repository.markPending({entry.id});
-      if (mounted) _message('Registro voltou para pendente.');
-    } catch (_) {
-      if (mounted) _message('Não foi possível corrigir. Tente novamente.');
-    } finally {
-      if (mounted) {
-        setState(() => _processing = false);
-        _reload();
-      }
-    }
+    if (!confirmed || !mounted) return;
+    await _mutate(
+      () => _repository.markPending({entry.id}),
+      success: 'Registro voltou para pendente.',
+      failure: 'Não foi possível corrigir. Tente novamente.',
+    );
   }
 
   Future<void> _delete(FinanceEntry entry) async {
     if (_processing || _reviewing) return;
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          entry.isRecurring
-              ? 'Excluir somente este mês?'
-              : 'Excluir lançamento?',
-        ),
-        content: Text(
-          '${entry.description}\n${AppFormatters.currency.format(entry.amount)}\n${entry.dueDate == null ? '' : AppFormatters.monthYear.format(entry.dueDate!)}\n\nO valor será retirado do saldo.${entry.isRecurring ? ' A recorrência continuará nos outros meses e este mês não reaparecerá.' : ''}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Excluir',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-        ],
-      ),
+    final month = entry.dueDate == null
+        ? ''
+        : AppFormatters.monthYear.format(entry.dueDate!);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: entry.isRecurring
+          ? 'Excluir somente este mês?'
+          : 'Excluir lançamento?',
+      message:
+          '${entry.description}\n${AppFormatters.currency.format(entry.amount)}\n$month\n\n'
+          'O valor será retirado do saldo.'
+          '${entry.isRecurring ? ' A recorrência continuará nos outros meses e este mês não reaparecerá.' : ''}',
+      confirmLabel: 'Excluir',
+      destructive: true,
     );
-    if (accepted != true || !mounted) return;
-    setState(() => _processing = true);
-    try {
-      await _repository.deleteEntry(entry.id);
-      if (mounted) _message('Lançamento excluído.');
-    } catch (_) {
-      if (mounted) {
-        _message(
-          'Não foi possível excluir. Confira a conexão e a atualização do banco.',
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _processing = false);
-        _reload();
-      }
-    }
+    if (!confirmed || !mounted) return;
+    await _mutate(
+      () => _repository.deleteEntry(entry.id),
+      success: 'Lançamento excluído.',
+      failure: 'Não foi possível excluir. Confira a conexão e a atualização do banco.',
+    );
   }
 
   Future<void> _stop(FinanceEntry entry) async {
     if (_processing || _reviewing) return;
     final reference = RecurrenceReference.fromEntryId(entry.id);
     if (reference == null) return;
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Encerrar próximos meses?'),
-        content: Text(
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Encerrar próximos meses?',
+      message:
           '${entry.description}\n\nA recorrência termina no fim do mês atual. Os registros anteriores e deste mês serão preservados.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Encerrar'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Encerrar',
     );
-    if (accepted != true || !mounted) return;
-    setState(() => _processing = true);
-    try {
-      await _repository.stopPlan(reference.ruleId);
-      if (mounted) _message('Recorrência encerrada após este mês.');
-    } catch (_) {
-      if (mounted) _message('Não foi possível encerrar. Tente novamente.');
-    } finally {
-      if (mounted) {
-        setState(() => _processing = false);
-        _reload();
-      }
-    }
+    if (!confirmed || !mounted) return;
+    await _mutate(
+      () => _repository.stopPlan(reference.ruleId),
+      success: 'Recorrência encerrada após este mês.',
+      failure: 'Não foi possível encerrar. Tente novamente.',
+    );
   }
 
   Future<void> _pickMonth() async {
     final date = await showMonthPicker(context: context, initialMonth: _month);
-    if (date != null && mounted) {
-      _setMonth(date);
+    if (date != null && mounted) _setMonth(date);
+  }
+
+  void _toggleSelection(FinanceEntry entry, bool? selected) => setState(() {
+    if (selected == true) {
+      _selectedIds.add(entry.id);
+    } else {
+      _selectedIds.remove(entry.id);
     }
+  });
+
+  Widget _monthNavigation() {
+    bool reachable(int delta) =>
+        !_processing &&
+        MonthRange.contains(DateTime(_month.year, _month.month + delta));
+    return Row(
+      children: [
+        IconButton(
+          tooltip: 'Mês anterior',
+          icon: const Icon(Icons.chevron_left),
+          onPressed: reachable(-1) ? () => _changeMonth(-1) : null,
+        ),
+        Expanded(
+          child: TextButton(
+            onPressed: _processing ? null : _pickMonth,
+            child: Text(AppFormatters.monthYear.format(_month)),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Próximo mês',
+          icon: const Icon(Icons.chevron_right),
+          onPressed: reachable(1) ? () => _changeMonth(1) : null,
+        ),
+      ],
+    );
   }
 
   Widget _filtersPanel() => SliverToBoxAdapter(
@@ -355,74 +297,45 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Buscar pelo nome da conta',
                 ),
-                onChanged: (value) => setState(() {
-                  _query = value.trim().toLowerCase();
-                  _selectedIds.clear();
-                }),
+                onChanged: (value) => _updateFilter(
+                  StatementFilter(
+                    confirmation: _filter.confirmation,
+                    kind: _filter.kind,
+                    query: value,
+                  ),
+                ),
               ),
             ),
-          if (_kind != null)
+          if (_filter.kind != null)
             Text(
-              _kind == TransactionKind.expense
+              _filter.kind == TransactionKind.expense
                   ? 'Somente despesas'
                   : 'Somente receitas',
             ),
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Mês anterior',
-                icon: const Icon(Icons.chevron_left),
-                onPressed:
-                    _processing ||
-                        !MonthRange.contains(
-                          DateTime(_month.year, _month.month - 1),
-                        )
-                    ? null
-                    : () => _changeMonth(-1),
-              ),
-              Expanded(
-                child: TextButton(
-                  onPressed: _processing ? null : _pickMonth,
-                  child: Text(AppFormatters.monthYear.format(_month)),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Próximo mês',
-                icon: const Icon(Icons.chevron_right),
-                onPressed:
-                    _processing ||
-                        !MonthRange.contains(
-                          DateTime(_month.year, _month.month + 1),
-                        )
-                    ? null
-                    : () => _changeMonth(1),
-              ),
-            ],
-          ),
+          _monthNavigation(),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: _processing
-                  ? null
-                  : () {
-                      _setMonth(DateTime.now());
-                    },
+              onPressed: _processing ? null : () => _setMonth(DateTime.now()),
               child: const Text('Mês atual'),
             ),
           ),
           Wrap(
             spacing: 8,
             children: [
-              for (final filter in _EntryFilter.values)
+              for (final confirmation in ConfirmationFilter.values)
                 ChoiceChip(
-                  label: Text(filter.label),
-                  selected: _filter == filter,
+                  label: Text(confirmation.label),
+                  selected: _filter.confirmation == confirmation,
                   onSelected: _processing
                       ? null
-                      : (_) => setState(() {
-                          _filter = filter;
-                          _selectedIds.clear();
-                        }),
+                      : (_) => _updateFilter(
+                          StatementFilter(
+                            confirmation: confirmation,
+                            kind: _filter.kind,
+                            query: _filter.query,
+                          ),
+                        ),
                 ),
             ],
           ),
@@ -443,48 +356,109 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     ),
   );
 
-  Future<void> _addEntry() async {
-    if (_adding || _processing) return;
-    _adding = true;
-    try {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => AddTransactionScreen(
-            key: widget.addKey,
-            repository: _repository,
-            onEnableReminders: widget.onEnableReminders,
+  Widget? _confirmationBar(BuildContext context) {
+    if (_selectedIds.isEmpty || MediaQuery.of(context).viewInsets.bottom > 0) {
+      return null;
+    }
+    return SafeArea(
+      top: false,
+      child: Container(
+        color: Theme.of(context).colorScheme.surface,
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+        child: Align(
+          heightFactor: 1,
+          alignment: Alignment.center,
+          child: FilledButton.icon(
+            onPressed: _processing ? null : _paySelected,
+            icon: const Icon(Icons.check_circle_outline),
+            label: Text(
+              _processing
+                  ? 'Confirmando...'
+                  : 'Confirmar selecionados (${_selectedIds.length})',
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _entryCard(FinanceEntry entry) => FinanceEntryCard(
+    entry: entry,
+    selected: _selectedIds.contains(entry.id),
+    onUndo: entry.isPaid && !entry.isAutomaticIncome && !_processing
+        ? () => _undo(entry)
+        : null,
+    onDelete: _processing ? null : () => _delete(entry),
+    onStop: _processing || RecurrenceReference.fromEntryId(entry.id) == null
+        ? null
+        : () => _stop(entry),
+    onTap: _processing ? null : () => _editAmount(entry),
+    onSelected: entry.isPaid || entry.isAutomaticIncome || _processing
+        ? null
+        : (value) => _toggleSelection(entry, value),
+  );
+
+  Widget _entries(List<FinanceEntry> monthEntries) {
+    final entries = _filter.apply(monthEntries);
+    if (entries.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const Icon(Icons.receipt_long_outlined, size: 40),
+              const SizedBox(height: 12),
+              Text(
+                monthEntries.isEmpty
+                    ? 'Nenhum lançamento neste mês. Cadastre uma conta ou consulte outro mês.'
+                    : 'Nenhum registro neste filtro. Consulte Todas para ver o mês.',
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       );
-    } finally {
-      _adding = false;
     }
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+      sliver: SliverList.builder(
+        itemCount: entries.length,
+        itemBuilder: (_, index) => _entryCard(entries[index]),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.showRegistration ? 'Finanças' : 'Extrato'),
+      title: const Text('Extrato'),
       actions: [
         IconButton(
           tooltip: 'Buscar contas',
           icon: const Icon(Icons.search),
           onPressed: _processing
               ? null
-              : () => setState(() {
+              : () {
                   _searchOpen = !_searchOpen;
-                  _query = '';
-                  _selectedIds.clear();
-                }),
+                  _updateFilter(
+                    StatementFilter(
+                      confirmation: _filter.confirmation,
+                      kind: _filter.kind,
+                    ),
+                  );
+                },
         ),
         PopupMenuButton<int>(
           tooltip: 'Filtrar receitas e despesas',
           enabled: !_processing,
           icon: const Icon(Icons.filter_list),
-          onSelected: (kind) => setState(() {
-            _kind = kind == 0 ? null : TransactionKind.values[kind - 1];
-            _selectedIds.clear();
-          }),
+          onSelected: (kind) => _updateFilter(
+            StatementFilter(
+              confirmation: _filter.confirmation,
+              kind: kind == 0 ? null : TransactionKind.values[kind - 1],
+              query: _filter.query,
+            ),
+          ),
           itemBuilder: (_) => const [
             PopupMenuItem(value: 0, child: Text('Receitas e despesas')),
             PopupMenuItem(value: 1, child: Text('Somente despesas')),
@@ -493,40 +467,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
         ),
       ],
     ),
-    bottomNavigationBar:
-        (!widget.showRegistration && _selectedIds.isEmpty) ||
-            MediaQuery.of(context).viewInsets.bottom > 0
-        ? null
-        : SafeArea(
-            top: false,
-            child: Container(
-              color: Theme.of(context).colorScheme.surface,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-              child: Align(
-                heightFactor: 1,
-                alignment: Alignment.center,
-                child: FilledButton.icon(
-                  onPressed: _processing
-                      ? null
-                      : _selectedIds.isEmpty
-                      ? _addEntry
-                      : _paySelected,
-                  icon: Icon(
-                    _selectedIds.isEmpty
-                        ? Icons.add_circle_outline
-                        : Icons.check_circle_outline,
-                  ),
-                  label: Text(
-                    _selectedIds.isEmpty
-                        ? 'Adicionar'
-                        : _processing
-                        ? 'Confirmando...'
-                        : 'Confirmar selecionados (${_selectedIds.length})',
-                  ),
-                ),
-              ),
-            ),
-          ),
+    bottomNavigationBar: _confirmationBar(context),
     body: SafeArea(
       top: false,
       child: RefreshIndicator(
@@ -534,103 +475,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            if (widget.showRegistration)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: _processing
-                          ? null
-                          : () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    ImportScreen(finance: _repository),
-                              ),
-                            ),
-                      icon: const Icon(Icons.upload_file_outlined, size: 20),
-                      label: const Text('Importar planilha'),
-                    ),
-                  ),
-                ),
-              ),
             _filtersPanel(),
             AsyncSliverPanel<List<FinanceEntry>>(
               future: _future,
               onRetry: _reload,
               errorMessage: 'Não foi possível carregar as contas. Verifique sua conexão e tente novamente.',
-              builder: (allEntries) {
-                final entries = allEntries
-                    .where(
-                      (e) =>
-                          (_filter == _EntryFilter.all ||
-                              (_filter == _EntryFilter.pending
-                                  ? !e.isPaid
-                                  : e.isPaid)) &&
-                          (_kind == null || e.kind == _kind) &&
-                          e.description.toLowerCase().contains(_query),
-                    )
-                    .toList();
-                if (entries.isEmpty) {
-                  return SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          const Icon(Icons.receipt_long_outlined, size: 40),
-                          const SizedBox(height: 12),
-                          Text(
-                            allEntries.isEmpty
-                                ? 'Nenhum lançamento neste mês. Cadastre uma conta ou consulte outro mês.'
-                                : 'Nenhum registro neste filtro. Consulte Todas para ver o mês.',
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                return SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-                  sliver: SliverList.builder(
-                    itemCount: entries.length,
-                    itemBuilder: (_, index) {
-                      final entry = entries[index];
-                      return FinanceEntryCard(
-                        entry: entry,
-                        selected: _selectedIds.contains(entry.id),
-                        onUndo:
-                            entry.isPaid &&
-                                !entry.isAutomaticIncome &&
-                                !_processing
-                            ? () => _undo(entry)
-                            : null,
-                        onDelete: _processing ? null : () => _delete(entry),
-                        onStop:
-                            _processing ||
-                                RecurrenceReference.fromEntryId(entry.id) ==
-                                    null
-                            ? null
-                            : () => _stop(entry),
-                        onTap: _processing ? null : () => _editAmount(entry),
-                        onSelected:
-                            entry.isPaid ||
-                                entry.isAutomaticIncome ||
-                                _processing
-                            ? null
-                            : (value) => setState(() {
-                                if (value == true) {
-                                  _selectedIds.add(entry.id);
-                                } else {
-                                  _selectedIds.remove(entry.id);
-                                }
-                              }),
-                      );
-                    },
-                  ),
-                );
-              },
+              builder: _entries,
             ),
           ],
         ),

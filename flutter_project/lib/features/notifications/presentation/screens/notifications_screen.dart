@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/services/reminder_preferences.dart';
+import '../../../../core/utils/dates.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
-import '../../../dashboard/domain/finance_summary.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../transactions/data/finance_repository.dart';
 import '../../../transactions/domain/finance_models.dart';
 import '../../../transactions/presentation/screens/finance_entry_card.dart';
@@ -92,36 +93,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _confirm(FinanceEntry entry) async {
     if (_busyId != null || _reviewing) return;
     _reviewing = true;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        title: const Text('Confirmar pagamento?'),
-        content: Text(
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Confirmar pagamento?',
+      message:
           '${entry.description}\n${AppFormatters.currency.format(entry.amount)}\n'
           'Vencimento: ${AppFormatters.date.format(entry.dueDate!)}\n\n'
           'Confirme somente após pagar ou transferir o valor. O aplicativo não realiza pagamentos.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Ainda não'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sim, paguei'),
-          ),
-        ],
-      ),
+      cancelLabel: 'Ainda não',
+      confirmLabel: 'Sim, paguei',
+      prominent: true,
+      scrollable: true,
     );
     _reviewing = false;
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     setState(() => _busyId = entry.id);
     try {
       await widget.repository.markPaid({entry.id});
       if (mounted) {
+        // O repositório já sinaliza a alteração; lista, início e lembretes
+        // são atualizados por esse aviso.
         _message('Pagamento confirmado. O lembrete deste mês foi removido.');
-        notifyFinanceChanged();
       }
     } catch (_) {
       if (mounted) {
@@ -279,21 +271,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     ),
   );
 
-  String _group(FinanceEntry entry) {
-    final days = daysUntil(entry.dueDate!, DateTime.now());
-    return days < 0
-        ? 'Atrasadas'
-        : days == 0
-        ? 'Vencem hoje'
-        : 'Próximos 3 dias';
-  }
+  String _group(FinanceEntry entry) =>
+      dueGroupLabel(daysUntil(entry.dueDate!, DateTime.now()));
 
-  String _notice(FinanceEntry entry) {
-    final days = daysUntil(entry.dueDate!, DateTime.now());
-    return days < 0
-        ? 'Atrasada há ${-days} dia(s)'
-        : days == 0
-        ? 'Vence hoje'
-        : 'Vence em $days dia(s)';
-  }
+  String _notice(FinanceEntry entry) =>
+      dueNotice(daysUntil(entry.dueDate!, DateTime.now()));
 }

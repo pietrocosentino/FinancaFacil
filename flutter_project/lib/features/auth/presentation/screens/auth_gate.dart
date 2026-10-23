@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/services/app_services.dart';
 import '../../../../shared/widgets/main_layout.dart';
+import '../../data/auth_gateway.dart';
 import '../../data/auth_session_service.dart';
 import 'login_screen.dart';
 
@@ -16,6 +17,7 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   late final AuthSessionService _session;
+  final AuthGateway _auth = AppServices.auth;
   StreamSubscription<SessionEvent>? _authSubscription;
   StreamSubscription<Uri>? _linkSubscription;
   bool _recovery = false;
@@ -100,10 +102,11 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     final userId = _session.userId;
     final child = userId == null
-        ? const LoginScreen(key: ValueKey('login'))
+        ? LoginScreen(key: const ValueKey('login'), gateway: _auth)
         : _recovery
         ? LoginScreen(
             key: const ValueKey('recovery'),
+            gateway: _auth,
             recovery: true,
             onPasswordUpdated: () => setState(() => _recovery = false),
             onRecoveryCancelled: _cancelRecovery,

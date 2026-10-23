@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/services/app_services.dart';
 import '../../../../core/utils/auth_validators.dart';
 import '../../../../core/utils/phone_formatter.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../data/profile_repository.dart';
 
 class PersonalDataScreen extends StatefulWidget {
-  const PersonalDataScreen({super.key, this.repository, this.onSaved});
-  final ProfileRepository? repository;
+  const PersonalDataScreen({super.key, required this.repository, this.onSaved});
+  final ProfileRepository repository;
   final VoidCallback? onSaved;
   @override
   State<PersonalDataScreen> createState() => _PersonalDataScreenState();
 }
 
 class _PersonalDataScreenState extends State<PersonalDataScreen> {
-  late final ProfileRepository _repository;
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _phone = TextEditingController();
@@ -23,10 +22,11 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
   String? _error;
   bool _allowExit = false;
 
+  ProfileRepository get _repository => widget.repository;
+
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ?? AppServices.profile;
     _loadFields();
   }
 
@@ -82,24 +82,14 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
 
   Future<void> _leave(bool didPop) async {
     if (didPop || _busy || !_dirty) return;
-    final discard = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Descartar alterações?'),
-        content: const Text('Seus dados ainda não foram salvos.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Continuar editando'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Descartar'),
-          ),
-        ],
-      ),
+    final discard = await showConfirmDialog(
+      context,
+      title: 'Descartar alterações?',
+      message: 'Seus dados ainda não foram salvos.',
+      cancelLabel: 'Continuar editando',
+      confirmLabel: 'Descartar',
     );
-    if (discard != true || !mounted) return;
+    if (!discard || !mounted) return;
     setState(() => _allowExit = true);
     await WidgetsBinding.instance.endOfFrame;
     if (mounted) Navigator.of(context).pop();

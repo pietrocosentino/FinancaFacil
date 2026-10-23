@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/services/app_services.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
 import '../../../notifications/data/reminder_service.dart';
 import '../../../notifications/domain/reminder_plan.dart';
-import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../transactions/data/finance_repository.dart';
+import '../../../transactions/domain/entry_status.dart';
 import '../../../transactions/domain/finance_models.dart';
 import '../../../transactions/presentation/screens/finance_entry_card.dart';
 import '../../domain/finance_summary.dart';
@@ -16,38 +15,32 @@ import '../../domain/finance_summary.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
     super.key,
+    required this.repository,
     this.onNavigateToNotifications,
-    this.repository,
     this.reminders,
-    this.showHeader = true,
   });
+  final FinanceRepository repository;
   final VoidCallback? onNavigateToNotifications;
-  final FinanceRepository? repository;
   final ReminderService? reminders;
-  final bool showHeader;
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  late final FinanceRepository _repository;
   late Future<List<FinanceEntry>> _future;
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ?? AppServices.finance;
     _future = _load();
     financeRevision.addListener(_reload);
   }
 
-  Future<List<FinanceEntry>> _load() =>
-      _repository.transactions(DateTime.now().add(const Duration(days: 3)));
+  Future<List<FinanceEntry>> _load() => widget.repository.transactions(
+    DateTime.now().add(const Duration(days: attentionWindowDays)),
+  );
+
   void _reload() {
-    if (mounted) {
-      setState(() {
-        _future = _load();
-      });
-    }
+    if (mounted) setState(() => _future = _load());
   }
 
   Future<void> _refresh() async {
@@ -65,50 +58,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  void _openNotifications() {
-    if (widget.onNavigateToNotifications != null) {
-      widget.onNavigateToNotifications!();
-      return;
-    }
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => NotificationsScreen(
-          repository: _repository,
-          reminders: widget.reminders,
-        ),
-      ),
-    );
-  }
+  void _openNotifications() => widget.onNavigateToNotifications?.call();
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: widget.showHeader
-        ? AppBar(
-            title: const Text('FinançaFácil'),
-            actions: [
-              FutureBuilder<List<FinanceEntry>>(
-                future: _future,
-                builder: (_, snapshot) {
-                  final count = snapshot.hasError
-                      ? 0
-                      : pendingBills(
-                          snapshot.data ?? [],
-                          DateTime.now(),
-                        ).length;
-                  return IconButton(
-                    tooltip: 'Notificações',
-                    onPressed: _openNotifications,
-                    icon: Badge(
-                      label: Text('$count'),
-                      isLabelVisible: count > 0,
-                      child: const Icon(Icons.notifications_outlined),
-                    ),
-                  );
-                },
-              ),
-            ],
-          )
-        : null,
     body: SafeArea(
       child: AsyncPanel<List<FinanceEntry>>(
         future: _future,

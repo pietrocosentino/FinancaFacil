@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/confirm_dialog.dart';
 import '../data/import_repository.dart';
 import '../domain/import_models.dart';
 import 'import_error_message.dart';
@@ -24,26 +25,13 @@ class _ImportHistoryScreenState extends State<ImportHistoryScreen> {
   void _reload() => setState(() => _future = widget.repository.history());
 
   Future<void> _undo(ImportBatch batch) async {
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Desfazer importação?'),
-        content: const Text(
-          'O lote será removido somente se nenhum registro foi alterado e nenhuma recorrência possui confirmações. Se houver mudanças, o lote inteiro será preservado.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Desfazer lote'),
-          ),
-        ],
-      ),
+    final accepted = await showConfirmDialog(
+      context,
+      title: 'Desfazer importação?',
+      message: 'O lote será removido somente se nenhum registro foi alterado e nenhuma recorrência possui confirmações. Se houver mudanças, o lote inteiro será preservado.',
+      confirmLabel: 'Desfazer lote',
     );
-    if (accepted != true || !mounted || _busy) return;
+    if (!accepted || !mounted || _busy) return;
     setState(() => _busy = true);
     try {
       final count = await widget.repository.undo(batch.id);

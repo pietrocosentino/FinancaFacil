@@ -2,8 +2,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/services/app_services.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/confirm_dialog.dart';
 import '../../transactions/data/finance_repository.dart';
 import '../../transactions/domain/finance_models.dart';
 import '../data/import_file_gateway.dart';
@@ -19,13 +19,13 @@ List<ImportLine> _readSheet(Uint8List bytes) => XlsxImportReader().read(bytes);
 class ImportScreen extends StatefulWidget {
   const ImportScreen({
     super.key,
-    this.finance,
-    this.repository,
+    required this.finance,
+    required this.repository,
     this.files,
     this.reader,
   });
-  final FinanceRepository? finance;
-  final ImportRepository? repository;
+  final FinanceRepository finance;
+  final ImportRepository repository;
   final ImportFileGateway? files;
   final Future<List<ImportLine>> Function(Uint8List)? reader;
   @override
@@ -48,8 +48,8 @@ class _ImportScreenState extends State<ImportScreen> {
   @override
   void initState() {
     super.initState();
-    _finance = widget.finance ?? AppServices.finance;
-    _repository = widget.repository ?? AppServices.imports;
+    _finance = widget.finance;
+    _repository = widget.repository;
     _files = widget.files ?? NativeImportFileGateway();
   }
 
@@ -175,30 +175,20 @@ class _ImportScreenState extends State<ImportScreen> {
     if (!_canImport) return;
     final rows = _selected;
     final similar = rows.where((line) => line.similar).length;
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar importação?'),
-        scrollable: true,
-        content: Text(
+    final accepted = await showConfirmDialog(
+      context,
+      title: 'Confirmar importação?',
+      message:
           '${rows.length} lançamentos serão cadastrados.\n'
           '${_lines.length - rows.length} linhas não serão importadas.\n\n'
           'Recorrências serão cadastradas uma única vez. Despesas exigem confirmação de pagamento; rendas recorrentes entram automaticamente no saldo na data mensal.'
           '${similar > 0 ? '\n\nVocê incluiu $similar possíveis duplicatas. Confirme somente se são lançamentos diferentes.' : ''}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Voltar à prévia'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Importar agora'),
-          ),
-        ],
-      ),
+      cancelLabel: 'Voltar à prévia',
+      confirmLabel: 'Importar agora',
+      prominent: true,
+      scrollable: true,
     );
-    if (accepted != true || !mounted) return;
+    if (!accepted || !mounted) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -222,7 +212,7 @@ class _ImportScreenState extends State<ImportScreen> {
           content: Text(
             receipt.alreadyImported
                 ? 'Este arquivo já possui uma importação ativa. Nenhum registro foi duplicado. Consulte o histórico.'
-                : '${receipt.count} lançamentos cadastrados. Consulte o mês do primeiro vencimento na aba Finanças.',
+                : '${receipt.count} lançamentos cadastrados. Consulte o mês do primeiro vencimento no Extrato.',
           ),
           actions: [
             TextButton(

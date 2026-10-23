@@ -1,3 +1,4 @@
+import '../../../core/utils/dates.dart';
 import '../../../core/utils/finance_utils.dart';
 import '../../transactions/domain/finance_models.dart';
 
@@ -10,9 +11,6 @@ String normalizeImportText(String value) {
   }
   return result.replaceAll(RegExp(r'\s+'), ' ');
 }
-
-String importDate(DateTime date) =>
-    '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
 DateTime? parseImportDate(Object? input) {
   if (input is DateTime) return DateTime(input.year, input.month, input.day);
@@ -40,9 +38,7 @@ class ImportLine {
 
   String text(String field) {
     final value = values[field];
-    return value is DateTime
-        ? importDate(value)
-        : value?.toString().trim() ?? '';
+    return value is DateTime ? isoDate(value) : value?.toString().trim() ?? '';
   }
 
   TransactionKind? get kind {
@@ -138,7 +134,7 @@ class ImportLine {
     'description': text('description'),
     'type': kind!.databaseValue,
     'amount': amount!,
-    'due_date': importDate(due!),
+    'due_date': isoDate(due!),
     'due_day': day!,
     'recurring': recurring!,
     'months': months,
@@ -147,7 +143,7 @@ class ImportLine {
   };
 
   String get signature =>
-      '${kind?.databaseValue}|${normalizeImportText(text('description'))}|$amount|${due == null ? '' : importDate(due!)}|$recurring|$months|$day|$categoryId';
+      '${kind?.databaseValue}|${normalizeImportText(text('description'))}|$amount|${due == null ? '' : isoDate(due!)}|$recurring|$months|$day|$categoryId';
 }
 
 class ImportBatch {

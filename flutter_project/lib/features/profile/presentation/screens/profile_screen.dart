@@ -1,40 +1,33 @@
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
-import '../../../../core/files/selected_file_reader.dart';
-import '../../../../core/services/app_services.dart';
 import '../../../../core/services/reminder_preferences.dart';
-import '../../../../core/utils/finance_updates.dart';
-import '../../data/profile_image_decoder.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
+import '../../data/profile_photo_source.dart';
 import '../../data/profile_photo_store.dart';
 import '../../data/profile_repository.dart';
 import '../profile_controller.dart';
 import '../profile_menu_item.dart';
-import '../widgets/profile_identity.dart';
 import 'personal_data_screen.dart';
 
+/// Menu do perfil. Recebe o [controller] compartilhado com o cabeçalho ou,
+/// isoladamente, um [repository] para criar o próprio controlador.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
+    this.controller,
     this.repository,
     this.onNavigateToNotifications,
-    this.photoStore,
-    this.imagePicker,
-    this.controller,
+    this.photoSource,
     this.extraItems = const [],
-    this.showIdentity = true,
     this.onClose,
-  });
+  }) : assert(controller != null || repository != null);
+  final ProfileController? controller;
   final ProfileRepository? repository;
   final VoidCallback? onNavigateToNotifications;
-  final ProfilePhotoStore? photoStore;
-  final ImagePicker? imagePicker;
-  final ProfileController? controller;
+  final ProfilePhotoSource? photoSource;
   final List<ProfileMenuItem> extraItems;
-  final bool showIdentity;
   final VoidCallback? onClose;
 
   @override
@@ -42,20 +35,17 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late final ProfileRepository _repository;
   late final ProfileController _controller;
+  late final ProfilePhotoSource _photos;
   bool _busy = false;
+
+  ProfileRepository get _repository => _controller.repository;
 
   @override
   void initState() {
     super.initState();
-    _repository =
-        widget.controller?.repository ??
-        widget.repository ??
-        AppServices.profile;
-    _controller =
-        widget.controller ??
-        ProfileController(_repository, photos: widget.photoStore);
+    _controller = widget.controller ?? ProfileController(widget.repository!);
+    _photos = widget.photoSource ?? DeviceProfilePhotoSource();
     _controller.loadPhoto();
   }
 
@@ -112,32 +102,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await _controller.removePhoto();
         _message('Foto removida.');
       } else {
-        final Uint8List bytes;
-        if (action == 'files') {
-          final result = await FilePicker.platform.pickFiles(
-            type: FileType.custom,
-            allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
-            allowMultiple: false,
-            withData: false,
-            withReadStream: true,
-          );
-          if (result == null) return;
-          final input = await readSelectedFile(
-            result.files.single,
-            5 * 1024 * 1024,
-          );
-          bytes = await prepareProfileImage(input);
-        } else {
-          final file = await (widget.imagePicker ?? ImagePicker()).pickImage(
-            source: ImageSource.gallery,
-            maxWidth: 512,
-            maxHeight: 512,
-            imageQuality: 70,
-            requestFullMetadata: false,
-          );
-          if (file == null) return;
-          bytes = await prepareProfileImage(await file.readAsBytes());
-        }
+        final Uint8List? bytes = action == 'files'
+            ? await _photos.fromFiles()
+            : await _photos.fromGallery();
+        if (bytes == null) return;
         if (bytes.length > ProfilePhotoStore.maxBytes) {
           _message('Escolha uma imagem menor, de até 200 KB após a redução.');
           return;
@@ -177,8 +145,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (time == null || !mounted) return;
     setState(() => _busy = true);
     try {
+      // O layout principal observa o horário e reagenda os lembretes.
       await ReminderPreferences.setTime(time);
-      notifyFinanceChanged();
       _message('Horário dos lembretes atualizado.');
     } catch (_) {
       _message('Não foi possível salvar o horário. Tente novamente.');
@@ -228,26 +196,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _signOut() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sair da conta?'),
-        content: const Text(
-          'Os lembretes deste aparelho serão interrompidos até você entrar novamente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sair'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Sair da conta?',
+      message: 'Os lembretes deste aparelho serão interrompidos até você entrar novamente.',
+      confirmLabel: 'Sair',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     setState(() => _busy = true);
     try {
       await _repository.signOut();
@@ -318,7 +273,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            if (widget.showIdentity) ProfileIdentity(controller: _controller),
             _section('Minha conta', [
               _item(Icons.photo_camera_outlined, 'Alterar foto', _changePhoto),
               for (final item in widget.extraItems)

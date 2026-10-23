@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/services/app_services.dart';
 import '../../../../core/utils/finance_utils.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/month_picker.dart';
 import '../../data/finance_repository.dart';
 import '../../domain/finance_models.dart';
@@ -19,12 +19,12 @@ enum _Frequency {
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({
     super.key,
-    this.repository,
+    required this.repository,
     this.onEnableReminders,
     this.initialKind = TransactionKind.expense,
   });
   final TransactionKind initialKind;
-  final FinanceRepository? repository;
+  final FinanceRepository repository;
   final VoidCallback? onEnableReminders;
   @override
   State<AddTransactionScreen> createState() => AddTransactionScreenState();
@@ -36,7 +36,6 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
   final _description = TextEditingController();
   final _notes = TextEditingController();
   final _installments = TextEditingController();
-  late final FinanceRepository _repository;
   TransactionKind _kind = TransactionKind.expense;
   TransactionKind _initialKind = TransactionKind.expense;
   DateTime _dueDate = DateTime.now();
@@ -51,6 +50,13 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
   bool _allowExit = false;
   bool _askingToLeave = false;
   bool _detailsChanged = false;
+  FinanceRepository get _repository => widget.repository;
+  double? get _amountValue => parseMoney(_amount.text);
+  int? get _installmentCount {
+    final count = int.tryParse(_installments.text);
+    return count != null && count >= 2 && count <= 1200 ? count : null;
+  }
+
   bool get _dirty =>
       _amount.text.isNotEmpty ||
       _description.text.isNotEmpty ||
@@ -65,26 +71,16 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
     if (_saving || _askingToLeave) return false;
     if (!_dirty) return true;
     _askingToLeave = true;
-    final discard = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Descartar cadastro?'),
-        content: const Text('Você tem dados ainda não salvos.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Continuar preenchendo'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Descartar'),
-          ),
-        ],
-      ),
+    final discard = await showConfirmDialog(
+      context,
+      title: 'Descartar cadastro?',
+      message: 'Você tem dados ainda não salvos.',
+      cancelLabel: 'Continuar preenchendo',
+      confirmLabel: 'Descartar',
     );
     _askingToLeave = false;
-    if (discard == true && mounted) setState(() => _allowExit = true);
-    return discard == true;
+    if (discard && mounted) setState(() => _allowExit = true);
+    return discard;
   }
 
   bool _loadingCategories = false;
@@ -96,7 +92,6 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
     super.initState();
     _kind = widget.initialKind;
     _initialKind = widget.initialKind;
-    _repository = widget.repository ?? AppServices.finance;
     _loadCategories();
   }
 
@@ -176,7 +171,7 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
       await _repository.save(
         TransactionDraft(
           kind: _kind,
-          amount: parseMoney(_amount.text)!,
+          amount: _amountValue!,
           description: _description.text,
           notes: _notes.text,
           dueDay: _dueDay,
@@ -192,7 +187,7 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
       if (!mounted) return;
       _message(
         _recurring
-            ? 'Conta mensal salva. Consulte em Finanças.'
+            ? 'Conta mensal salva. Consulte no Extrato.'
             : 'Lançamento salvo.',
       );
       final action = await showDialog<String>(
@@ -200,13 +195,7 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Cadastro salvo'),
-          content: Text(
-            '${_description.text}\n${AppFormatters.currency.format(parseMoney(_amount.text))}\nPrimeiro vencimento: ${AppFormatters.date.format(_dueDate)}\n\n${_kind == TransactionKind.income && _recurring
-                ? 'A renda será considerada recebida automaticamente na data de cada mês. Você pode editar o valor em Finanças.'
-                : _kind == TransactionKind.income
-                ? 'Consulte sua renda em Finanças.'
-                : 'Confirme cada pagamento em Finanças. Ative os lembretes em Notificações para receber avisos.'}',
-          ),
+          content: Text(_savedSummary()),
           actions: [
             FilledButton(
               onPressed: () => Navigator.pop(context, 'exit'),
@@ -258,6 +247,37 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
         setState(() => _saving = false);
       }
     }
+  }
+
+  /// Resumo exibido depois de salvar, com o próximo passo esperado.
+  String _savedSummary() {
+    final guidance = _kind == TransactionKind.income
+        ? _recurring
+              ? 'A renda será considerada recebida automaticamente na data de cada mês. Você pode editar o valor no Extrato.'
+              : 'Consulte sua renda no Extrato.'
+        : 'Confirme cada pagamento no Extrato. Ative os lembretes em Notificações para receber avisos.';
+    return '${_description.text}\n'
+        '${AppFormatters.currency.format(_amountValue)}\n'
+        'Primeiro vencimento: ${AppFormatters.date.format(_dueDate)}\n\n'
+        '$guidance';
+  }
+
+  /// Prévia do cadastro antes de salvar.
+  String _previewText(double amount) {
+    final when = _recurring
+        ? 'todo dia $_dueDay'
+        : 'em ${AppFormatters.date.format(_dueDate)}';
+    final period = _hasInstallments
+        ? ' · ${_installments.text} meses'
+        : _recurring
+        ? ' · sem data final'
+        : '';
+    final guidance = _kind == TransactionKind.expense
+        ? 'Lembretes começam 3 dias antes do vencimento, se ativados.'
+        : _recurring
+        ? 'A renda entra no saldo automaticamente na data de cada mês.'
+        : 'Confirme o recebimento no Extrato.';
+    return '${AppFormatters.currency.format(amount)} $when$period. $guidance';
   }
 
   void _message(String message) =>
@@ -488,23 +508,15 @@ class AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                if (_hasInstallments &&
-                    (int.tryParse(_installments.text) ?? 0) >= 2 &&
-                    (int.tryParse(_installments.text) ?? 0) <= 1200)
+                if (_hasInstallments && _installmentCount != null)
                   Text(
-                    'Última parcela: ${AppFormatters.date.format(monthlyDueDate(_dueDate, int.parse(_installments.text) - 1, day: _dueDay))}',
+                    'Última parcela: ${AppFormatters.date.format(monthlyDueDate(_dueDate, _installmentCount! - 1, day: _dueDay))}',
                   ),
-                if (parseMoney(_amount.text) != null)
+                if (_amountValue != null)
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Text(
-                        '${AppFormatters.currency.format(parseMoney(_amount.text))} ${_recurring ? 'todo dia $_dueDay' : 'em ${AppFormatters.date.format(_dueDate)}'}${_hasInstallments
-                            ? ' · ${_installments.text} meses'
-                            : _recurring
-                            ? ' · sem data final'
-                            : ''}. ${_kind == TransactionKind.expense ? 'Lembretes começam 3 dias antes do vencimento, se ativados.' : 'Confirme o recebimento em Finanças.'}',
-                      ),
+                      child: Text(_previewText(_amountValue!)),
                     ),
                   ),
               ],

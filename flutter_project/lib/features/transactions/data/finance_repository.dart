@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/utils/dates.dart';
 import '../../../core/utils/finance_updates.dart';
 import '../domain/finance_models.dart';
 import '../domain/recurrence.dart';
@@ -71,6 +72,8 @@ class SupabaseFinanceRepository implements FinanceRepository {
     );
   }
 
+  void _ensureSignedIn() => _userId;
+
   String get _userId {
     final user = _client.auth.currentUser;
     if (user == null) throw StateError('Sua sessão terminou. Entre novamente.');
@@ -120,7 +123,7 @@ class SupabaseFinanceRepository implements FinanceRepository {
 
   @override
   Future<List<RecurrencePlan>> plans() async =>
-      (await _read('recurrence_rules')).map(RecurrencePlan.fromMap).toList();
+      (await _snapshot()).rules.map(RecurrencePlan.fromMap).toList();
 
   @override
   Future<List<FinanceEntry>> transactions(DateTime through) async {
@@ -153,7 +156,7 @@ class SupabaseFinanceRepository implements FinanceRepository {
     if (draft.isRecurring) {
       await _client.from('recurrence_rules').insert({
         'user_id': owner,
-        'first_due': _date(draft.dueDate),
+        'first_due': isoDate(draft.dueDate),
         'due_day': draft.dueDay,
         'total_installments': draft.totalInstallments,
         'template': draft.template,
@@ -162,10 +165,10 @@ class SupabaseFinanceRepository implements FinanceRepository {
       await _client.from('transactions').insert({
         ...draft.template,
         'user_id': owner,
-        'due_date': _date(draft.dueDate),
+        'due_date': isoDate(draft.dueDate),
         'is_recurrent': false,
         'is_paid': draft.alreadyConfirmed,
-        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'created_at': _now().toUtc().toIso8601String(),
       });
     }
     notifyFinanceChanged();
@@ -255,7 +258,7 @@ class SupabaseFinanceRepository implements FinanceRepository {
 
   @override
   Future<void> deleteEntry(String id) async {
-    _userId;
+    _ensureSignedIn();
     if (id.isEmpty) throw const FormatException('Registro inválido.');
     RecurrenceReference.fromEntryId(id);
     await _client.rpc('delete_finance_entry', params: {'p_entry_id': id});
@@ -264,13 +267,10 @@ class SupabaseFinanceRepository implements FinanceRepository {
 
   @override
   Future<void> stopPlan(String id) async {
-    _userId;
+    _ensureSignedIn();
     await _client.rpc('stop_finance_plan', params: {'p_rule_id': id});
     notifyFinanceChanged();
   }
-
-  String _date(DateTime date) =>
-      '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
 
 /// Apenas um conjunto de dados por conta/revisão, compartilhado entre consultas.

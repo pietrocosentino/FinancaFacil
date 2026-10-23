@@ -51,9 +51,3 @@ class FinanceSummary {
     );
   }
 }
-
-int daysUntil(DateTime dueDate, DateTime today) => DateTime.utc(
-  dueDate.year,
-  dueDate.month,
-  dueDate.day,
-).difference(DateTime.utc(today.year, today.month, today.day)).inDays;

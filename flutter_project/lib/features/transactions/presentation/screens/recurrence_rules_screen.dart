@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/services/app_services.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../data/finance_repository.dart';
 import '../../domain/finance_models.dart';
 
 class RecurrenceRulesScreen extends StatefulWidget {
-  const RecurrenceRulesScreen({super.key, this.repository});
-  final FinanceRepository? repository;
+  const RecurrenceRulesScreen({super.key, required this.repository});
+  final FinanceRepository repository;
   @override
   State<RecurrenceRulesScreen> createState() => _RecurrenceRulesScreenState();
 }
@@ -20,7 +20,7 @@ class _RecurrenceRulesScreenState extends State<RecurrenceRulesScreen> {
   @override
   void initState() {
     super.initState();
-    _repository = widget.repository ?? AppServices.finance;
+    _repository = widget.repository;
     _future = _repository.plans();
   }
 
@@ -30,26 +30,13 @@ class _RecurrenceRulesScreenState extends State<RecurrenceRulesScreen> {
 
   Future<void> _stop(RecurrencePlan plan) async {
     if (_busyId != null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Encerrar recorrência?'),
-        content: const Text(
-          'A regra termina no fim deste mês. As previsões seguintes serão removidas da consulta. O histórico de pagamentos será preservado.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Encerrar'),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Encerrar recorrência?',
+      message: 'A regra termina no fim deste mês. As previsões seguintes serão removidas da consulta. O histórico de pagamentos será preservado.',
+      confirmLabel: 'Encerrar',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     setState(() => _busyId = plan.id);
     try {
       await _repository.stopPlan(plan.id);

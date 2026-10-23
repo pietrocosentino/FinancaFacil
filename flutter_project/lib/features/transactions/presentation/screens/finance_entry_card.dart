@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../dashboard/domain/finance_summary.dart';
+import '../../domain/entry_status.dart';
 import '../../domain/finance_models.dart';
 
 class FinanceEntryCard extends StatelessWidget {
@@ -28,32 +28,20 @@ class FinanceEntryCard extends StatelessWidget {
   final String? notice;
   final Widget? actions;
 
+  static Color _urgencyColor(EntryUrgency urgency) => switch (urgency) {
+    EntryUrgency.settled => AppTheme.mintNeon,
+    EntryUrgency.overdue => Colors.redAccent,
+    EntryUrgency.dueSoon => Colors.amber,
+    EntryUrgency.normal => AppTheme.textSecondary,
+  };
+
   @override
   Widget build(BuildContext context) {
-    final days = entry.dueDate == null
-        ? null
-        : daysUntil(entry.dueDate!, DateTime.now());
-    final statusColor = entry.isPaid
-        ? AppTheme.mintNeon
-        : !entry.isIncome && days != null && days < 0
-        ? Colors.redAccent
-        : !entry.isIncome && days != null && days <= 3
-        ? Colors.amber
-        : AppTheme.textSecondary;
-    final color = AppTheme.semanticColor(context, statusColor);
-    final status = entry.isPaid
-        ? entry.isAutomaticIncome
-              ? 'Recebido · automático'
-              : entry.isIncome
-              ? 'Recebido'
-              : 'Pago'
-        : !entry.isIncome && days != null && days < 0
-        ? 'Atrasada'
-        : !entry.isIncome && days == 0
-        ? 'Vence hoje'
-        : entry.isAutomaticIncome
-        ? 'Recebimento previsto'
-        : '${entry.kind.label} pendente';
+    final status = EntryStatus.of(entry, DateTime.now());
+    final color = AppTheme.semanticColor(
+      context,
+      _urgencyColor(status.urgency),
+    );
     final dateLabel = entry.isIncome ? 'Recebimento' : 'Vencimento';
     return Card(
       child: Padding(
@@ -139,7 +127,7 @@ class FinanceEntryCard extends StatelessWidget {
                     color: color,
                     size: 18,
                   ),
-                Text(status, style: TextStyle(color: color)),
+                Text(status.label, style: TextStyle(color: color)),
               ],
             ),
             Text(

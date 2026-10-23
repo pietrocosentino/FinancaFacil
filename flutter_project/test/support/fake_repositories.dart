@@ -1,3 +1,4 @@
+import 'package:financafacil/core/utils/finance_updates.dart';
 import 'package:financafacil/features/notifications/data/reminder_service.dart';
 import 'package:financafacil/features/profile/data/profile_repository.dart';
 import 'package:financafacil/features/profile/domain/user_profile.dart';
@@ -5,17 +6,15 @@ import 'package:financafacil/features/transactions/data/finance_repository.dart'
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
 import 'package:flutter/foundation.dart';
 
+/// Repositório em memória. Assim como o adapter Supabase, avisa as telas por
+/// `notifyFinanceChanged` depois de cada alteração.
 class FakeFinanceRepository implements FinanceRepository {
   List<FinanceEntry> entries = [];
   TransactionDraft? saved;
   Set<String>? paidIds;
   double? updatedAmount;
   String? deletedId;
-  @override
-  Future<void> deleteEntry(String id) async {
-    deletedId = id;
-    entries.removeWhere((entry) => entry.id == id);
-  }
+  String? stoppedPlanId;
 
   @override
   Future<List<FinanceEntry>> transactions(DateTime through) async => entries;
@@ -24,66 +23,53 @@ class FakeFinanceRepository implements FinanceRepository {
       const [FinanceCategory(id: '1', name: 'Categoria de teste')];
   @override
   Future<List<RecurrencePlan>> plans() async => [];
+
   @override
   Future<void> save(TransactionDraft draft) async {
     saved = draft;
+    notifyFinanceChanged();
   }
 
   @override
   Future<void> markPaid(Set<String> ids) async {
     paidIds = ids;
-    entries = entries
-        .map(
-          (entry) => FinanceEntry(
-            id: entry.id,
-            kind: entry.kind,
-            amount: entry.amount,
-            description: entry.description,
-            dueDate: entry.dueDate,
-            categoryName: entry.categoryName,
-            isPaid: ids.contains(entry.id) || entry.isPaid,
-            notes: entry.notes,
-            isRecurring: entry.isRecurring,
-            installment: entry.installment,
-            totalInstallments: entry.totalInstallments,
-            lastDue: entry.lastDue,
-          ),
-        )
-        .toList();
+    _setPaid(ids, true);
   }
 
   @override
-  Future<void> markPending(Set<String> ids) async {
-    entries = entries
-        .map(
-          (e) => FinanceEntry(
-            id: e.id,
-            kind: e.kind,
-            amount: e.amount,
-            description: e.description,
-            dueDate: e.dueDate,
-            categoryName: e.categoryName,
-            isPaid: ids.contains(e.id) ? false : e.isPaid,
-            notes: e.notes,
-            isRecurring: e.isRecurring,
-            installment: e.installment,
-            totalInstallments: e.totalInstallments,
-            lastDue: e.lastDue,
-          ),
-        )
-        .toList();
+  Future<void> markPending(Set<String> ids) async => _setPaid(ids, false);
+
+  void _setPaid(Set<String> ids, bool paid) {
+    entries = [
+      for (final entry in entries)
+        ids.contains(entry.id) ? entry.copyWith(isPaid: paid) : entry,
+    ];
+    notifyFinanceChanged();
   }
 
   @override
   Future<void> updateAmount(String id, double amount) async {
     updatedAmount = amount;
+    notifyFinanceChanged();
   }
 
   @override
-  Future<void> stopPlan(String id) async {}
-  @override
   Future<void> updateFutureAmount(String id, double amount) async {
     updatedAmount = amount;
+    notifyFinanceChanged();
+  }
+
+  @override
+  Future<void> stopPlan(String id) async {
+    stoppedPlanId = id;
+    notifyFinanceChanged();
+  }
+
+  @override
+  Future<void> deleteEntry(String id) async {
+    deletedId = id;
+    entries.removeWhere((entry) => entry.id == id);
+    notifyFinanceChanged();
   }
 }
 

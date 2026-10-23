@@ -22,6 +22,13 @@ class ReminderStatus {
   final String message;
   final int scheduledDays;
   final DateTime? coveredUntil;
+
+  ReminderStatus withMessage(String message) => ReminderStatus(
+    enabled: enabled,
+    message: message,
+    scheduledDays: scheduledDays,
+    coveredUntil: coveredUntil,
+  );
 }
 
 abstract class ReminderService {
@@ -179,24 +186,7 @@ class LocalReminderService implements ReminderService {
         _cacheKey,
         jsonEncode({
           'owner': owner,
-          'entries': entries
-              .map(
-                (entry) => {
-                  'id': entry.id,
-                  'type': entry.kind.databaseValue,
-                  'amount': entry.amount,
-                  'description': entry.description,
-                  'notes': entry.notes,
-                  'due_date': entry.dueDate?.toIso8601String(),
-                  'category': {'name': entry.categoryName},
-                  'is_paid': entry.isPaid,
-                  'is_recurrent': entry.isRecurring,
-                  '_installment': entry.installment,
-                  '_total_installments': entry.totalInstallments,
-                  '_last_due': entry.lastDue?.toIso8601String(),
-                },
-              )
-              .toList(),
+          'entries': entries.map((entry) => entry.toMap()).toList(),
         }),
       );
       if (generation != _generation) return;

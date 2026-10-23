@@ -1,3 +1,4 @@
+import '../../../core/utils/dates.dart';
 import '../../../core/utils/finance_utils.dart';
 import 'recurrence.dart';
 
@@ -64,6 +65,40 @@ class FinanceEntry {
   bool get isAutomaticIncome => isIncome && isRecurring;
   bool belongsToMonth(DateTime month) =>
       dueDate?.year == month.year && dueDate?.month == month.month;
+
+  /// Mapa no mesmo formato lido por [FinanceEntry.fromMap]; usado no cache
+  /// local que mantém os lembretes disponíveis sem conexão.
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'type': kind.databaseValue,
+    'amount': amount,
+    'description': description,
+    'notes': notes,
+    'due_date': dueDate?.toIso8601String(),
+    'category': {'name': categoryName},
+    'is_paid': isPaid,
+    'is_recurrent': isRecurring,
+    '_installment': installment,
+    '_total_installments': totalInstallments,
+    '_last_due': lastDue?.toIso8601String(),
+  };
+
+  /// Cópia com confirmação ou valor alterados; os demais dados são mantidos.
+  FinanceEntry copyWith({bool? isPaid, double? amount}) => FinanceEntry(
+    id: id,
+    kind: kind,
+    amount: amount ?? this.amount,
+    description: description,
+    dueDate: dueDate,
+    categoryName: categoryName,
+    isPaid: isPaid ?? this.isPaid,
+    notes: notes,
+    isRecurring: isRecurring,
+    installment: installment,
+    totalInstallments: totalInstallments,
+    lastDue: lastDue,
+  );
+
   String get recurrenceDescription {
     if (installment == null) return isRecurring ? 'Recorrência antiga' : '';
     return totalInstallments == null
@@ -185,20 +220,8 @@ class RecurrencePlan {
   final int? totalInstallments;
   final DateTime? endDate;
   final List<Map<String, dynamic>> futureAmounts;
-  double amountAt(DateTime month) {
-    var result = amount;
-    final changes = [...futureAmounts]
-      ..sort(
-        (a, b) =>
-            a['from_month'].toString().compareTo(b['from_month'].toString()),
-      );
-    for (final change in changes) {
-      if (change['from_month'].toString().compareTo(monthKey(month)) <= 0) {
-        result = (change['amount'] as num).toDouble();
-      }
-    }
-    return result;
-  }
+  double amountAt(DateTime month) =>
+      AmountSchedule(amount, futureAmounts).at(monthKey(month)).toDouble();
 
   DateTime? get lastDue => totalInstallments == null
       ? null

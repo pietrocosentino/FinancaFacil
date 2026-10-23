@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/errors/app_failure.dart';
-import '../../../../core/services/app_services.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/auth_validators.dart';
 import '../../../../core/utils/phone_formatter.dart';
@@ -10,13 +9,13 @@ import '../../data/auth_gateway.dart';
 enum AuthFormMode { login, register, forgotPassword, newPassword }
 
 class LoginScreen extends StatefulWidget {
-  final AuthGateway? gateway;
+  final AuthGateway gateway;
   final bool recovery;
   final VoidCallback? onPasswordUpdated;
   final VoidCallback? onRecoveryCancelled;
   const LoginScreen({
     super.key,
-    this.gateway,
+    required this.gateway,
     this.recovery = false,
     this.onPasswordUpdated,
     this.onRecoveryCancelled,
@@ -33,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _phone = TextEditingController();
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
-  late final AuthGateway _gateway;
   late AuthFormMode _mode;
   bool _busy = false;
   bool _hidden = true;
@@ -43,7 +41,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _gateway = widget.gateway ?? AppServices.auth;
     _mode = widget.recovery ? AuthFormMode.newPassword : AuthFormMode.login;
   }
 
@@ -85,10 +82,10 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       switch (mode) {
         case AuthFormMode.login:
-          await _gateway.signIn(_email.text.trim(), _password.text);
+          await widget.gateway.signIn(_email.text.trim(), _password.text);
           break;
         case AuthFormMode.register:
-          final confirmationRequired = await _gateway.signUp(
+          final confirmationRequired = await widget.gateway.signUp(
             _name.text.trim(),
             _email.text.trim(),
             phoneDigits(_phone.text),
@@ -103,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
           break;
         case AuthFormMode.forgotPassword:
-          await _gateway.requestPasswordReset(_email.text.trim());
+          await widget.gateway.requestPasswordReset(_email.text.trim());
           if (mounted) {
             setState(
               () => _message = 'Se houver uma conta para esse e-mail, você receberá um link para criar uma nova senha. Confira também o spam.',
@@ -111,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
           break;
         case AuthFormMode.newPassword:
-          await _gateway.updatePassword(_password.text);
+          await widget.gateway.updatePassword(_password.text);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Senha atualizada com sucesso.')),
