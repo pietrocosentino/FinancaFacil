@@ -2,7 +2,7 @@
 
 ## Entrega
 
-Em Finanças, o botão **Importar planilha Excel** abre a seleção de arquivo, o modelo para baixar e o histórico. O formato é .xlsx, até 5 MB, com até 500 linhas na aba Lançamentos. Os exemplos estão somente na aba Como preencher e nunca são cadastrados automaticamente.
+No Início ou no Extrato, **Adicionar → Importar planilha** abre a seleção de arquivo, o modelo para baixar e o histórico. O formato é .xlsx, até 5 MB, com até 500 linhas na aba Lançamentos. Os exemplos estão somente na aba Como preencher e nunca são cadastrados automaticamente.
 
 A prévia mostra receitas, despesas, valor por linha, primeiro vencimento, categoria e recorrência. O usuário pode corrigir campos e associar categorias às existentes, ou desmarcar linhas. Tipos e categorias não recebem valores padrão silenciosos. As despesas e rendas avulsas entram pendentes. Rendas recorrentes são consideradas recebidas automaticamente na data mensal, por cálculo do aplicativo. As recorrências criam uma regra por linha; não multiplicam o valor mensal nem antecipam as parcelas.
 
@@ -24,7 +24,7 @@ Lotes desfeitos continuam no histórico. O mesmo arquivo pode ser importado nova
 
 ## Categorias
 
-Nesta versão, categorias desconhecidas precisam ser associadas às categorias existentes. Não há criação automática de categorias, pois o esquema base e suas políticas de compartilhamento não foram fornecidos. A RPC usa SECURITY INVOKER na importação para respeitar a visibilidade de categorias e as políticas existentes das tabelas financeiras.
+Uma categoria da planilha que não existe pode ser criada na própria prévia, com o botão **Criar categoria “nome”**: todas as linhas do mesmo tipo com esse nome são associadas a ela. Nada é criado sem esse toque. Requer `006_categorias_e_renda.sql`. A RPC usa SECURITY INVOKER na importação para respeitar a visibilidade de categorias e as políticas existentes das tabelas financeiras.
 
 O desfazer usa uma função restrita à conta autenticada, com verificação dos registros e bloqueios. Ela não concede DELETE geral nas tabelas financeiras. O SQL pressupõe transactions, categories, recurrence_rules e recurrence_occurrences existentes e corretamente protegidas por RLS.
 
@@ -32,7 +32,7 @@ O desfazer usa uma função restrita à conta autenticada, com verificação dos
 
 1. Atualize os arquivos locais preservando .git e android/local.properties.
 2. Execute flutter pub get e reinicie totalmente o app; file_picker é um plugin nativo novo.
-3. Se as migrações anteriores já estão aplicadas, execute somente supabase/importacao_mvp2.sql no SQL Editor do Supabase.
+3. Se as migrações anteriores já estão aplicadas, execute somente supabase/004_importacao_mvp2.sql no SQL Editor do Supabase.
 4. Em um banco existente ainda sem recorrência, confira e aplique a sequência descrita em flutter_project/supabase/README.md. Elas pressupõem as tabelas base existentes; não criam um banco novo completo.
 5. Teste com duas linhas reais, confira a prévia, importe e consulte o mês do primeiro vencimento.
 

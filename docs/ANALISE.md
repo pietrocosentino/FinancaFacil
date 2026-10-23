@@ -1,4 +1,4 @@
-# Análise ponta a ponta — FinançaFácil 2.0.7
+# Análise ponta a ponta — FinançaFácil 2.0.7 (e o que foi aplicado na 2.1.0)
 
 Revisão de 22/10/2026 sobre o `main` em `1e4e3f4`. Escopo: app Flutter (`flutter_project/lib`), testes, scripts Supabase, ferramentas de validação e CI. As mudanças estão no branch `refactor/analise-clean-code-solid`.
 
@@ -131,3 +131,22 @@ O CI agora publica análise, testes com falha (nome e mensagem) e cobertura como
 **O que não faz sentido hoje:** a aba Finanças como menu; o botão "Manter pendente"; dois saldos mensais que não acumulam sem um saldo geral; o perfil acessível por cabeçalho e por aba ao mesmo tempo; e a renda considerada recebida sem nenhuma forma de contestar.
 
 **Limites desta revisão:** testes rodaram no CI (Linux, Flutter 3.47.6) com repositórios simulados e PostgreSQL em memória. Não houve execução em aparelho, em Supabase real nem medição de desempenho com histórico grande.
+
+## 5. Aplicado na versão 2.1.0 (23/10/2026)
+
+| Recomendação | Situação |
+|---|---|
+| 1. `targetSdkVersion` 36 | **Feito**, com voltar preditivo e edge-to-edge. Falta testar em aparelho Android 15/16. |
+| 2. Versionar o esquema base | **Feito**: `000_esquema_base.sql` cria um projeto do zero; scripts numerados; teste que monta o banco só com eles. |
+| 3. Assinatura de release | **Preparado**: `android/key.properties` ativa a chave própria. A chave precisa ser gerada por você. |
+| 4. Consultas por intervalo de datas | **Parcial**: retorno ao app só recarrega depois de 1 minuto fora ou em outro dia. O histórico ainda é lido por inteiro a cada alteração. |
+| 5. Registro de erros | **Feito** no app (`AppLog`, com captura global e as últimas 50 falhas). Ligar Sentry ou Crashlytics é trocar o destino em um ponto só. |
+| 6. Dinheiro em centavos inteiros | Pendente. As somas já são em centavos; o modelo ainda guarda `double`. |
+| 7. Botão Adicionar e fim da aba-menu | **Feito**: abas Início, Extrato e Perfil; uma porta para perfil (nome no cabeçalho leva à aba) e para notificações (sino). |
+| 8. Categorias do usuário | **Feito** no cadastro e na importação, com política restritiva no banco. |
+| 9. "Não recebi" e "Manter pendente" | **Feito**: "Não recebi" deixa o mês pendente; "Manter pendente" foi removido. |
+| 10. Início por mês, comparação e tema | **Feito**. |
+
+Outras correções desta versão: espaço duplicado da barra de status sob o cabeçalho; tocar no cartão abre as ações; confirmação individual no Extrato; detalhes do lançamento visíveis sem expandir; mensagens de erro que distinguem rede, sessão e banco desatualizado; folha de cadastro rolável em telas baixas.
+
+**Atenção:** o projeto Supabase "Finança Fácil" estava **pausado (INACTIVE)** em 23/10/2026. Enquanto estiver assim, o app não consegue entrar nem carregar dados. Reative-o no painel do Supabase e aplique `003` e `006`.

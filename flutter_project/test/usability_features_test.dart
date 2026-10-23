@@ -305,8 +305,10 @@ void main() {
       await tester.tap(find.text('Importar 1 lançamentos'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Importar agora'));
-      await tester.pumpAndSettle();
+      // O indicador de progresso segue animado atrás do aviso de conclusão.
+      await tester.pump(const Duration(milliseconds: 400));
       expect(imports.saved!.single['category_id'], 'new-Saúde');
+      expect(find.text('Importação concluída'), findsOneWidget);
     });
   });
 }

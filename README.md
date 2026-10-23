@@ -1,15 +1,16 @@
 # FinançaFácil
 
-Aplicativo Flutter de finanças pessoais com Supabase: contas e rendas avulsas, mensais e parceladas, confirmação de pagamentos, lembretes no aparelho e importação de planilha Excel. Versão 2.0.7+16.
+Aplicativo Flutter de finanças pessoais com Supabase: contas e rendas avulsas, mensais e parceladas, confirmação de pagamentos, lembretes no aparelho e importação de planilha Excel. Versão 2.1.0+17.
 
 ## Funcionalidades
 
-- **Início:** pendências próximas, saldo confirmado e previsto do mês, despesas por categoria.
-- **Finanças:** cadastro de conta, renda e importação de planilha.
-- **Extrato:** consulta por mês, filtros, confirmação em lote, edição de valor, exclusão e encerramento de recorrências.
-- **Perfil:** foto (salva só no aparelho), nome e telefone, horário dos lembretes, tema e saída.
+- **Adicionar** (botão no Início e no Extrato): conta ou despesa, renda ou importação de planilha. Categorias próprias podem ser criadas no cadastro.
+- **Início:** pendências próximas, resumo de qualquer mês (saldo previsto e confirmado, rendas, contas pagas e a pagar), comparação com o mês anterior e despesas por categoria.
+- **Extrato:** lançamentos do mês com filtros por situação e tipo, busca, confirmação individual ou em lote, edição de valor, "Não recebi" para renda mensal, exclusão e encerramento de recorrências.
+- **Perfil:** foto (salva só no aparelho), nome e telefone, horário dos lembretes, tema (segue o sistema por padrão) e saída.
+- **Sino:** contas atrasadas e dos próximos 3 dias, com confirmação de pagamento.
 
-Regras principais: recorrências são regras projetadas mês a mês, sem parcelas antecipadas; o dia de vencimento é mantido (dia 31 vira o último dia em meses curtos); rendas recorrentes contam como recebidas na data cadastrada; despesas exigem confirmação manual; reajustes valem do mês escolhido em diante e preservam meses já pagos.
+Regras principais: recorrências são regras projetadas mês a mês, sem parcelas antecipadas; o dia de vencimento é mantido (dia 31 vira o último dia em meses curtos); rendas recorrentes contam como recebidas na data cadastrada, a menos que o mês seja marcado como "Não recebi"; despesas exigem confirmação manual; reajustes valem do mês escolhido em diante e preservam meses já pagos.
 
 ## Estrutura
 
@@ -42,15 +43,17 @@ Para validar tudo antes de enviar: `powershell -ExecutionPolicy Bypass -File .\t
 
 ## Banco de dados
 
-Execute os scripts de `flutter_project/supabase` no SQL Editor, na ordem de `flutter_project/supabase/README.md`. Eles pressupõem as tabelas base `categories` e `transactions`, que ainda não estão versionadas neste repositório.
+Execute os scripts numerados de `flutter_project/supabase` no SQL Editor, na ordem de `flutter_project/supabase/README.md`. Um projeto novo é criado do zero a partir de `000_esquema_base.sql`; em um banco existente, aplique de novo `003` e depois `006`.
 
 ## Importar planilha
 
-Em Finanças → Importar planilha: baixe o modelo, preencha a aba Lançamentos e escolha o arquivo (.xlsx, até 5 MB e 500 linhas). Corrija as linhas sinalizadas, associe categorias existentes e confirme. Tudo entra pendente; uma conta de dez meses vira uma única regra mensal. Regras completas em `docs/MVP2.md`.
+Adicionar → Importar planilha: baixe o modelo, preencha a aba Lançamentos e escolha o arquivo (.xlsx, até 5 MB e 500 linhas). Corrija as linhas sinalizadas, associe ou crie as categorias e confirme. Tudo entra pendente; uma conta de dez meses vira uma única regra mensal. Regras completas em `docs/MVP2.md`.
 
 ## Ambiente
 
-Flutter 3.47.6, Dart 3.13, Java 17. Android: compileSdk 36, minSdk 23, **targetSdk 34**. iOS mínimo 15. O APK de release usa assinatura de debug e o build iOS não é assinado: servem para testes, não para publicação. Para usar outro projeto Supabase, rode com `--dart-define-from-file=env.local.json` (modelo em `env.example.json`).
+Flutter 3.47.6, Dart 3.13, Java 17. Android: compileSdk e targetSdk 36 (exigência atual da Google Play), minSdk 23. iOS mínimo 15.
+
+**Publicar na Play Store:** gere uma chave (`keytool -genkey -v -keystore financafacil.jks -keyalg RSA -keysize 2048 -validity 10000 -alias financafacil`) e crie `flutter_project/android/key.properties` com `storeFile`, `storePassword`, `keyAlias` e `keyPassword`. Os dois ficam fora do Git. Sem eles, o APK de release usa a chave de depuração e serve só para testes. O build iOS do CI não é assinado. Para usar outro projeto Supabase, rode com `--dart-define-from-file=env.local.json` (modelo em `env.example.json`).
 
 ## Documentação
 
