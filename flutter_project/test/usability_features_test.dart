@@ -241,7 +241,7 @@ void main() {
   });
 
   group('Categorias', () {
-    testWidgets('cadastro cria e já seleciona uma nova categoria', (
+    testWidgets('categoria digitada que não existe é criada ao salvar', (
       tester,
     ) async {
       final repository = FakeFinanceRepository();
@@ -249,27 +249,27 @@ void main() {
         MaterialApp(home: AddTransactionScreen(repository: repository)),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Nova categoria'));
-      await tester.tap(find.text('Nova categoria'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Criar'));
-      await tester.pumpAndSettle();
-      expect(find.text('Use um nome com 2 a 40 caracteres.'), findsOneWidget);
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Nome da categoria'),
-        'Pet',
+      final category = find.descendant(
+        of: find.byType(DropdownMenu<String>),
+        matching: find.byType(TextField),
       );
-      await tester.tap(find.text('Criar'));
+      await tester.ensureVisible(category);
+      await tester.enterText(category, 'P');
+      await tester.ensureVisible(find.text('Salvar conta'));
+      await tester.tap(find.text('Salvar conta'));
       await tester.pumpAndSettle();
-      expect(repository.createdCategories.single.name, 'Pet');
-      await tester.enterText(find.widgetWithText(TextFormField, 'Valor'), '80');
+      expect(find.text('Use de 2 a 40 caracteres.'), findsOneWidget);
+      expect(repository.saved, isNull);
+      await tester.enterText(category, 'Pet');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Valor da conta'), '80');
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Nome da conta ou renda'),
+        find.widgetWithText(TextFormField, 'Nome da conta'),
         'Ração',
       );
-      await tester.ensureVisible(find.text('Salvar lançamento'));
-      await tester.tap(find.text('Salvar lançamento'));
+      await tester.ensureVisible(find.text('Salvar conta'));
+      await tester.tap(find.text('Salvar conta'));
       await tester.pumpAndSettle();
+      expect(repository.createdCategories.single.name, 'Pet');
       expect(repository.saved?.categoryId, 'new-Pet');
     });
 

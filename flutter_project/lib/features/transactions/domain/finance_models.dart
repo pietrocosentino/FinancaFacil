@@ -74,9 +74,9 @@ class FinanceEntry {
   /// Confirmação feita por engano: continua no histórico, mas sai dos totais.
   final bool isInactive;
 
-  /// Depois de confirmado, o lançamento não pode ser alterado nem excluído;
-  /// resta inativar. A renda mensal automática é a exceção: continua editável.
-  bool get isLocked => isPaid && !isAutomaticIncome;
+  /// Conta paga não pode ser alterada nem excluída; resta inativar. Renda
+  /// continua editável mesmo depois de recebida (descontos, férias, débitos).
+  bool get isLocked => isPaid && !isIncome;
 
   /// Entra nas somas de receitas, despesas e saldo.
   bool get countsInTotals => !isInactive;

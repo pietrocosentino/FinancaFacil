@@ -5,10 +5,11 @@ import 'finance_models.dart';
 /// vencimento; o mesmo prazo vale para os lembretes.
 const attentionWindowDays = 3;
 
-/// Aviso exibido antes de toda confirmação de pagamento ou recebimento.
+/// Aviso exibido antes de confirmar o pagamento de uma conta. Rendas não
+/// ficam bloqueadas e não exibem este aviso.
 const lockedAfterConfirmWarning =
-    'Depois de confirmar, este lançamento não poderá ser alterado nem excluído. '
-    'Se confirmar por engano, você poderá apenas inativá-lo para que não entre '
+    'Depois de confirmar o pagamento, esta conta não poderá ser alterada nem excluída. '
+    'Se confirmar por engano, você poderá apenas inativá-la para que não entre '
     'nos totais. Em contas mensais, também será possível encerrar os próximos meses.';
 
 /// Nível de atenção de um lançamento; a interface escolhe a cor a partir dele.

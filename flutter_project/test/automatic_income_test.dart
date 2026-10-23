@@ -102,12 +102,12 @@ void main() {
         await t.tap(find.byType(PopupMenuButton<String>));
         await t.pumpAndSettle();
         expect(find.text('Corrigir confirmação'), findsNothing);
-        final edit = find.text('Editar valor');
+        final edit = find.text('Editar lançamento');
         await t.ensureVisible(edit);
         await t.pumpAndSettle();
         await t.tap(edit);
         await t.pumpAndSettle();
-        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('Editar renda'), findsOneWidget);
       },
     );
   }
@@ -123,7 +123,8 @@ void main() {
               body: TextButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => AddTransactionScreen(repository: r),
+                    builder: (_) =>
+                        AddTransactionScreen(repository: r, initialKind: kind),
                   ),
                 ),
                 child: const Text('Abrir cadastro'),
@@ -134,18 +135,27 @@ void main() {
       );
       await t.tap(find.text('Abrir cadastro'));
       await t.pumpAndSettle();
-      if (kind == TransactionKind.income) {
-        await t.tap(find.text('Receita'));
-        await t.pumpAndSettle();
-      }
-      await t.enterText(find.widgetWithText(TextFormField, 'Valor'), '100');
+      final income = kind == TransactionKind.income;
       await t.enterText(
-        find.widgetWithText(TextFormField, 'Nome da conta ou renda'),
+        find.widgetWithText(
+          TextFormField,
+          income ? 'Valor recebido' : 'Valor da conta',
+        ),
+        '100',
+      );
+      await t.enterText(
+        find.widgetWithText(
+          TextFormField,
+          income ? 'Nome da renda' : 'Nome da conta',
+        ),
         'Teste',
       );
-      await t.tap(find.text('Salvar lançamento'));
+      await t.tap(find.text(income ? 'Salvar renda' : 'Salvar conta'));
       await t.pumpAndSettle();
-      expect(find.text('Cadastrar outra'), findsOneWidget);
+      expect(
+        find.text(income ? 'Cadastrar outra renda' : 'Cadastrar outra conta'),
+        findsOneWidget,
+      );
       expect(find.text('Sair'), findsOneWidget);
       await t.tap(find.text('Sair'));
       await t.pumpAndSettle();

@@ -233,6 +233,9 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   Widget build(BuildContext context) => NavigatorPopHandler(
     onPopWithResult: (result) => _navigator.currentState?.maybePop(result),
     child: Scaffold(
+      // Cada tela interna já se ajusta ao teclado; ajustar aqui também
+      // descontaria o espaço duas vezes e esconderia o formulário.
+      resizeToAvoidBottomInset: false,
       body: Column(
         children: [
           MainHeader(
@@ -262,31 +265,35 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           ),
         ],
       ),
-      bottomNavigationBar: ValueListenableBuilder<int>(
-        valueListenable: _tab,
-        builder: (_, index, __) => BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: index,
-          onTap: _onTabTapped,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Início',
+      // Com o teclado aberto, o menu inferior sai de cena para o formulário
+      // ocupar a tela até o teclado.
+      bottomNavigationBar: MediaQuery.viewInsetsOf(context).bottom > 0
+          ? null
+          : ValueListenableBuilder<int>(
+              valueListenable: _tab,
+              builder: (_, index, __) => BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                currentIndex: index,
+                onTap: _onTabTapped,
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.home_outlined),
+                    activeIcon: Icon(Icons.home),
+                    label: 'Início',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.receipt_long_outlined),
+                    activeIcon: Icon(Icons.receipt_long),
+                    label: 'Extrato',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.person_outline),
+                    activeIcon: Icon(Icons.person),
+                    label: 'Perfil',
+                  ),
+                ],
+              ),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_outlined),
-              activeIcon: Icon(Icons.receipt_long),
-              label: 'Extrato',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Perfil',
-            ),
-          ],
-        ),
-      ),
     ),
   );
 }

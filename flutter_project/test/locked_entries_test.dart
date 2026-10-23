@@ -189,7 +189,10 @@ void main() {
       final request = backend.requests.single;
       expect(request.method, 'PATCH');
       expect(request.url.path, '/rest/v1/transactions');
-      expect(request.url.queryParameters['is_paid'], 'eq.false');
+      expect(
+        request.url.queryParameters['or'],
+        '(is_paid.eq.false,type.eq.receita)',
+      );
       expect(request.url.queryParameters['user_id'], 'eq.owner');
       expect((jsonDecode(request.body) as Map)['due_date'], '2026-10-09');
     });

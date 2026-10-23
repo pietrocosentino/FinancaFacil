@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Preferências deste aparelho (tema e horário dos lembretes); não alteram
-/// valores nem recorrências. O tema segue o sistema até o usuário escolher.
+/// Preferências deste aparelho (horário dos lembretes); não alteram valores
+/// nem recorrências. A aparência é fixa, com a identidade visual do app.
 class DevicePreferences {
-  static final themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
   static final time = ValueNotifier<TimeOfDay>(
     const TimeOfDay(hour: 9, minute: 0),
   );
-
-  static Future<void> setTheme(ThemeMode mode) async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setInt('theme_mode', mode.index);
-    themeMode.value = mode;
-  }
 
   static Future<void> setTime(TimeOfDay value) async {
     final preferences = await SharedPreferences.getInstance();
@@ -26,11 +19,8 @@ class DevicePreferences {
 
   static Future<void> load() async {
     final preferences = await SharedPreferences.getInstance();
-    final theme = preferences.getInt('theme_mode');
-    themeMode.value =
-        theme != null && theme >= 0 && theme < ThemeMode.values.length
-        ? ThemeMode.values[theme]
-        : ThemeMode.system;
+    // Escolha de tema de versões anteriores deixa de valer.
+    await preferences.remove('theme_mode');
     final savedTime = preferences.getString('reminder_time')?.split(':');
     if (savedTime != null && savedTime.length == 2) {
       final hour = int.tryParse(savedTime[0]);

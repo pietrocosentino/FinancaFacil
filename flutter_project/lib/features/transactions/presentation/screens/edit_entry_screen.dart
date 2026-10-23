@@ -7,12 +7,13 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/month_picker.dart';
 import '../../data/finance_repository.dart';
 import '../../domain/finance_models.dart';
+import '../widgets/category_field.dart';
 
-/// O que a tela altera: um lançamento avulso pendente ou a renda mensal.
+/// O que a tela altera: um lançamento avulso ou a renda mensal.
 enum EditEntryMode { pendingEntry, incomeRule }
 
-/// Edita os dados de um lançamento. Lançamentos confirmados não chegam aqui:
-/// depois de confirmados só podem ser inativados.
+/// Edita os dados de um lançamento. Contas pagas não chegam aqui: depois de
+/// pagas só podem ser inativadas. Rendas podem ser editadas a qualquer hora.
 class EditEntryScreen extends StatefulWidget {
   const EditEntryScreen({
     super.key,
@@ -33,16 +34,17 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
   late final TextEditingController _description;
   late final TextEditingController _amount;
   late final TextEditingController _notes;
+  late final TextEditingController _category;
   late DateTime _dueDate;
   late int _dueDay;
-  String? _categoryId;
   List<FinanceCategory> _categories = [];
-  bool _loading = true;
   bool _saving = false;
   String? _error;
+  String? _categoryError;
 
   FinanceEntry get _entry => widget.entry;
   bool get _isIncomeRule => widget.mode == EditEntryMode.incomeRule;
+  bool get _isIncome => _entry.isIncome;
 
   @override
   void initState() {
@@ -52,6 +54,9 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
       text: _entry.amount.toStringAsFixed(2).replaceAll('.', ','),
     );
     _notes = TextEditingController(text: _entry.notes);
+    _category = TextEditingController(
+      text: _entry.categoryName == 'Sem categoria' ? '' : _entry.categoryName,
+    );
     _dueDate = _entry.dueDate ?? DateTime.now();
     _dueDay = _dueDate.day;
     _loadCategories();
@@ -62,34 +67,16 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
     _description.dispose();
     _amount.dispose();
     _notes.dispose();
+    _category.dispose();
     super.dispose();
   }
 
   Future<void> _loadCategories() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
     try {
       final categories = await widget.repository.categories(_entry.kind);
-      if (!mounted) return;
-      setState(() {
-        _categories = categories;
-        _categoryId =
-            categories.any((category) => category.id == _entry.categoryId)
-            ? _entry.categoryId
-            : categories
-                  .where((category) => category.name == _entry.categoryName)
-                  .firstOrNull
-                  ?.id;
-      });
+      if (mounted) setState(() => _categories = categories);
     } catch (error, stack) {
       AppLog.error(error, stack, 'carregar categorias da edição');
-      if (mounted) {
-        setState(() => _error = 'Não foi possível carregar as categorias.');
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -104,19 +91,30 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
   }
 
   Future<void> _save() async {
-    if (_saving || _loading || !_form.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    final categoryError = categoryNameError(_category.text);
+    setState(() => _categoryError = categoryError);
+    if (_saving || !_form.currentState!.validate() || categoryError != null) {
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
     });
     try {
+      final categoryId = await resolveCategoryId(
+        widget.repository,
+        _entry.kind,
+        _categories,
+        _category.text,
+      );
       if (_isIncomeRule) {
         final ruleId = RecurrenceReference.fromEntryId(_entry.id)!.ruleId;
         await widget.repository.updateIncomeRule(
           ruleId,
           IncomeRuleDetails(
             description: _description.text,
-            categoryId: _categoryId!,
+            categoryId: categoryId,
             dueDay: _dueDay,
           ),
         );
@@ -127,7 +125,7 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
             description: _description.text,
             amount: parseMoney(_amount.text)!,
             dueDate: _dueDate,
-            categoryId: _categoryId!,
+            categoryId: categoryId,
             notes: _notes.text,
           ),
         );
@@ -147,20 +145,30 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
     }
   }
 
+  String get _intro => _isIncomeRule
+      ? 'Nome, categoria e dia valem para todos os meses desta renda. Para mudar o valor (descontos, férias, débitos), use "Editar valor" no mês desejado.'
+      : _isIncome
+      ? 'A renda pode ser alterada a qualquer momento, mesmo depois de recebida.'
+      : 'Você pode alterar esta conta enquanto ela estiver pendente. Depois de confirmar o pagamento, não será mais possível alterar nem excluir.';
+
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: !_saving,
     child: Scaffold(
       appBar: AppBar(
         title: Text(
-          _isIncomeRule ? 'Editar renda mensal' : 'Editar lançamento',
+          _isIncomeRule
+              ? 'Editar renda mensal'
+              : _isIncome
+              ? 'Editar renda'
+              : 'Editar conta',
         ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: FilledButton.icon(
-            onPressed: _saving || _loading ? null : _save,
+            onPressed: _saving ? null : _save,
             icon: const Icon(Icons.check),
             label: Text(_saving ? 'Salvando...' : 'Salvar alterações'),
           ),
@@ -170,18 +178,18 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
         key: _form,
         child: ListView(
           padding: const EdgeInsets.all(16),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: [
-            Text(
-              _isIncomeRule
-                  ? 'Nome, categoria e dia valem para todos os meses desta renda. Para mudar o valor, use "Editar valor".'
-                  : 'Você pode alterar este lançamento enquanto ele estiver pendente. Depois de confirmar o pagamento, não será mais possível alterar nem excluir.',
-            ),
+            Text(_intro),
             const SizedBox(height: 16),
             TextFormField(
               controller: _description,
               enabled: !_saving,
               maxLength: 120,
-              decoration: const InputDecoration(labelText: 'Nome'),
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                labelText: _isIncome ? 'Nome da renda' : 'Nome da conta',
+              ),
               validator: (value) =>
                   (value?.trim().isEmpty ?? true) ? 'Informe um nome.' : null,
             ),
@@ -193,8 +201,8 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                decoration: const InputDecoration(
-                  labelText: 'Valor',
+                decoration: InputDecoration(
+                  labelText: _isIncome ? 'Valor recebido' : 'Valor',
                   prefixText: 'R\$ ',
                 ),
                 validator: (value) => parseMoney(value ?? '') == null
@@ -206,7 +214,7 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
                 onPressed: _saving ? null : _pickDate,
                 icon: const Icon(Icons.calendar_month_outlined),
                 label: Text(
-                  '${_entry.isIncome ? 'Recebimento' : 'Vencimento'}: ${AppFormatters.date.format(_dueDate)}',
+                  '${_isIncome ? 'Recebimento' : 'Vencimento'}: ${AppFormatters.date.format(_dueDate)}',
                 ),
               ),
             ] else ...[
@@ -226,35 +234,13 @@ class _EditEntryScreenState extends State<EditEntryScreen> {
               ),
             ],
             const SizedBox(height: 16),
-            if (_loading)
-              const Center(child: CircularProgressIndicator())
-            else if (_categories.isEmpty)
-              TextButton.icon(
-                onPressed: _saving ? null : _loadCategories,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Recarregar categorias'),
-              )
-            else
-              DropdownButtonFormField<String>(
-                initialValue: _categoryId,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Categoria'),
-                validator: (value) =>
-                    value == null ? 'Escolha uma categoria.' : null,
-                items: [
-                  for (final category in _categories)
-                    DropdownMenuItem(
-                      value: category.id,
-                      child: Text(
-                        category.name,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: _saving
-                    ? null
-                    : (value) => setState(() => _categoryId = value),
-              ),
+            CategoryField(
+              kind: _entry.kind,
+              categories: _categories,
+              controller: _category,
+              enabled: !_saving,
+              errorText: _categoryError,
+            ),
             if (!_isIncomeRule) ...[
               const SizedBox(height: 16),
               TextFormField(

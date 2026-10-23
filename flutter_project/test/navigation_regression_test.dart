@@ -51,10 +51,10 @@ void main() {
     await tester.tap(find.text('Conta ou despesa'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text('Novo lançamento'), findsOneWidget);
+    expect(find.text('Nova conta'), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.text('Novo lançamento'), findsNothing);
+    expect(find.text('Nova conta'), findsNothing);
     expect(addButton, findsOneWidget);
   });
 
@@ -72,7 +72,7 @@ void main() {
     await tester.pumpAndSettle();
     await openAdd(tester);
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Valor'),
+      find.widgetWithText(TextFormField, 'Valor da conta'),
       '90,60',
     );
     await tester.pump();
@@ -86,11 +86,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Descartar'));
     await tester.pumpAndSettle();
-    expect(find.text('Novo lançamento'), findsNothing);
+    expect(find.text('Nova conta'), findsNothing);
     expect(addButton, findsOneWidget);
   });
 
-  testWidgets('mudança apenas do tipo também protege o cadastro', (
+  testWidgets('mudança apenas da frequência também protege o cadastro', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -103,17 +103,17 @@ void main() {
     );
     await tester.pumpAndSettle();
     await openAdd(tester);
-    await tester.tap(find.text('Receita'));
+    await tester.tap(find.text('Todo mês'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
     expect(find.text('Descartar cadastro?'), findsOneWidget);
     await tester.tap(find.text('Continuar preenchendo'));
     await tester.pumpAndSettle();
-    expect(find.text('Novo lançamento'), findsOneWidget);
+    expect(find.text('Nova conta'), findsOneWidget);
   });
 
-  testWidgets('categoria é obrigatória e volta vazia no cadastro seguinte', (
+  testWidgets('categoria é opcional, aceita a lista ou texto e volta vazia', (
     tester,
   ) async {
     final repository = _TwoCategoriesRepository();
@@ -121,43 +121,43 @@ void main() {
       MaterialApp(home: AddTransactionScreen(repository: repository)),
     );
     await tester.pumpAndSettle();
+    final category = find.descendant(
+      of: find.byType(DropdownMenu<String>),
+      matching: find.byType(TextField),
+    );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Valor'),
+      find.widgetWithText(TextFormField, 'Valor da conta'),
       '90,60',
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Nome da conta ou renda'),
+      find.widgetWithText(TextFormField, 'Nome da conta'),
       'Ótica',
     );
-    await tester.tap(find.text('Salvar lançamento'));
+    await tester.tap(find.text('Salvar conta'));
     await tester.pumpAndSettle();
-    expect(repository.saved, isNull);
-    expect(find.text('Escolha uma categoria.'), findsOneWidget);
-    final dropdown = find.byType(DropdownButtonFormField<String>);
-    await tester.ensureVisible(dropdown);
-    await tester.tap(dropdown);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Saúde').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Salvar lançamento'));
-    await tester.pumpAndSettle();
-    expect(repository.saved?.categoryId, '2');
-    await tester.tap(find.text('Cadastrar outra'));
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<DropdownButtonFormField<String>>(dropdown).initialValue,
-      isNull,
-    );
-    await tester.ensureVisible(find.widgetWithText(TextFormField, 'Valor'));
-    await tester.enterText(find.widgetWithText(TextFormField, 'Valor'), '100');
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Nome da conta ou renda'),
-      'Outra conta',
-    );
-    await tester.tap(find.text('Salvar lançamento'));
-    await tester.pumpAndSettle();
-    expect(find.text('Escolha uma categoria.'), findsOneWidget);
+    // Sem categoria: vai para a padrão, criada quando ainda não existe.
     expect(repository.saved?.description, 'Ótica');
+    expect(repository.saved?.categoryId, 'new-Outras despesas');
+    await tester.tap(find.text('Cadastrar outra conta'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(category).controller?.text, isEmpty);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor da conta'),
+      '100',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nome da conta'),
+      'Consulta',
+    );
+    await tester.ensureVisible(category);
+    await tester.enterText(category, 'saúde');
+    await tester.tap(find.text('Salvar conta'));
+    await tester.pumpAndSettle();
+    // Nome existente (sem diferenciar maiúsculas) usa a categoria da lista.
+    expect(repository.saved?.categoryId, '2');
+    expect(repository.createdCategories.map((c) => c.name), [
+      'Outras despesas',
+    ]);
   });
 
   testWidgets('mudar o primeiro mês conserva o dia mensal escolhido', (
@@ -168,9 +168,9 @@ void main() {
       MaterialApp(home: AddTransactionScreen(repository: repository)),
     );
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextFormField, 'Valor'), '500');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Valor da conta'), '500');
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Nome da conta ou renda'),
+      find.widgetWithText(TextFormField, 'Nome da conta'),
       'Aluguel',
     );
     await tester.tap(find.text('Todo mês'));

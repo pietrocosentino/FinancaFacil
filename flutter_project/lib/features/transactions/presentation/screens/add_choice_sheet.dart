@@ -38,13 +38,13 @@ Future<AddChoice?> showAddChoiceSheet(BuildContext context) =>
                   AddChoice.expense,
                   Icons.receipt_outlined,
                   'Conta ou despesa',
-                  'Contas fixas, compras e parcelamentos',
+                  'O que você paga: aluguel, luz, compras, parcelas',
                 ),
                 option(
                   AddChoice.income,
                   Icons.savings_outlined,
                   'Renda',
-                  'Salário e outros valores recebidos',
+                  'O que você recebe: salário, freela, aluguel recebido',
                 ),
                 option(
                   AddChoice.spreadsheet,

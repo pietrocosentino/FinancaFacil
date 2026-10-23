@@ -22,14 +22,14 @@ void main() {
     'configuração inválida usa padrões em vez de valores antigos em memória',
     () async {
       await DevicePreferences.setTime(const TimeOfDay(hour: 18, minute: 15));
-      await DevicePreferences.setTheme(ThemeMode.light);
       SharedPreferences.setMockInitialValues({
         'reminder_time': '25:99',
-        'theme_mode': -1,
+        'theme_mode': 1,
       });
       await DevicePreferences.load();
       expect(DevicePreferences.time.value, const TimeOfDay(hour: 9, minute: 0));
-      expect(DevicePreferences.themeMode.value, ThemeMode.system);
+      final preferences = await SharedPreferences.getInstance();
+      expect(preferences.containsKey('theme_mode'), false);
     },
   );
   test('preserva a preferência antiga de hora ao carregar', () async {

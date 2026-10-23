@@ -203,11 +203,12 @@ class SupabaseFinanceRepository implements FinanceRepository {
           .update(details.toMap())
           .eq('user_id', owner)
           .eq('id', id)
-          .eq('is_paid', false)
+          // Conta paga fica bloqueada; renda pode ser corrigida mesmo recebida.
+          .or('is_paid.eq.false,type.eq.receita')
           .select('id');
       if (updated.length != 1) {
         throw StateError(
-          'Lançamentos confirmados não podem ser alterados. Atualize a lista.',
+          'Contas pagas não podem ser alteradas. Atualize a lista.',
         );
       }
     } finally {

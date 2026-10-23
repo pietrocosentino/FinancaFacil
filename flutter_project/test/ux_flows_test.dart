@@ -25,7 +25,7 @@ void main() {
     await tester.pumpAndSettle();
     await openAdd(tester);
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Valor'),
+      find.widgetWithText(TextFormField, 'Valor da conta'),
       '90,60',
     );
     await tester.tap(find.text('Perfil'));

@@ -23,31 +23,37 @@ void main() {
 
 class FinancaFacilApp extends StatelessWidget {
   const FinancaFacilApp({super.key});
+
+  /// Identidade visual fixa: as paletas do FinançaFácil acompanham o modo
+  /// claro/escuro do celular, sem escolha de aparência no app.
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
-    valueListenable: DevicePreferences.themeMode,
-    builder: (_, mode, __) => MaterialApp(
-      title: 'FinançaFácil',
-      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-        value:
-            (Theme.of(context).brightness == Brightness.dark
-                    ? SystemUiOverlayStyle.light
-                    : SystemUiOverlayStyle.dark)
-                .copyWith(
-                  statusBarColor: Colors.transparent,
-                  systemNavigationBarColor: Colors.transparent,
-                ),
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'FinançaFácil',
+    builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+      value:
+          (Theme.of(context).brightness == Brightness.dark
+                  ? SystemUiOverlayStyle.light
+                  : SystemUiOverlayStyle.dark)
+              .copyWith(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: Colors.transparent,
+              ),
+      // Tocar fora de um campo fecha o teclado. Toques em botões e campos
+      // continuam com eles, pois o gesto mais interno vence.
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: child!,
       ),
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: mode,
-      locale: const Locale('pt', 'BR'),
-      supportedLocales: const [Locale('pt', 'BR')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: const _ApplicationStartup(),
     ),
+    debugShowCheckedModeBanner: false,
+    theme: AppTheme.lightTheme,
+    darkTheme: AppTheme.darkTheme,
+    themeMode: ThemeMode.system,
+    locale: const Locale('pt', 'BR'),
+    supportedLocales: const [Locale('pt', 'BR')],
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
+    home: const _ApplicationStartup(),
   );
 }
 

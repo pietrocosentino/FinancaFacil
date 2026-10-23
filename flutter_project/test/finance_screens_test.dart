@@ -66,7 +66,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await openAdd(tester);
-    expect(find.text('Novo lançamento'), findsOneWidget);
+    expect(find.text('Nova conta'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
     expect(find.text('Extrato'), findsOneWidget);
     await tester.tap(find.text('Perfil'));
@@ -84,11 +84,11 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Valor'),
+        find.widgetWithText(TextFormField, 'Valor da conta'),
         '500,00',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Nome da conta ou renda'),
+        find.widgetWithText(TextFormField, 'Nome da conta'),
         'Aluguel',
       );
       await tester.tap(find.text('Todo mês'));
@@ -175,7 +175,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.paidIds, isNull);
     expect(
-      find.textContaining('não poderá ser alterado nem excluído'),
+      find.textContaining('não poderá ser alterada nem excluída'),
       findsOneWidget,
     );
     await tester.tap(find.text('Tenho certeza, confirmar'));

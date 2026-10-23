@@ -166,58 +166,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  String _themeName(ThemeMode mode) => switch (mode) {
-    ThemeMode.dark => 'Escuro',
-    ThemeMode.light => 'Claro',
-    ThemeMode.system => 'Sistema',
-  };
-
-  Future<void> _appearance() async {
-    final mode = await showModalBottomSheet<ThemeMode>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Text('Aparência'),
-            ),
-            for (final mode in ThemeMode.values)
-              ListTile(
-                leading: Icon(switch (mode) {
-                  ThemeMode.system => Icons.brightness_auto_outlined,
-                  ThemeMode.light => Icons.light_mode_outlined,
-                  ThemeMode.dark => Icons.dark_mode_outlined,
-                }),
-                title: Text(_themeName(mode)),
-                subtitle: Text(switch (mode) {
-                  ThemeMode.system =>
-                    'Acompanha o celular · agora: ${MediaQuery.platformBrightnessOf(context) == Brightness.dark ? 'escuro' : 'claro'}',
-                  ThemeMode.light => 'Fundo claro e suave, sem branco puro',
-                  ThemeMode.dark => 'Fundo grafite, confortável à noite',
-                }),
-                trailing: mode == DevicePreferences.themeMode.value
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () => Navigator.pop(context, mode),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (mode == null || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      await DevicePreferences.setTheme(mode);
-    } catch (error, stack) {
-      AppLog.error(error, stack, 'aparência');
-      _message('Não foi possível salvar a aparência.');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _signOut() async {
     final confirmed = await showConfirmDialog(
       context,
@@ -310,16 +258,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _reminders,
                   subtitle:
                       'Todos os dias às ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} · enquanto houver pendências',
-                ),
-              ),
-              const Divider(height: 1, indent: 56),
-              ValueListenableBuilder<ThemeMode>(
-                valueListenable: DevicePreferences.themeMode,
-                builder: (_, mode, __) => _item(
-                  Icons.palette_outlined,
-                  'Aparência',
-                  _appearance,
-                  subtitle: _themeName(mode),
                 ),
               ),
             ]),

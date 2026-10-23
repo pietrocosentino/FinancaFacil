@@ -1,7 +1,8 @@
--- Lançamentos confirmados ficam bloqueados: não podem ser alterados nem
--- excluídos. Uma confirmação feita por engano pode ser inativada (sai dos
--- totais, continua no histórico) e reativada. Renda mensal pode ter nome,
--- categoria e dia alterados. Executar após 007. Não apaga dados.
+-- Contas pagas ficam bloqueadas: não podem ser alteradas nem excluídas. Uma
+-- confirmação feita por engano pode ser inativada (sai dos totais, continua
+-- no histórico) e reativada. Rendas continuam editáveis mesmo recebidas, e a
+-- renda mensal pode ter nome, categoria e dia alterados.
+-- Executar após 007. Não apaga dados.
 begin;
 
 alter table public.transactions add column if not exists is_inactive boolean not null default false;
@@ -14,14 +15,14 @@ returns trigger language plpgsql set search_path = '' as $$
 begin
   if auth.uid() is null then return coalesce(new, old); end if;
   if tg_op = 'DELETE' then
-    if old.is_paid then
-      raise exception 'Lançamento confirmado não pode ser excluído. Use Inativar.';
+    if old.is_paid and old.type = 'despesa' then
+      raise exception 'Conta paga não pode ser excluída. Use Inativar.';
     end if;
     return old;
   end if;
-  if tg_op = 'UPDATE' and old.is_paid
+  if tg_op = 'UPDATE' and old.is_paid and old.type = 'despesa'
     and (to_jsonb(new) - 'is_inactive') is distinct from (to_jsonb(old) - 'is_inactive') then
-    raise exception 'Lançamento confirmado não pode ser alterado. Use Inativar.';
+    raise exception 'Conta paga não pode ser alterada. Use Inativar.';
   end if;
   if new.is_inactive and not new.is_paid then
     raise exception 'Somente lançamentos confirmados podem ser inativados.';
@@ -36,15 +37,21 @@ create trigger guard_confirmed_transaction
 
 create or replace function public.guard_confirmed_occurrence()
 returns trigger language plpgsql set search_path = '' as $$
+declare
+  is_expense boolean;
 begin
   if auth.uid() is null then return coalesce(new, old); end if;
+  if tg_op <> 'INSERT' then
+    select r.template->>'type' = 'despesa' into is_expense
+      from public.recurrence_rules r where r.id = old.rule_id;
+  end if;
   if tg_op = 'DELETE' then
-    if old.is_paid then
-      raise exception 'Lançamento confirmado não pode ser excluído. Use Inativar.';
+    if old.is_paid and coalesce(is_expense, false) then
+      raise exception 'Conta paga não pode ser excluída. Use Inativar.';
     end if;
     return old;
   end if;
-  if tg_op = 'UPDATE' and old.is_paid then
+  if tg_op = 'UPDATE' and old.is_paid and coalesce(is_expense, false) then
     -- Reajuste futuro grava o valor que já valia no mês confirmado.
     if current_setting('financafacil.freeze_amount', true) = 'on'
       and old.amount is null and new.amount is not null

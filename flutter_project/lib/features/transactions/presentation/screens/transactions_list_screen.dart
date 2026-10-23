@@ -157,7 +157,9 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           'Recebimentos: ${AppFormatters.currency.format(totals.incomeCents / 100)}\n\n'
           '${selected.map((e) => e.description).join('\n')}\n\n'
           'Confirme somente os valores já pagos ou recebidos.',
-      warning: lockedAfterConfirmWarning,
+      warning: selected.any((entry) => !entry.isIncome)
+          ? lockedAfterConfirmWarning
+          : null,
       confirmLabel: 'Tenho certeza, confirmar',
       prominent: true,
       scrollable: true,
@@ -305,7 +307,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       message:
           '${entry.description}\n${AppFormatters.currency.format(entry.amount)}\n\n'
           '${entry.isIncome ? 'Confirme somente depois de o valor entrar na sua conta.' : 'Confirme somente depois de pagar. O aplicativo não realiza pagamentos.'}',
-      warning: lockedAfterConfirmWarning,
+      warning: entry.isIncome ? null : lockedAfterConfirmWarning,
       confirmLabel: entry.isIncome
           ? 'Tenho certeza, recebi'
           : 'Tenho certeza, paguei',
@@ -479,8 +481,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     );
   }
 
-  /// Pendente: alterar, excluir e confirmar. Confirmado: somente inativar e
-  /// encerrar a recorrência. Renda mensal automática continua editável.
+  /// Pendente: alterar, excluir e confirmar. Conta paga: somente inativar e
+  /// encerrar a recorrência. Renda continua editável mesmo depois de recebida.
   Widget _entryCard(FinanceEntry entry) {
     VoidCallback? when(bool allowed, VoidCallback action) =>
         allowed && !_processing ? action : null;
@@ -491,15 +493,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       entry: entry,
       selected: _selectedIds.contains(entry.id),
       onEdit: when(
-        pendingManual && !monthly,
+        editable && !monthly,
         () => _openEditor(entry, EditEntryMode.pendingEntry),
       ),
-      onTap: when(
-        editable && (monthly || entry.isAutomaticIncome),
-        () => _editAmount(entry),
-      ),
+      onTap: when(editable && monthly, () => _editAmount(entry)),
       onEditIncome: when(
-        editable && monthly && entry.isIncome,
+        monthly && entry.isIncome,
         () => _openEditor(entry, EditEntryMode.incomeRule),
       ),
       onConfirm: when(pendingManual, () => _confirmOne(entry)),
