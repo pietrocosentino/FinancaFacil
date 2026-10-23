@@ -12,6 +12,7 @@ Todos podem ser executados novamente sem apagar dados.
 | 4 | `004_importacao_mvp2.sql` | Lotes de importação do Excel: `preview_finance_import`, `import_finance_batch` e `undo_finance_import`. |
 | 5 | `005_excluir_lancamentos.sql` | `delete_finance_entry` (exclui um mês ou um lançamento) e `stop_finance_plan` (encerra recorrência). |
 | 6 | `006_categorias_e_renda.sql` | Categorias criadas pelo usuário (`create_category`) e "Não recebi" para renda mensal (`set_income_not_received`). |
+| 7 | `007_protege_gatilho_cadastro.sql` | Impede chamar pela API o gatilho que cria o perfil no cadastro e fixa o `search_path` dele. |
 
 `diagnostico.sql` é somente leitura: confere tabelas, políticas, permissões e funções.
 
@@ -21,6 +22,9 @@ Se você já tinha aplicado os scripts antigos (sem número), aplique só os nov
 
 1. `003_editar_valores.sql` de novo: o mês atual passou a ser calculado no fuso de São Paulo.
 2. `006_categorias_e_renda.sql`.
+3. `007_protege_gatilho_cadastro.sql`.
+
+**No projeto "Finança Fácil" estes três já foram aplicados em 23/10/2026** e testados com uma conta real dentro de uma transação desfeita (nenhum dado ficou gravado).
 
 Os nomes mudaram (ganharam número), mas o conteúdo dos demais é o mesmo. O app funciona sem o 006; apenas "Nova categoria" e "Não recebi" mostram o aviso de que o banco precisa ser atualizado.
 

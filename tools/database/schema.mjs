@@ -11,6 +11,7 @@ export const migrations = [
   '004_importacao_mvp2.sql',
   '005_excluir_lancamentos.sql',
   '006_categorias_e_renda.sql',
+  '007_protege_gatilho_cadastro.sql',
 ];
 
 const supabaseRoles = `

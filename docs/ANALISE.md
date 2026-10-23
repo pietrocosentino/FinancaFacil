@@ -149,4 +149,4 @@ O CI agora publica análise, testes com falha (nome e mensagem) e cobertura como
 
 Outras correções desta versão: espaço duplicado da barra de status sob o cabeçalho; tocar no cartão abre as ações; confirmação individual no Extrato; detalhes do lançamento visíveis sem expandir; mensagens de erro que distinguem rede, sessão e banco desatualizado; folha de cadastro rolável em telas baixas.
 
-**Atenção:** o projeto Supabase "Finança Fácil" estava **pausado (INACTIVE)** em 23/10/2026. Enquanto estiver assim, o app não consegue entrar nem carregar dados. Reative-o no painel do Supabase e aplique `003` e `006`.
+**Banco de produção:** em 23/10/2026 o projeto "Finança Fácil" foi reativado e recebeu `003`, `006` e `007` (este último protege o gatilho `handle_new_user`, que estava exposto pela API). As novas funções foram testadas com uma conta real dentro de uma transação desfeita. Restam dois avisos do Supabase que são intencionais (`delete_finance_entry` e `undo_finance_import` usam SECURITY DEFINER e conferem o dono) e um de configuração: ativar a proteção contra senhas vazadas em Authentication → Policies.
