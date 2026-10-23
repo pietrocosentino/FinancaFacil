@@ -65,6 +65,12 @@ jobs:
             jq -s '[.[] | select(.type == "testDone" and .hidden == false)] |
               "::notice title=Testes Flutter::\(map(select(.result == "success" and .skipped == false)) | length) aprovados, \(map(select(.result != "success")) | length) com falha, \(map(select(.skipped)) | length) ignorados"' \
               -r test-results.json
+            jq -s -r '
+              (map(select(.type == "testStart")) | map({key: (.test.id | tostring), value: .test.name}) | from_entries) as $names
+              | (map(select(.type == "error")) | group_by(.testID) | map({key: (.[0].testID | tostring), value: (.[0].error | gsub("\n"; " ") | .[0:700])}) | from_entries) as $errors
+              | .[] | select(.type == "testDone" and .hidden == false and .result != "success")
+              | "::error title=Teste com falha::\($names[.testID | tostring]) — \($errors[.testID | tostring] // "")"' \
+              test-results.json
           fi
           if [ -f coverage/lcov.info ]; then
             awk -F: '/^LF:/{f+=$2} /^LH:/{h+=$2} END{if(f>0) printf "::notice title=Cobertura::%.1f%% (%d de %d linhas)\n", 100*h/f, h, f}' coverage/lcov.info
