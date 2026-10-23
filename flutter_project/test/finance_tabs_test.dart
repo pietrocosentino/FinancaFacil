@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/fake_import_repository.dart';
 import 'support/fake_repositories.dart';
 import 'support/navigation.dart';
 
@@ -20,6 +21,7 @@ void main() {
         home: MainLayout(
           financeRepository: FakeFinanceRepository(),
           profileRepository: FakeProfileRepository(),
+          importRepository: FakeImportRepository(),
         ),
       ),
     );

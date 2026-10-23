@@ -286,7 +286,12 @@ void main() {
       await tester.tap(find.text('Escolher planilha'));
       await tester.pumpAndSettle();
       expect(find.text('Importar 0 lançamentos'), findsOneWidget);
-      await tester.ensureVisible(find.text('Criar categoria “Saúde”'));
+      // A lista é preguiçosa: rola até a linha ser construída.
+      await tester.scrollUntilVisible(
+        find.text('Criar categoria “Saúde”'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Criar categoria “Saúde”'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Criar'));

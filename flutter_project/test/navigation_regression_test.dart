@@ -230,7 +230,11 @@ void main() {
         await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, 600));
+        await tester.pumpAndSettle();
         expect(find.text('Todas'), findsOneWidget);
+        expect(find.text('Buscar pelo nome da conta'), findsOneWidget);
+        expect(tester.takeException(), isNull);
       },
     );
   }

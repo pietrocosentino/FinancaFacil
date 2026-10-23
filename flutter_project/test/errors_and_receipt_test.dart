@@ -26,7 +26,9 @@ void main() {
         'Valor inválido.',
       );
       expect(
-        message(PostgrestException(message: 'Lote preservado.', code: 'P0001')),
+        message(
+          const PostgrestException(message: 'Lote preservado.', code: 'P0001'),
+        ),
         'Lote preservado.',
       );
     });
@@ -51,7 +53,7 @@ void main() {
         'Sua sessão terminou. Entre novamente.',
       );
       expect(
-        message(AuthException('JWT expired')),
+        message(const AuthException('JWT expired')),
         'Sua sessão terminou. Entre novamente.',
       );
     });
@@ -59,7 +61,7 @@ void main() {
     test('erros desconhecidos usam a mensagem da tela', () {
       expect(message(StateError('interno')), fallback);
       expect(
-        message(PostgrestException(message: 'x', code: '23505')),
+        message(const PostgrestException(message: 'x', code: '23505')),
         fallback,
       );
     });

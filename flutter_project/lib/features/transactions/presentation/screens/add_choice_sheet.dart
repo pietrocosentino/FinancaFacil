@@ -7,6 +7,7 @@ Future<AddChoice?> showAddChoiceSheet(BuildContext context) =>
     showModalBottomSheet<AddChoice>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (context) {
         Widget option(
           AddChoice choice,
@@ -20,7 +21,7 @@ Future<AddChoice?> showAddChoiceSheet(BuildContext context) =>
           onTap: () => Navigator.pop(context, choice),
         );
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
