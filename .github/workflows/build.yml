@@ -67,7 +67,7 @@ jobs:
               -r test-results.json
             jq -s -r '
               (map(select(.type == "testStart")) | map({key: (.test.id | tostring), value: .test.name}) | from_entries) as $names
-              | (map(select(.type == "error")) | group_by(.testID) | map({key: (.[0].testID | tostring), value: (.[0].error | gsub("\n"; " ") | .[0:700])}) | from_entries) as $errors
+              | (map(select(.type == "error" or .type == "print")) | group_by(.testID) | map({key: (.[0].testID | tostring), value: (map(.error // .message) | join(" ") | gsub("[═╡╞]+"; "") | gsub("\n"; " ⏎ ") | .[0:3500])}) | from_entries) as $errors
               | .[] | select(.type == "testDone" and .hidden == false and .result != "success")
               | "::error title=Teste com falha::\($names[.testID | tostring]) — \($errors[.testID | tostring] // "")"' \
               test-results.json
