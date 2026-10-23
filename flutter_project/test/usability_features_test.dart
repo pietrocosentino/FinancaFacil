@@ -270,6 +270,10 @@ void main() {
     testWidgets('importação cria a categoria da planilha e libera a linha', (
       tester,
     ) async {
+      tester.view.physicalSize = const Size(800, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final finance = FakeFinanceRepository();
       final imports = _Imports();
       await tester.pumpWidget(
