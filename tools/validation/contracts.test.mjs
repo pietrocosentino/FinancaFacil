@@ -10,19 +10,19 @@ const adapters = ['transactions/data/finance_repository','imports/data/import_re
 let checks=0;
 for (const [path, methods] of Object.entries(api.paths)) {
   const name=path.split('/').pop();
-  assert.ok(adapters.includes(`rpc('${name}'`),`${name} não é usado pelo app`); checks++;
+  assert.ok(new RegExp(`rpc\\(\\s*'${name}'`).test(adapters),`${name} não é usado pelo app`); checks++;
   const definition=new RegExp(`function\\s+public\\.${name}\\s*\\(([\\s\\S]*?)\\)`, 'i').exec(sql);
   assert.ok(definition,`${name} sem implementação SQL`); checks++;
   const params=Object.keys(methods.post.requestBody.content['application/json'].schema.properties);
   for(const param of params){assert.ok(definition[1].includes(param),`${name}: parâmetro SQL ausente ${param}`);checks++;}
   assert.ok(methods.post.security[0].apiKey && methods.post.security[0].bearerAuth);checks++;
 }
-for(const match of adapters.matchAll(/rpc\('([^']+)'/g)) {
+for(const match of adapters.matchAll(/rpc\(\s*'([^']+)'/g)) {
   assert.ok(api.paths[`/rest/v1/rpc/${match[1]}`],`Endpoint não documentado ${match[1]}`);checks++;
 }
 const env=JSON.parse(read('flutter_project/env.example.json'));
 const config=read('flutter_project/lib/core/config/supabase_config.dart');
-for(const key of Object.keys(env)){assert.ok(config.includes(`String.fromEnvironment('${key}'`));checks++;}
+for(const key of Object.keys(env)){assert.ok(new RegExp(`String\\.fromEnvironment\\(\\s*'${key}'`).test(config),`${key} não é lida pelo app`);checks++;}
 assert.ok(!JSON.stringify(env).includes('service_role'));checks++;
 
 const project = read('flutter_project/ios/Runner.xcodeproj/project.pbxproj');
