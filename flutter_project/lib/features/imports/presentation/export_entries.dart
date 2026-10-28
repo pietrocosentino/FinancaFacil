@@ -105,7 +105,7 @@ class _ExportPeriodDialogState extends State<_ExportPeriodDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Escolha o período. A planilha traz data, nome, tipo, categoria, valor e situação de cada lançamento.',
+          'Escolha o período. Cada vencimento será exportado como lançamento individual, usando o mesmo formato aceito na importação.',
         ),
         const SizedBox(height: 16),
         OutlinedButton.icon(

@@ -67,11 +67,6 @@ class _Imports implements ImportRepository {
     saved = rows;
     return ImportReceipt('batch', rows.length, false);
   }
-
-  @override
-  Future<List<ImportBatch>> history() async => [];
-  @override
-  Future<int> undo(String batchId) async => 0;
 }
 
 void main() {

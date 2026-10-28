@@ -12,7 +12,6 @@ class XlsxExportWriter {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   Uint8List write(
     List<FinanceEntry> entries, {
-    DateTime? today,
   }) {
     final sorted = [...entries]
       ..sort(

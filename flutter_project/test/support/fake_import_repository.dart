@@ -16,9 +16,4 @@ class FakeImportRepository implements ImportRepository {
     saved = rows;
     return ImportReceipt('batch', rows.length, false);
   }
-
-  @override
-  Future<List<ImportBatch>> history() async => [];
-  @override
-  Future<int> undo(String batchId) async => 0;
 }
