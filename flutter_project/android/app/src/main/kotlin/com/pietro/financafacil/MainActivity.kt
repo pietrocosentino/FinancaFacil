@@ -7,7 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
@@ -18,7 +18,7 @@ import java.io.File
  * e envia arquivos ao Drive pelo "Salvar no Drive". Usa apenas os aplicativos
  * instalados no aparelho: não há login próprio nem acesso à conta Google.
  */
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     private var pendingPick: MethodChannel.Result? = null
     private var pickLimit = 0L
 

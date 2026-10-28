@@ -7,6 +7,7 @@ class DevicePreferences {
   static final time = ValueNotifier<TimeOfDay>(
     const TimeOfDay(hour: 9, minute: 0),
   );
+  static final biometricsEnabled = ValueNotifier<bool>(false);
 
   static Future<void> setTime(TimeOfDay value) async {
     final preferences = await SharedPreferences.getInstance();
@@ -17,8 +18,16 @@ class DevicePreferences {
     time.value = value;
   }
 
+  static Future<void> setBiometricsEnabled(bool value) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool('biometrics_enabled', value);
+    biometricsEnabled.value = value;
+  }
+
   static Future<void> load() async {
     final preferences = await SharedPreferences.getInstance();
+    biometricsEnabled.value =
+        preferences.getBool('biometrics_enabled') ?? false;
     // Escolha de tema de versões anteriores deixa de valer.
     await preferences.remove('theme_mode');
     final savedTime = preferences.getString('reminder_time')?.split(':');

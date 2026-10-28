@@ -1,9 +1,11 @@
-import 'dart:typed_data';
+animport 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 import '../../../../core/errors/app_log.dart';
 import '../../../../core/files/cloud_files.dart';
+import '../../../../core/services/app_services.dart';
+import '../../../../core/services/device_biometrics.dart';
 import '../../../../core/services/device_preferences.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../data/profile_photo_source.dart';
@@ -20,11 +22,13 @@ class ProfileScreen extends StatefulWidget {
     super.key,
     this.controller,
     this.repository,
+    this.biometrics,
     this.photoSource,
     this.extraItems = const [],
   }) : assert(controller != null || repository != null);
   final ProfileController? controller;
   final ProfileRepository? repository;
+  final BiometricAuthenticator? biometrics;
   final ProfilePhotoSource? photoSource;
   final List<ProfileMenuItem> extraItems;
 
@@ -38,6 +42,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _busy = false;
 
   ProfileRepository get _repository => _controller.repository;
+  BiometricAuthenticator get _biometrics =>
+      widget.biometrics ?? AppServices.biometrics;
 
   @override
   void initState() {
@@ -174,6 +180,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _setBiometricsEnabled(bool enabled) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      if (enabled) {
+        if (!await _biometrics.canAuthenticate) {
+          _message(
+            'Configure uma biometria no aparelho antes de ativar o bloqueio.',
+          );
+          return;
+        }
+        final authenticated = await _biometrics.authenticate(
+          'Confirme sua identidade para ativar o bloqueio do FinançaFácil.',
+        );
+        if (!authenticated) {
+          _message('Biometria não confirmada. O bloqueio não foi ativado.');
+          return;
+        }
+      }
+      await DevicePreferences.setBiometricsEnabled(enabled);
+      _message(
+        enabled
+            ? 'Bloqueio biométrico ativado.'
+            : 'Bloqueio biométrico desativado.',
+      );
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'configurar bloqueio biométrico');
+      _message('Não foi possível configurar a biometria. Tente novamente.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _signOut() async {
     final confirmed = await showConfirmDialog(
       context,
@@ -258,6 +297,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ]),
             _section('Preferências', [
+              ValueListenableBuilder<bool>(
+                valueListenable: DevicePreferences.biometricsEnabled,
+                builder: (_, enabled, __) => SwitchListTile(
+                  secondary: Icon(
+                    Icons.fingerprint,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('Bloqueio biométrico'),
+                  subtitle: const Text(
+                    'Use digital ou rosto ao abrir o app ou voltar para ele. O PIN, padrão ou senha do aparelho também funciona.',
+                  ),
+                  value: enabled,
+                  onChanged: _busy ? null : _setBiometricsEnabled,
+                ),
+              ),
               ValueListenableBuilder<TimeOfDay>(
                 valueListenable: DevicePreferences.time,
                 builder: (_, time, __) => _item(

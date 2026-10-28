@@ -84,4 +84,5 @@ dependencies {
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:1.2.2"
     // FileProvider para enviar a planilha ao Google Drive.
     implementation "androidx.core:core:1.13.1"
+    implementation "androidx.appcompat:appcompat:1.7.0"
 }
