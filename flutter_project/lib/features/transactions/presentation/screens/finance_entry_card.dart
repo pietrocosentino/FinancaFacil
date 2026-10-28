@@ -14,6 +14,7 @@ enum _EntryAction {
   inactivate,
   reactivate,
   delete,
+  deleteIncome,
   stop,
 }
 
@@ -30,6 +31,7 @@ class FinanceEntryCard extends StatefulWidget {
     this.onEditIncome,
     this.onConfirm,
     this.onDelete,
+    this.onDeleteIncome,
     this.onStop,
     this.onInactivate,
     this.onReactivate,
@@ -51,6 +53,7 @@ class FinanceEntryCard extends StatefulWidget {
   final VoidCallback? onEditIncome;
   final VoidCallback? onConfirm;
   final VoidCallback? onDelete;
+  final VoidCallback? onDeleteIncome;
   final VoidCallback? onStop;
   final VoidCallback? onInactivate;
   final VoidCallback? onReactivate;
@@ -76,6 +79,7 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
     _EntryAction.inactivate: widget.onInactivate,
     _EntryAction.reactivate: widget.onReactivate,
     _EntryAction.delete: widget.onDelete,
+    _EntryAction.deleteIncome: widget.onDeleteIncome,
     _EntryAction.stop: widget.onStop,
   };
 
@@ -93,8 +97,12 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
     _EntryAction.reactivate => 'Reativar lançamento',
     _EntryAction.delete =>
       entry.isRecurring ? 'Excluir somente este mês' : 'Excluir lançamento',
+    _EntryAction.deleteIncome => 'Excluir renda fixa (deste mês em diante)',
     _EntryAction.stop => 'Encerrar próximos meses',
   };
+
+  bool _isDestructive(_EntryAction action) =>
+      action == _EntryAction.delete || action == _EntryAction.deleteIncome;
 
   IconData _icon(_EntryAction action) => switch (action) {
     _EntryAction.edit => Icons.edit_note,
@@ -105,6 +113,7 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
     _EntryAction.inactivate => Icons.visibility_off_outlined,
     _EntryAction.reactivate => Icons.visibility_outlined,
     _EntryAction.delete => Icons.delete_outline,
+    _EntryAction.deleteIncome => Icons.delete_outline,
     _EntryAction.stop => Icons.stop_circle_outlined,
   };
 
@@ -172,7 +181,7 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
                                   Icon(
                                     _icon(action),
                                     size: 20,
-                                    color: action == _EntryAction.delete
+                                    color: _isDestructive(action)
                                         ? theme.colorScheme.error
                                         : null,
                                   ),
@@ -180,7 +189,7 @@ class _FinanceEntryCardState extends State<FinanceEntryCard> {
                                   Flexible(
                                     child: Text(
                                       _label(action),
-                                      style: action == _EntryAction.delete
+                                      style: _isDestructive(action)
                                           ? TextStyle(
                                               color: theme.colorScheme.error,
                                             )

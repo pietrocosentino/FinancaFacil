@@ -20,6 +20,16 @@ import 'edit_entry_screen.dart';
 import 'finance_entry_card.dart';
 import 'recurrence_rules_screen.dart';
 
+class _StatementFilterSelection {
+  const _StatementFilterSelection({
+    required this.confirmations,
+    required this.kinds,
+  });
+
+  final Set<ConfirmationFilter> confirmations;
+  final Set<TransactionKind> kinds;
+}
+
 /// Extrato mensal: consulta, filtros, confirmação, edição e exclusão.
 class TransactionsListScreen extends StatefulWidget {
   const TransactionsListScreen({
@@ -99,6 +109,113 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     _filter = filter;
     _selectedIds.clear();
   });
+
+  Set<ConfirmationFilter> get _selectedConfirmationFilters =>
+      _filter.confirmations.isNotEmpty
+      ? _filter.confirmations
+      : _filter.confirmation == ConfirmationFilter.all
+      ? const {}
+      : {_filter.confirmation};
+
+  Set<TransactionKind> get _selectedKinds =>
+      _filter.kinds.isNotEmpty
+      ? _filter.kinds
+      : _filter.kind == null
+      ? const {}
+      : {_filter.kind!};
+
+  Future<void> _openFilters() async {
+    final confirmations = _selectedConfirmationFilters.toSet();
+    final kinds = _selectedKinds.toSet();
+    final selection = await showModalBottomSheet<_StatementFilterSelection>(
+      context: context,
+      useSafeArea: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Filtros',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => setSheetState(() {
+                        confirmations.clear();
+                        kinds.clear();
+                      }),
+                      child: const Text('Limpar'),
+                    ),
+                  ],
+                ),
+              ),
+              const ListTile(title: Text('Situação')),
+              for (final filter in [
+                ConfirmationFilter.pending,
+                ConfirmationFilter.confirmed,
+              ])
+                CheckboxListTile(
+                  title: Text(filter.label),
+                  value: confirmations.contains(filter),
+                  onChanged: (selected) => setSheetState(() {
+                    if (selected == true) {
+                      confirmations.add(filter);
+                    } else {
+                      confirmations.remove(filter);
+                    }
+                  }),
+                ),
+              const ListTile(title: Text('Tipo')),
+              for (final kind in TransactionKind.values)
+                CheckboxListTile(
+                  title: Text(
+                    kind == TransactionKind.expense ? 'Despesas' : 'Receitas',
+                  ),
+                  value: kinds.contains(kind),
+                  onChanged: (selected) => setSheetState(() {
+                    if (selected == true) {
+                      kinds.add(kind);
+                    } else {
+                      kinds.remove(kind);
+                    }
+                  }),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(
+                      _StatementFilterSelection(
+                        confirmations: Set.unmodifiable(confirmations),
+                        kinds: Set.unmodifiable(kinds),
+                      ),
+                    ),
+                    child: const Text('Aplicar'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selection == null || !mounted) return;
+    _updateFilter(
+      _filter.copyWith(
+        confirmation: ConfirmationFilter.all,
+        kind: () => null,
+        confirmations: () => selection.confirmations,
+        kinds: () => selection.kinds,
+      ),
+    );
+  }
 
   void _message(String message) =>
       ScaffoldMessenger.of(context)
@@ -268,6 +385,32 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     );
   }
 
+  Future<void> _deleteIncomeFromMonth(FinanceEntry entry) async {
+    if (_processing || _reviewing) return;
+    final now = DateTime.now();
+    final month = AppFormatters.monthYear.format(
+      DateTime(now.year, now.month),
+    );
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Excluir renda fixa?',
+      message:
+          '${entry.description}\n${AppFormatters.currency.format(entry.amount)} por mês\n\n'
+          'Ela deixa de aparecer de $month em diante. Os meses anteriores continuam no histórico.',
+      confirmLabel: 'Excluir',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+    await _mutate(
+      () => _repository.deleteIncomeFromMonth(
+        entry,
+        DateTime(now.year, now.month),
+      ),
+      success: 'Renda fixa excluída.',
+      failure: 'Não foi possível excluir. Tente novamente.',
+    );
+  }
+
   Future<void> _stop(FinanceEntry entry) async {
     if (_processing || _reviewing) return;
     final reference = RecurrenceReference.fromEntryId(entry.id);
@@ -383,52 +526,6 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     );
   }
 
-  Widget _filterChips() {
-    Widget kindChip(TransactionKind kind, String label) => FilterChip(
-      visualDensity: VisualDensity.compact,
-      showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      label: Text(label),
-      selected: _filter.kind == kind,
-      onSelected: _processing
-          ? null
-          : (selected) => _updateFilter(
-              _filter.copyWith(kind: () => selected ? kind : null),
-            ),
-    );
-    // Duas linhas centralizadas: situação em cima, tipo embaixo.
-    Widget row(List<Widget> chips) => Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 6,
-      runSpacing: 4,
-      children: chips,
-    );
-    return Column(
-      children: [
-        row([
-          for (final confirmation in ConfirmationFilter.values)
-            ChoiceChip(
-              visualDensity: VisualDensity.compact,
-              showCheckmark: false,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              label: Text(confirmation.label),
-              selected: _filter.confirmation == confirmation,
-              onSelected: _processing
-                  ? null
-                  : (_) => _updateFilter(
-                      _filter.copyWith(confirmation: confirmation),
-                    ),
-            ),
-        ]),
-        const SizedBox(height: 4),
-        row([
-          kindChip(TransactionKind.expense, 'Despesas'),
-          kindChip(TransactionKind.income, 'Receitas'),
-        ]),
-      ],
-    );
-  }
-
   Widget _filtersPanel() => SliverToBoxAdapter(
     child: Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
@@ -450,11 +547,25 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
               ),
             ),
           _monthNavigation(),
-          _filterChips(),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: _processing ? null : _openFilters,
+              icon: const Icon(Icons.filter_list),
+              label: Text(
+                _filterChoiceCount == 0
+                    ? 'Filtro'
+                    : 'Filtro ($_filterChoiceCount)',
+              ),
+            ),
+          ),
         ],
       ),
     ),
   );
+
+  int get _filterChoiceCount =>
+      _selectedConfirmationFilters.length + _selectedKinds.length;
 
   Widget? _confirmationBar(BuildContext context) {
     if (_selectedIds.isEmpty || MediaQuery.of(context).viewInsets.bottom > 0) {
@@ -510,6 +621,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       onEditIncome: when(
         entry.isIncome && entry.isRecurring,
         () => _openEditor(entry, EditEntryMode.incomeRule),
+      ),
+      onDeleteIncome: when(
+        entry.isIncome && entry.isRecurring,
+        () => _deleteIncomeFromMonth(entry),
       ),
       onConfirm: when(pendingManual, () => _confirmOne(entry)),
       onNotReceived: when(entry.isAutomaticIncome, () => _notReceived(entry)),
@@ -630,7 +745,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
               : () => exportEntries(context, _repository),
         ),
         IconButton(
-          tooltip: 'Contas recorrentes e parcelas',
+          tooltip: 'Lançamentos recorrentes',
           icon: const Icon(Icons.repeat),
           onPressed: _processing
               ? null

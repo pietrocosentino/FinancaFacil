@@ -21,6 +21,7 @@ class _AuthGateState extends State<AuthGate> {
   final AuthGateway _auth = AppServices.auth;
   StreamSubscription<SessionEvent>? _authSubscription;
   StreamSubscription<Uri>? _linkSubscription;
+  String? _userId;
   bool _recovery = false;
   String? _error;
 
@@ -28,11 +29,13 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
     _session = AppServices.session;
+    _userId = _session.userId;
     _authSubscription = _session.changes.listen(
       (event) {
         if (!mounted) return;
         setState(() {
           _error = null;
+          _userId = event == SessionEvent.signedOut ? null : _session.userId;
           if (event == SessionEvent.passwordRecovery) _recovery = true;
           if (event == SessionEvent.signedOut) {
             _recovery = false;
@@ -103,7 +106,7 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    final userId = _session.userId;
+    final userId = _userId;
     final child = userId == null
         ? LoginScreen(key: const ValueKey('login'), gateway: _auth)
         : _recovery

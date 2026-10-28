@@ -1,11 +1,32 @@
 import 'package:financafacil/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
 import 'package:financafacil/features/transactions/presentation/screens/transactions_list_screen.dart';
+import 'package:financafacil/features/transactions/presentation/screens/recurrence_rules_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'support/fake_repositories.dart';
+
+class _RecurrenceRepository extends FakeFinanceRepository {
+  @override
+  Future<List<RecurrencePlan>> plans() async => [
+    RecurrencePlan(
+      id: 'expense-rule',
+      firstDue: DateTime(2026, 1, 5),
+      description: 'Aluguel',
+      amount: 1500,
+      kind: TransactionKind.expense,
+    ),
+    RecurrencePlan(
+      id: 'income-rule',
+      firstDue: DateTime(2026, 1, 10),
+      description: 'Salário',
+      amount: 5000,
+      kind: TransactionKind.income,
+    ),
+  ];
+}
 
 FinanceEntry _salary({String id = 'legacy-1'}) {
   final now = DateTime.now();
@@ -25,9 +46,7 @@ FinanceEntry _salary({String id = 'legacy-1'}) {
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
-  testWidgets('Início lista a renda fixa e altera de vez a partir deste mês', (
-    tester,
-  ) async {
+  testWidgets('Início não lista rendas fixas', (tester) async {
     tester.view.physicalSize = const Size(800, 1800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -37,50 +56,22 @@ void main() {
       MaterialApp(home: DashboardScreen(repository: repository)),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Suas rendas fixas'), findsOneWidget);
-    expect(find.text('Salário'), findsOneWidget);
-    await tester.tap(find.byTooltip('Alterar Salário'));
-    await tester.pumpAndSettle();
-    expect(find.text('Alterar renda fixa'), findsOneWidget);
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Valor mensal'),
-      '8.750,00',
-    );
-    await tester.tap(find.text('Salvar alterações'));
-    await tester.pumpAndSettle();
-    final now = DateTime.now();
-    expect(repository.incomeChange?.amount, 8750);
-    expect(repository.incomeChange?.description, 'Salário');
-    expect(repository.incomeChange?.dueDay, 6);
-    expect(repository.incomeChangeFrom, DateTime(now.year, now.month));
-    expect(
-      find.text('Renda fixa atualizada deste mês em diante.'),
-      findsOneWidget,
-    );
+    expect(find.text('Suas rendas fixas'), findsNothing);
+    expect(find.text('Salário'), findsNothing);
   });
 
-  testWidgets('Início exclui a renda fixa depois de confirmar', (tester) async {
-    tester.view.physicalSize = const Size(800, 1800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final repository = FakeFinanceRepository()..entries = [_salary()];
+  testWidgets('lista recorrências do Extrato identifica débitos e créditos', (
+    tester,
+  ) async {
+    final repository = _RecurrenceRepository();
     await tester.pumpWidget(
-      MaterialApp(home: DashboardScreen(repository: repository)),
+      MaterialApp(home: RecurrenceRulesScreen(repository: repository)),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Excluir Salário'));
-    await tester.pumpAndSettle();
-    expect(find.text('Excluir renda fixa?'), findsOneWidget);
-    await tester.tap(find.text('Cancelar'));
-    await tester.pumpAndSettle();
-    expect(repository.deletedIncome, isNull);
-    await tester.tap(find.byTooltip('Excluir Salário'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Excluir'));
-    await tester.pumpAndSettle();
-    expect(repository.deletedIncome?.id, 'legacy-1');
-    expect(find.text('Renda fixa excluída.'), findsOneWidget);
+    expect(find.text('Lançamentos recorrentes'), findsOneWidget);
+    expect(find.text('Contas mensais e parcelas'), findsNothing);
+    expect(find.text('Despesa'), findsOneWidget);
+    expect(find.text('Receita'), findsOneWidget);
   });
 
   testWidgets('Extrato oferece alterar só o mês ou a renda fixa de vez', (
@@ -98,5 +89,15 @@ void main() {
       find.text('Alterar renda fixa (deste mês em diante)'),
       findsOneWidget,
     );
+    expect(
+      find.text('Excluir renda fixa (deste mês em diante)'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Excluir renda fixa (deste mês em diante)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Excluir renda fixa?'), findsOneWidget);
+    await tester.tap(find.text('Excluir'));
+    await tester.pumpAndSettle();
+    expect(repository.deletedIncome?.id, 'legacy-1');
   });
 }

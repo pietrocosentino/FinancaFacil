@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:financafacil/core/config/supabase_config.dart';
 import 'package:financafacil/core/errors/app_failure.dart';
 import 'package:financafacil/features/auth/data/auth_gateway.dart';
+import 'package:financafacil/features/auth/data/auth_session_service.dart';
 import 'package:financafacil/features/profile/data/profile_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -11,10 +12,12 @@ import 'support/fake_supabase_backend.dart';
 void main() {
   late FakeSupabaseBackend backend;
   late SupabaseAuthGateway auth;
+  late AuthSessionService session;
   late SupabaseProfileRepository profile;
   setUp(() {
     backend = FakeSupabaseBackend();
     auth = SupabaseAuthGateway(backend.client);
+    session = AuthSessionService(backend.client);
     profile = SupabaseProfileRepository(backend.client);
   });
   tearDown(() => backend.dispose());
@@ -138,5 +141,16 @@ void main() {
   test('editar perfil sem sessão falha antes de enviar requisição', () async {
     await expectLater(profile.update('Pietro', ''), throwsStateError);
     expect(backend.requests, isEmpty);
+  });
+  test('sair limpa a sessão e publica o evento para mostrar o login', () async {
+    await backend.authenticate();
+    final events = <SessionEvent>[];
+    final subscription = session.changes.listen(events.add);
+    await profile.signOut();
+    await Future<void>.delayed(Duration.zero);
+    expect(session.userId, isNull);
+    expect(profile.currentProfile, isNull);
+    expect(events, contains(SessionEvent.signedOut));
+    await subscription.cancel();
   });
 }

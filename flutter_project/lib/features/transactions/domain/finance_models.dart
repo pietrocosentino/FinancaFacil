@@ -322,6 +322,7 @@ class RecurrencePlan {
     required this.firstDue,
     required this.description,
     required this.amount,
+    required this.kind,
     this.dueDay,
     this.totalInstallments,
     this.endDate,
@@ -333,6 +334,7 @@ class RecurrencePlan {
   int get monthlyDay => dueDay ?? firstDue.day;
   final String description;
   final double amount;
+  final TransactionKind kind;
   final int? totalInstallments;
   final DateTime? endDate;
   final List<Map<String, dynamic>> futureAmounts;
@@ -359,6 +361,7 @@ class RecurrencePlan {
       dueDay: (data['due_day'] as num?)?.toInt(),
       description: template['description'].toString(),
       amount: (template['amount'] as num).toDouble(),
+      kind: TransactionKind.fromDatabase(template['type']),
       totalInstallments: (data['total_installments'] as num?)?.toInt(),
       endDate: DateTime.tryParse(data['end_date']?.toString() ?? ''),
       futureAmounts: List<Map<String, dynamic>>.from(

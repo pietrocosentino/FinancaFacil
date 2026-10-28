@@ -65,7 +65,7 @@ class _RecurrenceRulesScreenState extends State<RecurrenceRulesScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Contas mensais e parcelas'),
+      title: const Text('Lançamentos recorrentes'),
       actions: [
         IconButton(
           onPressed: _busyId == null ? _reload : null,
@@ -97,6 +97,7 @@ class _RecurrenceRulesScreenState extends State<RecurrenceRulesScreen> {
                           plan.description,
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
+                        Text(plan.kind.label),
                         Text(
                           '${AppFormatters.currency.format(plan.amountAt(DateTime.now()))} por mês',
                         ),

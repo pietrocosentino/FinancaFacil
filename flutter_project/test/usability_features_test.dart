@@ -206,21 +206,50 @@ void main() {
       expect(find.text('Excluir lançamento'), findsOneWidget);
     });
 
-    testWidgets('filtros por tipo e atalho para limpar', (tester) async {
+    testWidgets('filtros em checklist combinam tipo e situação', (
+      tester,
+    ) async {
       await open(tester, [
         _entry('a', description: 'Aluguel'),
         _entry('b', kind: TransactionKind.income, description: 'Freela'),
+        _entry(
+          'c',
+          kind: TransactionKind.income,
+          paid: true,
+          description: 'Salário recebido',
+        ),
       ]);
-      await tester.tap(find.widgetWithText(FilterChip, 'Receitas'));
+      await tester.tap(find.text('Filtro'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CheckboxListTile), findsNWidgets(4));
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Pendentes'));
+      await tester.ensureVisible(
+        find.widgetWithText(CheckboxListTile, 'Receitas'),
+      );
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Receitas'));
+      await tester.ensureVisible(find.text('Aplicar'));
+      await tester.tap(find.text('Aplicar'));
       await tester.pumpAndSettle();
       expect(find.text('Freela'), findsOneWidget);
       expect(find.text('Aluguel'), findsNothing);
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Confirmadas'));
+      expect(find.text('Salário recebido'), findsNothing);
+      await tester.tap(find.text('Filtro (2)'));
       await tester.pumpAndSettle();
-      expect(find.text('Nenhum lançamento com estes filtros.'), findsOneWidget);
-      await tester.tap(find.text('Limpar filtros'));
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Confirmadas'));
+      await tester.ensureVisible(find.text('Aplicar'));
+      await tester.tap(find.text('Aplicar'));
       await tester.pumpAndSettle();
       expect(find.text('Freela'), findsOneWidget);
+      expect(find.text('Salário recebido'), findsOneWidget);
+      expect(find.text('Aluguel'), findsNothing);
+      await tester.tap(find.text('Filtro (3)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Limpar'));
+      await tester.ensureVisible(find.text('Aplicar'));
+      await tester.tap(find.text('Aplicar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Freela'), findsOneWidget);
+      expect(find.text('Salário recebido'), findsOneWidget);
       expect(find.text('Aluguel'), findsOneWidget);
     });
 

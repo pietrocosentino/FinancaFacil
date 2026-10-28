@@ -81,6 +81,7 @@ void main() {
       };
       final projected = projectRecurrences([rule], const [], DateTime(2026, 6));
       final plan = RecurrencePlan.fromMap(rule);
+      expect(plan.kind, TransactionKind.expense);
       for (final row in projected) {
         final month = DateTime.parse(row['due_date'] as String);
         expect(row['amount'], plan.amountAt(month), reason: '$month');
@@ -185,6 +186,16 @@ void main() {
         const StatementFilter(kind: TransactionKind.income)
             .apply(month)
             .map((e) => e.id),
+        ['salary'],
+      );
+      expect(
+        const StatementFilter(
+          confirmations: {
+            ConfirmationFilter.pending,
+            ConfirmationFilter.confirmed,
+          },
+          kinds: {TransactionKind.income},
+        ).apply(month).map((e) => e.id),
         ['salary'],
       );
       expect(

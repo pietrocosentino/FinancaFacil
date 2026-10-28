@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/errors/app_log.dart';
-import '../../../../core/errors/failure_message.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../shared/widgets/async_panel.dart';
-import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../shared/widgets/month_picker.dart';
 import '../../../notifications/data/reminder_service.dart';
 import '../../../notifications/domain/reminder_plan.dart';
@@ -14,7 +11,6 @@ import '../../../transactions/data/finance_repository.dart';
 import '../../../transactions/domain/entry_status.dart';
 import '../../../transactions/domain/finance_models.dart';
 import '../../../transactions/presentation/screens/add_choice_sheet.dart';
-import '../../../transactions/presentation/screens/edit_entry_screen.dart';
 import '../../../transactions/presentation/screens/finance_entry_card.dart';
 import '../../domain/finance_summary.dart';
 
@@ -181,150 +177,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
   ];
 
-  /// Rendas que se repetem todo mês (salário, aluguel recebido etc.).
-  List<FinanceEntry> _fixedIncomes(List<FinanceEntry> entries) =>
-      entries
-          .where(
-            (entry) =>
-                entry.isIncome &&
-                entry.isRecurring &&
-                !entry.isInactive &&
-                entry.belongsToMonth(_month),
-          )
-          .toList()
-        ..sort((a, b) => b.amount.compareTo(a.amount));
-
-  Future<void> _deleteIncome(FinanceEntry entry) async {
-    final now = DateTime.now();
-    final month = AppFormatters.monthYear.format(DateTime(now.year, now.month));
-    final confirmed = await showConfirmDialog(
-      context,
-      title: 'Excluir renda fixa?',
-      message:
-          '${entry.description}\n${AppFormatters.currency.format(entry.amount)} por mês\n\n'
-          'Ela deixa de aparecer de $month em diante. Os meses anteriores continuam no histórico.',
-      confirmLabel: 'Excluir',
-      destructive: true,
-    );
-    if (!confirmed || !mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await widget.repository.deleteIncomeFromMonth(
-        entry,
-        DateTime(now.year, now.month),
-      );
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Renda fixa excluída.')),
-      );
-    } catch (error, stack) {
-      AppLog.error(error, stack, 'excluir renda fixa');
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            failureMessage(
-              error,
-              fallback: 'Não foi possível excluir. Tente novamente.',
-            ),
-          ),
-        ),
-      );
-    }
-  }
-
-  Future<void> _changeIncome(FinanceEntry entry) async {
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => EditEntryScreen(
-          entry: entry,
-          repository: widget.repository,
-          mode: EditEntryMode.incomeRule,
-        ),
-      ),
-    );
-    if (saved == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Renda fixa atualizada deste mês em diante.'),
-        ),
-      );
-    }
-  }
-
-  /// Rendas fixas com atalho para alterar de vez (descontos, reajustes,
-  /// volta de férias), sem precisar cadastrar outra.
-  Widget _incomeSources(List<FinanceEntry> entries) {
-    final incomes = _fixedIncomes(entries);
-    final colors = AppColors.of(context);
-    final money = AppFormatters.currency.format;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Suas rendas fixas',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                if (widget.onAdd != null)
-                  TextButton.icon(
-                    onPressed: () => widget.onAdd!(AddChoice.income),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Nova'),
-                  ),
-              ],
-            ),
-            if (incomes.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(right: 8, bottom: 8),
-                child: Text(
-                  'Nenhuma renda fixa neste mês. Cadastre seu salário em "Renda" com a frequência "Todo mês".',
-                ),
-              ),
-            for (final income in incomes)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  backgroundColor: colors.income.withValues(alpha: 0.15),
-                  foregroundColor: colors.income,
-                  child: const Icon(Icons.savings_outlined),
-                ),
-                title: Text(
-                  income.description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  '${money(income.amount)}${income.dueDate == null ? '' : ' · todo dia ${income.dueDate!.day}'}',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      tooltip: 'Alterar ${income.description}',
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => _changeIncome(income),
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      tooltip: 'Excluir ${income.description}',
-                      icon: Icon(Icons.delete_outline, color: colors.danger),
-                      onPressed: () => _deleteIncome(income),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _firstSteps() => Card(
     child: Padding(
       padding: const EdgeInsets.all(16),
@@ -400,7 +252,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 8),
             _monthNavigation(),
             _MonthSummaryCard(summary: summary),
-            if (!empty) _incomeSources(entries),
             if (summary.expenses > 0 || previous.expenses > 0)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
