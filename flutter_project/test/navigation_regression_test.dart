@@ -261,7 +261,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Ativar lembretes no aparelho'), findsOneWidget);
+    expect(find.text('Ativar notificações'), findsOneWidget);
     expect(find.text('Tentar novamente'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

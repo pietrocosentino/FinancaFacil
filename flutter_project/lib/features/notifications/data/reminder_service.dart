@@ -8,7 +8,6 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../../core/errors/app_log.dart';
-import '../../../core/services/device_preferences.dart';
 import '../../transactions/domain/finance_models.dart';
 import '../domain/reminder_plan.dart';
 
@@ -101,8 +100,8 @@ class LocalReminderService implements ReminderService {
       status.value = ReminderStatus(
         enabled: enabled,
         message: enabled
-            ? 'Lembretes ativados no aparelho.'
-            : 'Ative os lembretes do aparelho.',
+            ? 'Lembretes ativados.'
+            : 'Ative as notificações do aparelho.',
       );
     } catch (error, stack) {
       AppLog.error(error, stack, 'preparar lembretes');
@@ -171,8 +170,8 @@ class LocalReminderService implements ReminderService {
     status.value = ReminderStatus(
       enabled: enabled,
       message: enabled
-          ? 'Lembretes ativados. Preparando próximos vencimentos.'
-          : 'Notificações bloqueadas. Você pode permitir nas configurações do aparelho.',
+          ? 'Lembretes ativados.'
+          : 'Ative as notificações nas configurações do aparelho.',
     );
     return enabled;
   }
@@ -197,17 +196,11 @@ class LocalReminderService implements ReminderService {
       await _plugin.cancelAll();
       if (!enabled) {
         status.value = const ReminderStatus(
-          message:
-              'Ative as notificações para receber lembretes com o app fechado.',
+          message: 'Ative as notificações do aparelho.',
         );
         return;
       }
-      final plan = planReminders(
-        entries,
-        DateTime.now(),
-        hour: DevicePreferences.time.value.hour,
-        minute: DevicePreferences.time.value.minute,
-      );
+      final plan = planReminders(entries, DateTime.now());
       try {
         for (final reminder in plan) {
           if (generation != _generation) return;
@@ -242,8 +235,8 @@ class LocalReminderService implements ReminderService {
           scheduledDays: plan.length,
           coveredUntil: plan.isEmpty ? null : plan.last.date,
           message: plan.isEmpty
-              ? 'Sem contas pendentes para lembrar nos próximos 90 dias.'
-              : 'Lembretes preparados. Abra o app periodicamente para renovar os próximos vencimentos.',
+              ? 'Nenhuma conta pendente no momento.'
+              : 'Lembretes ativados.',
         );
       } catch (error, stack) {
         AppLog.error(error, stack, 'agendar lembretes');

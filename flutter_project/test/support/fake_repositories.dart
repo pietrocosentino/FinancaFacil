@@ -187,7 +187,7 @@ class FakeReminderService implements ReminderService {
   final status = ValueNotifier(
     const ReminderStatus(
       enabled: true,
-      message: 'Lembretes preparados. Abra o app periodicamente para renovar os próximos vencimentos.',
+      message: 'Lembretes ativados.',
     ),
   );
   @override

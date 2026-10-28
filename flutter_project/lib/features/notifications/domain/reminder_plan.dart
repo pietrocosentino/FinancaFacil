@@ -41,8 +41,6 @@ List<DailyReminder> planReminders(
   DateTime now, {
   int horizonDays = 90,
   int limit = 60,
-  int hour = 9,
-  int minute = 0,
 }) {
   final result = <DailyReminder>[];
   for (
@@ -50,7 +48,7 @@ List<DailyReminder> planReminders(
     offset <= horizonDays && result.length < limit;
     offset++
   ) {
-    final date = DateTime(now.year, now.month, now.day + offset, hour, minute);
+    final date = DateTime(now.year, now.month, now.day + offset, 9);
     if (!date.isAfter(now)) continue;
     final count = entries.where((entry) => _needsAttention(entry, date)).length;
     if (count > 0) result.add(DailyReminder(date, count));

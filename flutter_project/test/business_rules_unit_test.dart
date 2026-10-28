@@ -256,25 +256,21 @@ void main() {
       expect(daysUntil(DateTime(2026, 1, 8, 23), DateTime(2026, 1, 5, 1)), 3);
       expect(daysUntil(DateTime(2026, 1, 8, 1), DateTime(2026, 1, 5, 23)), 3);
     });
-    test('horário configurado preserva hora e minuto', () {
+    test('horário fixo é às 9h', () {
       final reminders = planReminders(
         [bill('optical', DateTime(2026, 1, 8))],
         DateTime(2026, 1, 5),
-        hour: 18,
-        minute: 30,
         horizonDays: 1,
       );
-      expect(reminders.first.date, DateTime(2026, 1, 5, 18, 30));
+      expect(reminders.first.date, DateTime(2026, 1, 5, 9));
     });
-    test('horário de hoje já passado agenda somente amanhã', () {
+    test('horário de hoje já passado agenda para amanhã às 9h', () {
       final reminders = planReminders(
         [bill('optical', DateTime(2026, 1, 8))],
         DateTime(2026, 1, 5, 18, 31),
-        hour: 18,
-        minute: 30,
         horizonDays: 1,
       );
-      expect(reminders.single.date, DateTime(2026, 1, 6, 18, 30));
+      expect(reminders.single.date, DateTime(2026, 1, 6, 9));
     });
     test('receita, conta paga e data ausente não geram avisos', () {
       final reminders = planReminders([

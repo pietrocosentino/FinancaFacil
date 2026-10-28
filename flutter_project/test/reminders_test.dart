@@ -222,7 +222,7 @@ void main() {
     final reminders = FakeReminderService();
     reminders.status.value = ReminderStatus(
       enabled: true,
-      message: 'Lembretes preparados. Abra o app periodicamente para renovar os próximos vencimentos.',
+      message: 'Lembretes ativados.',
       coveredUntil: DateTime(2026, 12, 31),
     );
     await tester.pumpWidget(

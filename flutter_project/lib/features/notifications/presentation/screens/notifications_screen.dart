@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/errors/app_log.dart';
 import '../../../../core/errors/failure_message.dart';
-import '../../../../core/services/device_preferences.dart';
 import '../../../../core/utils/dates.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
@@ -145,25 +144,50 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           valueListenable: widget.reminders!.status,
           builder: (_, status, __) => Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(status.message),
-                if (status.coveredUntil != null)
-                  Text(
-                    'Agenda preparada até ${AppFormatters.date.format(status.coveredUntil!)}. Lembretes por volta das ${DevicePreferences.time.value.hour.toString().padLeft(2, '0')}:${DevicePreferences.time.value.minute.toString().padLeft(2, '0')}.',
-                  ),
-                if (!status.enabled)
-                  OutlinedButton.icon(
-                    onPressed: _requesting ? null : _enable,
-                    icon: const Icon(Icons.notifications_active_outlined),
-                    label: Text(
-                      _requesting
-                          ? 'Ativando...'
-                          : 'Ativar lembretes no aparelho',
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.notifications_active_outlined),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Lembretes',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Um aviso às 9h para contas atrasadas ou que vencem nos próximos 3 dias.',
+                          ),
+                          if (!status.enabled) ...[
+                            const SizedBox(height: 8),
+                            Text(status.message),
+                            OutlinedButton.icon(
+                              onPressed: _requesting ? null : _enable,
+                              icon: const Icon(
+                                Icons.notifications_active_outlined,
+                              ),
+                              label: Text(
+                                _requesting
+                                    ? 'Ativando...'
+                                    : 'Ativar notificações',
+                              ),
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 8),
+                            const Text('Ativados'),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
         );

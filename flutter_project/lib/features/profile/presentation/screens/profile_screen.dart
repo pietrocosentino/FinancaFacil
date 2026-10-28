@@ -160,26 +160,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _reminders() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: DevicePreferences.time.value,
-      helpText: 'Horário dos lembretes',
-    );
-    if (time == null || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      // O layout principal observa o horário e reagenda os lembretes.
-      await DevicePreferences.setTime(time);
-      _message('Horário dos lembretes atualizado.');
-    } catch (error, stack) {
-      AppLog.error(error, stack, 'horário dos lembretes');
-      _message('Não foi possível salvar o horário. Tente novamente.');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _setBiometricsEnabled(bool enabled) async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -296,7 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 subtitle: 'Nome, e-mail e telefone',
               ),
             ]),
-            _section('Preferências', [
+            _section('Segurança', [
               ValueListenableBuilder<bool>(
                 valueListenable: DevicePreferences.biometricsEnabled,
                 builder: (_, enabled, __) => SwitchListTile(
@@ -310,16 +290,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   value: enabled,
                   onChanged: _busy ? null : _setBiometricsEnabled,
-                ),
-              ),
-              ValueListenableBuilder<TimeOfDay>(
-                valueListenable: DevicePreferences.time,
-                builder: (_, time, __) => _item(
-                  Icons.schedule_outlined,
-                  'Lembretes',
-                  _reminders,
-                  subtitle:
-                      'Todos os dias às ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} · enquanto houver pendências',
                 ),
               ),
             ]),
