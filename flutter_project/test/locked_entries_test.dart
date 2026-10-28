@@ -265,10 +265,13 @@ void main() {
           files['xl/worksheets/sheet1.xml']!.content as List<int>,
         );
         expect(sheet, contains('Aluguel &amp; condomínio'));
-        expect(sheet, contains('<sheet name="Lançamentos"'));
         expect(sheet, contains('<v>1200.00</v>'));
         expect(sheet, contains('<v>5000.00</v>'));
         expect(sheet, isNot(contains('<f>')));
+        final workbook = utf8.decode(
+          files['xl/workbook.xml']!.content as List<int>,
+        );
+        expect(workbook, contains('<sheet name="Lançamentos"'));
         final lines = XlsxImportReader().read(bytes);
         expect(lines, hasLength(2));
         expect(lines.first.text('description'), 'Aluguel & condomínio');
