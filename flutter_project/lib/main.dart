@@ -73,6 +73,12 @@ class _ApplicationStartupState extends State<_ApplicationStartup> {
 
   Future<void> _initialize() async {
     await initializeDateFormatting('pt_BR');
+    if (!SupabaseConfig.isConfigured) {
+      throw StateError(
+        'Supabase não configurado: compile com '
+        '--dart-define-from-file=env.local.json',
+      );
+    }
     await Supabase.initialize(
       url: SupabaseConfig.url,
       publishableKey: SupabaseConfig.anonKey,

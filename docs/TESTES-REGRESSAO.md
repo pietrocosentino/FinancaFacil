@@ -29,7 +29,7 @@ No Windows, na raiz: `powershell -ExecutionPolicy Bypass -File .\tools\validatio
 
 Manualmente: na raiz, `npm ci --prefix tools/database` e `npm test --prefix tools/database`; em `flutter_project`, `flutter pub get`, `dart format lib test`, `flutter analyze` e `flutter test --coverage`.
 
-Para apontar para outro projeto Supabase, copie `env.example.json` para `env.local.json` e rode `flutter run --dart-define-from-file=env.local.json`. Nunca coloque a chave `service_role` no app.
+A URL e a chave pública do Supabase não ficam no código. Copie `env.example.json` para `env.local.json` (fora do Git), preencha com os dados do painel do Supabase (Project Settings > API) e rode `flutter run --dart-define-from-file=env.local.json`. No Android Studio, coloque `--dart-define-from-file=env.local.json` em *Run > Edit Configurations > Additional run args*. No CI, os mesmos valores vêm dos Secrets `SUPABASE_URL` e `SUPABASE_ANON_KEY`. Nunca coloque a chave `service_role` no app.
 
 ## O que os testes automáticos não cobrem
 

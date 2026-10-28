@@ -53,7 +53,7 @@ Adicionar → Importar planilha: baixe o modelo, preencha a aba Lançamentos e e
 
 Flutter 3.47.6, Dart 3.13, Java 17. Android: compileSdk e targetSdk 36 (exigência atual da Google Play), minSdk 23. iOS mínimo 15.
 
-**Publicar na Play Store:** gere uma chave (`keytool -genkey -v -keystore financafacil.jks -keyalg RSA -keysize 2048 -validity 10000 -alias financafacil`) e crie `flutter_project/android/key.properties` com `storeFile`, `storePassword`, `keyAlias` e `keyPassword`. Os dois ficam fora do Git. Sem eles, o APK de release usa a chave de depuração e serve só para testes. O build iOS do CI não é assinado. Para usar outro projeto Supabase, rode com `--dart-define-from-file=env.local.json` (modelo em `env.example.json`).
+**Publicar na Play Store:** gere uma chave (`keytool -genkey -v -keystore financafacil.jks -keyalg RSA -keysize 2048 -validity 10000 -alias financafacil`) e crie `flutter_project/android/key.properties` com `storeFile`, `storePassword`, `keyAlias` e `keyPassword`. Os dois ficam fora do Git. Sem eles, o APK de release usa a chave de depuração e serve só para testes. O build iOS do CI não é assinado. URL e chave do Supabase não ficam no código: rode sempre com `--dart-define-from-file=env.local.json` (modelo em `env.example.json`); no CI elas vêm dos Secrets `SUPABASE_URL` e `SUPABASE_ANON_KEY`.
 
 ## Documentação
 

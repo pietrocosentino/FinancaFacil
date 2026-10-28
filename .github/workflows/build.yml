@@ -110,7 +110,15 @@ jobs:
       - name: Preparar execução do Gradle
         run: chmod +x android/gradlew
       - name: Gerar APK
-        run: flutter build apk --release
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Cadastre os Secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          flutter build apk --release --dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - name: Disponibilizar APK
         uses: actions/upload-artifact@v5
         with:
@@ -142,7 +150,15 @@ jobs:
         working-directory: flutter_project/ios
         run: pod install
       - name: Gerar iOS para dispositivo sem assinatura
-        run: flutter build ios --release --no-codesign
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Cadastre os Secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          flutter build ios --release --no-codesign --dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - name: Compactar iOS para dispositivo
         working-directory: flutter_project/build/ios/iphoneos
         run: zip -r FinancaFacil-iOS.zip Runner.app
@@ -153,7 +169,15 @@ jobs:
           path: flutter_project/build/ios/iphoneos/FinancaFacil-iOS.zip
           if-no-files-found: error
       - name: Gerar iOS para simulador
-        run: flutter build ios --simulator --debug
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Cadastre os Secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          flutter build ios --simulator --debug --dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - name: Compactar iOS para simulador
         working-directory: flutter_project/build/ios/iphonesimulator
         run: zip -r FinancaFacil-iOS-Simulador.zip Runner.app
