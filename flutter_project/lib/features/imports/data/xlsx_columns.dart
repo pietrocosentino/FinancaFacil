@@ -1,3 +1,5 @@
+import '../domain/import_models.dart';
+
 abstract final class XlsxColumns {
   static const fields = <String, String>{
     'Descrição': 'description',
@@ -10,4 +12,103 @@ abstract final class XlsxColumns {
     'Observações': 'notes',
     'Dia de vencimento': 'due_day',
   };
+
+  static const _aliases = <String, String>{
+    'description': 'description',
+    'descricao': 'description',
+    'lancamento': 'description',
+    'nome': 'description',
+    'nome do lancamento': 'description',
+    'nome da conta': 'description',
+    'descricao da conta': 'description',
+    'descricao do lancamento': 'description',
+    'conta': 'description',
+    'item': 'description',
+    'gasto': 'description',
+    'despesa': 'description',
+    'renda': 'description',
+    'titulo': 'description',
+    'historico': 'description',
+    'estabelecimento': 'description',
+    'favorecido': 'description',
+    'o que e': 'description',
+    'tipo': 'type',
+    'tipo de lancamento': 'type',
+    'tipo de movimento': 'type',
+    'tipo de movimentacao': 'type',
+    'natureza': 'type',
+    'movimento': 'type',
+    'entrada ou saida': 'type',
+    'entrada saida': 'type',
+    'receita ou despesa': 'type',
+    'credito ou debito': 'type',
+    'valor': 'amount',
+    'valor mensal': 'amount',
+    'valor total': 'amount',
+    'valor do lancamento': 'amount',
+    'valor da parcela': 'amount',
+    'valor da conta': 'amount',
+    'valor a pagar': 'amount',
+    'valor pago': 'amount',
+    'preco': 'amount',
+    r'valor r$': 'amount',
+    'quantia': 'amount',
+    'total': 'amount',
+    'amount': 'amount',
+    'data': 'due_date',
+    'vencimento': 'due_date',
+    'data de vencimento': 'due_date',
+    'data vencimento': 'due_date',
+    'data de pagamento': 'due_date',
+    'data pagamento': 'due_date',
+    'data limite': 'due_date',
+    'data venc.': 'due_date',
+    'venc.': 'due_date',
+    'dia de pagamento': 'due_date',
+    'primeiro vencimento': 'due_date',
+    'due date': 'due_date',
+    'recorrente': 'recurring',
+    'recorrencia': 'recurring',
+    'fixo': 'recurring',
+    'fixa': 'recurring',
+    'mensal': 'recurring',
+    'frequencia': 'recurring',
+    'quantidade de meses': 'months',
+    'numero de parcelas': 'months',
+    'parcelas': 'months',
+    'meses': 'months',
+    'categoria': 'category',
+    'classificacao': 'category',
+    'grupo': 'category',
+    'grupo de despesas': 'category',
+    'subcategoria': 'category',
+    'tipo de gasto': 'category',
+    'tipo de despesa': 'category',
+    'categoria do gasto': 'category',
+    'o que sao': 'category',
+    'observacao': 'notes',
+    'observacoes': 'notes',
+    'detalhes': 'notes',
+    'comentarios': 'notes',
+    'forma de pagamento': 'payment_method',
+    'metodo de pagamento': 'payment_method',
+    'meio de pagamento': 'payment_method',
+    'pagamento': 'payment_method',
+    'como pagou': 'payment_method',
+    'forma pagto': 'payment_method',
+    'dia de vencimento': 'due_day',
+    'dia do vencimento': 'due_day',
+    'dia': 'due_day',
+  };
+
+  static String? fieldForHeader(String value) {
+    final normalized = normalizeImportText(value);
+    final direct = _aliases[normalized];
+    if (direct != null) return direct;
+    final simplified = normalized
+        .replaceAll(RegExp(r'[^a-z0-9$]+'), ' ')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ');
+    return _aliases[simplified];
+  }
 }

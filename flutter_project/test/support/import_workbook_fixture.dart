@@ -8,6 +8,7 @@ Uint8List workbook(
   bool date1904 = false,
   String shared = '',
   bool prefixed = false,
+  String sheetName = 'Lançamentos',
 }) {
   final archive = Archive();
   void xml(String path, String content) {
@@ -27,7 +28,7 @@ Uint8List workbook(
 
   xml(
     'xl/workbook.xml',
-    '<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><workbookPr date1904="${date1904 ? 1 : 0}"/><sheets><sheet name="Lançamentos" r:id="r1"/></sheets></workbook>',
+    '<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><workbookPr date1904="${date1904 ? 1 : 0}"/><sheets><sheet name="$sheetName" r:id="r1"/></sheets></workbook>',
   );
   xml(
     'xl/_rels/workbook.xml.rels',

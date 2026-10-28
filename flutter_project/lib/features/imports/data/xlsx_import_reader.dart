@@ -4,19 +4,15 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
+import '../../../core/utils/finance_utils.dart';
 import '../domain/import_models.dart';
 import 'xlsx_columns.dart';
 
-/// Leitor limitado ao modelo de importação. Nunca executa fórmulas ou macros.
+/// Leitor limitado de planilhas financeiras. Nunca executa fórmulas ou macros.
 class XlsxImportReader {
   static const maxBytes = 5 * 1024 * 1024;
   static const maxRows = 500;
   static const _maxExpandedBytes = 20 * 1024 * 1024;
-  static final headers = {
-    for (final entry in XlsxColumns.fields.entries)
-      normalizeImportText(entry.key): entry.value,
-  };
-
   List<ImportLine> read(Uint8List bytes) {
     if (bytes.isEmpty || bytes.length > maxBytes) {
       throw const FormatException('Escolha um Excel .xlsx de até 5 MB.');
@@ -38,17 +34,25 @@ class XlsxImportReader {
       }
 
       final workbook = xml('xl/workbook.xml');
-      final sheets = workbook
-          .named('sheet')
-          .where(
-            (sheet) =>
-                normalizeImportText(sheet.getAttribute('name') ?? '') ==
-                'lancamentos',
-          );
-      if (sheets.length != 1) {
-        throw const FormatException('Use o modelo com a aba Lançamentos.');
+      final sheets = workbook.named('sheet').toList();
+      if (sheets.isEmpty) {
+        throw const FormatException(
+          'A planilha não contém abas para importar.',
+        );
       }
-      final relationship = sheets.single.getAttribute(
+      final sheet = sheets.firstWhere(
+        (item) =>
+            normalizeImportText(item.getAttribute('name') ?? '') ==
+            'lancamentos',
+        orElse: () => sheets.firstWhere(
+          (item) => RegExp(
+            r'\b(despesas?|receitas?|rendas?|contas?|dados|planilha)\b',
+          ).hasMatch(normalizeImportText(item.getAttribute('name') ?? '')),
+          orElse: () => sheets.first,
+        ),
+      );
+      final sheetName = normalizeImportText(sheet.getAttribute('name') ?? '');
+      final relationship = sheet.getAttribute(
         'id',
         namespace: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
       );
@@ -75,9 +79,7 @@ class XlsxImportReader {
           .named('workbookPr')
           .any((p) => ['1', 'true'].contains(p.getAttribute('date1904')));
       final rows = xml(path).named('row').toList();
-      final mapping = <int, String>{};
-      final result = <ImportLine>[];
-      var foundHeader = false;
+      final decodedRows = <(int, Map<int, Object?>, bool)>[];
       var previousLine = 0;
       for (final row in rows) {
         final line =
@@ -142,32 +144,129 @@ class XlsxImportReader {
             !hasFormula) {
           continue;
         }
-        if (!foundHeader) {
-          if (hasFormula) {
-            throw const FormatException(
-              'Cabeçalhos não podem conter fórmulas.',
-            );
+        decodedRows.add((line, cells, hasFormula));
+      }
+
+      Map<int, String>? mapping;
+      Map<int, String> headerNames = {};
+      var headerRowIndex = -1;
+      var bestScore = -1;
+      var duplicateHeader = false;
+      for (var index = 0; index < decodedRows.length && index < 50; index++) {
+        final (_, cells, hasFormula) = decodedRows[index];
+        if (hasFormula) continue;
+        final candidate = <int, String>{};
+        final names = <int, String>{};
+        var duplicate = false;
+        for (final entry in cells.entries) {
+          final name = entry.value?.toString().trim() ?? '';
+          names[entry.key] = name;
+          final field = XlsxColumns.fieldForHeader(name);
+          if (field == null) continue;
+          if (candidate.containsValue(field)) {
+            duplicate = true;
+            continue;
           }
-          for (final entry in cells.entries) {
-            final field =
-                headers[normalizeImportText(entry.value?.toString() ?? '')];
-            if (field == null) continue;
-            if (mapping.containsValue(field)) {
-              throw const FormatException('Cabeçalhos repetidos.');
-            }
-            mapping[entry.key] = field;
-          }
-          if (!headers.values.take(7).every(mapping.containsValue)) {
-            throw const FormatException(
-              'Cabeçalhos diferentes do modelo. Baixe o modelo de importação.',
-            );
-          }
-          foundHeader = true;
-          continue;
+          candidate[entry.key] = field;
         }
+        final score = candidate.length;
+        final usefulHeader =
+            candidate.values.contains('amount') &&
+            candidate.values.contains('due_date') &&
+            (candidate.values.contains('description') ||
+                candidate.values.contains('category') ||
+                candidate.values.contains('type'));
+        if (usefulHeader && score > bestScore) {
+          bestScore = score;
+          mapping = candidate;
+          headerNames = names;
+          headerRowIndex = index;
+          duplicateHeader = duplicate;
+        }
+      }
+      if (mapping == null) {
+        throw const FormatException(
+          'Não encontrei títulos reconhecidos para valor e vencimento. '
+          'Use colunas como Valor/Valor total e Data/Vencimento. ',
+        );
+      }
+      if (duplicateHeader) {
+        throw const FormatException(
+          'Há títulos repetidos para a mesma informação. Renomeie as colunas duplicadas.',
+        );
+      }
+
+      final result = <ImportLine>[];
+      for (final (line, cells, hasFormula) in decodedRows.skip(
+        headerRowIndex + 1,
+      )) {
         final values = {
           for (final entry in mapping.entries) entry.value: cells[entry.key],
         };
+        if (!mapping.values.contains('category') &&
+            values['type'] != null &&
+            importKindFromText(values['type'].toString()) == null) {
+          values['category'] = values['type'];
+          values['type'] = '';
+        }
+        final rawAmount = values['amount'];
+        if (rawAmount is num && rawAmount < 0) {
+          values['amount'] = rawAmount.abs();
+          if ((values['type']?.toString().trim() ?? '').isEmpty) {
+            values['type'] = 'Despesa';
+          }
+        } else if (rawAmount is String) {
+          final amountText = rawAmount
+              .replaceAll(r'R$', '')
+              .replaceAll(RegExp(r'\s'), '');
+          final negative =
+              amountText.startsWith('-') ||
+              (amountText.startsWith('(') && amountText.endsWith(')'));
+          if (negative) {
+            final unsigned = amountText.startsWith('-')
+                ? amountText.substring(1)
+                : amountText.substring(1, amountText.length - 1);
+            final parsedAmount = parseMoney(unsigned);
+            if (parsedAmount != null) {
+              values['amount'] = parsedAmount;
+              if ((values['type']?.toString().trim() ?? '').isEmpty) {
+                values['type'] = 'Despesa';
+              }
+            }
+          }
+        }
+        final rowType = values['type']?.toString().trim() ?? '';
+        if (rowType.isEmpty) {
+          final sheetWords = sheetName.split(RegExp(r'[^a-z0-9]+')).toSet();
+          if (sheetWords.intersection({
+            'despesa',
+            'despesas',
+            'conta',
+            'contas',
+            'gasto',
+            'gastos',
+          }).isNotEmpty) {
+            values['type'] = 'Despesa';
+          } else if (sheetWords.intersection({
+            'receita',
+            'receitas',
+            'renda',
+            'rendas',
+          }).isNotEmpty) {
+            values['type'] = 'Receita';
+          }
+        }
+        if (!values.containsKey('recurring') ||
+            values['recurring']?.toString().trim().isEmpty == true) {
+          final type = normalizeImportText(
+            values['type']?.toString() ?? '',
+          );
+          values['recurring'] = RegExp(
+            r'\b(fixa|fixo|mensal|recorrente)\b',
+          ).hasMatch(type)
+              ? 'Sim'
+              : 'Não';
+        }
         final serial = values['due_date'];
         if (serial is num &&
             serial.isFinite &&
@@ -180,6 +279,25 @@ class XlsxImportReader {
             date1904 ? 1 : 30,
           ).add(Duration(days: serial.floor()));
         }
+        final paymentMethod = values
+            .remove('payment_method')
+            ?.toString()
+            .trim();
+        final noteParts = <String>[
+          if (values['notes']?.toString().trim().isNotEmpty == true)
+            values['notes'].toString().trim(),
+          if (paymentMethod != null && paymentMethod.isNotEmpty)
+            'Forma de pagamento: $paymentMethod',
+        ];
+        for (final entry in cells.entries) {
+          if (mapping.containsKey(entry.key)) continue;
+          final name = headerNames[entry.key];
+          final value = entry.value?.toString().trim() ?? '';
+          if (name != null && name.isNotEmpty && value.isNotEmpty) {
+            noteParts.add('$name: $value');
+          }
+        }
+        if (noteParts.isNotEmpty) values['notes'] = noteParts.join(' • ');
         final parsed = ImportLine(line, values);
         if (hasFormula) {
           parsed.sourceError = 'Fórmula ou erro de Excel: substitua por valores na planilha e selecione o arquivo novamente.';

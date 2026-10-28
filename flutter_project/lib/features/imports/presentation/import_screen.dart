@@ -320,7 +320,8 @@ class _ImportScreenState extends State<ImportScreen> {
                           ? 'Mensal, sem data final'
                           : '${line.months} meses'
                     : 'Avulso'}\n'
-                'Categoria: ${category.isEmpty ? 'Escolha na correção' : category}',
+                'Categoria: ${category.isEmpty ? 'Escolha na correção' : category}'
+                '${line.text('notes').isEmpty ? '' : '\nObservações: ${line.text('notes')}'}',
               ),
             ),
             if (line.similar)
@@ -394,7 +395,7 @@ class _ImportScreenState extends State<ImportScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Baixe o modelo pelo Início, preencha-o e confira cada linha antes de cadastrar. Excel .xlsx, até 5 MB e 500 linhas.',
+            'Aceitamos nomes de coluna comuns em planilhas financeiras. Revise os dados antes de importar; forma de pagamento e outras colunas são preservadas em Observações. Excel .xlsx, até 5 MB e 500 linhas.',
           ),
           const SizedBox(height: 12),
           Text(

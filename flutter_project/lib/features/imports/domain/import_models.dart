@@ -14,8 +14,8 @@ String normalizeImportText(String value) {
 
 DateTime? parseImportDate(Object? input) {
   if (input is DateTime) return DateTime(input.year, input.month, input.day);
-  final text = input?.toString().trim() ?? '';
-  final br = RegExp(r'^(\d{2})/(\d{2})/(\d{4})$').firstMatch(text);
+  final text = input?.toString().trim().split('T').first ?? '';
+  final br = RegExp(r'^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$').firstMatch(text);
   final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(text);
   if (br == null && iso == null) return null;
   final year = int.parse(br?.group(3) ?? iso!.group(1)!);
@@ -25,6 +25,21 @@ DateTime? parseImportDate(Object? input) {
   return date.year == year && date.month == month && date.day == day
       ? date
       : null;
+}
+
+TransactionKind? importKindFromText(String input) {
+  final value = normalizeImportText(input);
+  if (RegExp(
+    r'\b(despesas?|expenses?|debitos?|saidas?|contas?|gastos?|pagamentos?)\b',
+  ).hasMatch(value)) {
+    return TransactionKind.expense;
+  }
+  if (RegExp(
+    r'\b(receitas?|incomes?|creditos?|entradas?|rendas?|recebimentos?)\b',
+  ).hasMatch(value)) {
+    return TransactionKind.income;
+  }
+  return null;
 }
 
 class ImportLine {
@@ -42,11 +57,11 @@ class ImportLine {
   }
 
   TransactionKind? get kind {
-    try {
-      return TransactionKind.fromDatabase(text('type'));
-    } on FormatException {
-      return null;
-    }
+    final labelKind =
+        importKindFromText(text('type')) ??
+        importKindFromText(text('category'));
+    if (labelKind != null) return labelKind;
+    return null;
   }
 
   double? get amount {
@@ -63,10 +78,23 @@ class ImportLine {
   }
 
   bool? get recurring {
+    if (!values.containsKey('recurring') || text('recurring').isEmpty) {
+      return null;
+    }
     switch (normalizeImportText(text('recurring'))) {
       case 'sim':
+      case 'sim, mensal':
+      case 'mensal':
+      case 'fixo':
+      case 'fixa':
+      case 'yes':
+      case 'true':
         return true;
       case 'nao':
+      case 'avulso':
+      case 'unico':
+      case 'no':
+      case 'false':
         return false;
       default:
         return null;
