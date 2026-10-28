@@ -8,6 +8,7 @@ import 'package:financafacil/features/imports/data/xlsx_import_reader.dart';
 import 'package:financafacil/features/imports/domain/import_models.dart';
 import 'package:financafacil/features/imports/presentation/import_screen.dart';
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
+import 'package:financafacil/shared/widgets/file_location_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -110,6 +111,40 @@ void main() {
     await tester.pumpAndSettle();
     expect(files.downloads, 1);
     expect(imports.saves, 0);
+  });
+
+  testWidgets('opções de salvar cabem em tela baixa sem overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => showSaveLocationSheet(
+                  context,
+                  title: 'Onde salvar o modelo?',
+                ),
+                child: const Text('Salvar'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Onde salvar o modelo?'), findsOneWidget);
+    expect(find.text('No celular'), findsOneWidget);
+    expect(find.text('No Google Drive'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
   testWidgets('planilha exportada pelo app ativa a importação', (tester) async {
     files.file = ImportFile(

@@ -98,7 +98,9 @@ class _ApplicationStartupState extends State<_ApplicationStartup> {
     onRetry: () => setState(() {
       _initialization = _initialize();
     }),
-    errorMessage: 'Não foi possível iniciar o aplicativo. Verifique a conexão.',
+    errorMessage: SupabaseConfig.isConfigured
+        ? 'Não foi possível conectar ao serviço. Verifique a conexão e tente novamente.'
+        : 'Configuração do serviço ausente neste APK. Gere o app com env.local.json e tente novamente.',
     builder: (_) => const AuthGate(),
   );
 }
