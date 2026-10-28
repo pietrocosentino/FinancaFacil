@@ -70,7 +70,11 @@ async function scenario(integerIds) {
   await db.exec("update transactions set is_paid=true where description='Conta avulsa'");
   await rejects(()=>undo(imported.batch_id),/preservado/);
   equal((await counts()).rules,before.rules);
-  await db.exec("update transactions set is_paid=false where description='Conta avulsa'");
+  // Conta paga fica bloqueada para o usuário (008); a reversão do cenário é
+  // feita sem sessão, como uma correção administrativa.
+  await rejects(()=>db.exec("update transactions set is_paid=false where description='Conta avulsa'"),/Conta paga/);
+  await db.exec("reset role; select set_config('request.jwt.claim.sub','',false); update transactions set is_paid=false where description='Conta avulsa'; set role authenticated");
+  await account(owner);
   const ruleId=(await db.query("select id from recurrence_rules where template->>'description'='Aluguel'")).rows[0].id;
   await db.query('select public.set_recurrence_occurrence($1::uuid,$2::date,true,null)',[ruleId,'2026-11-01']);
   await rejects(()=>undo(imported.batch_id),/preservado/);
@@ -88,11 +92,13 @@ async function scenario(integerIds) {
   await remove(disposableId);
   equal((await db.query('select count(*)::int as n from transactions where id::text=$1',[disposableId])).rows[0].n,0);
   await rejects(()=>remove(disposableId),/não encontrado/);
-  await remove(`r:${ruleId}:2026-11-01`);
-  equal((await db.query('select is_deleted,is_paid from recurrence_occurrences where rule_id=$1',[ruleId])).rows[0],{is_deleted:true,is_paid:false});
+  // Mês pago não pode ser excluído (008); um mês em aberto pode.
+  await rejects(()=>remove(`r:${ruleId}:2026-11-01`),/não pode ser (excluída|alterado)/);
+  await remove(`r:${ruleId}:2026-12-01`);
+  equal((await db.query("select is_deleted,is_paid from recurrence_occurrences where rule_id=$1 and due_month='2026-12-01'",[ruleId])).rows[0],{is_deleted:true,is_paid:false});
   equal((await db.query('select count(*)::int as n from recurrence_rules where id=$1',[ruleId])).rows[0].n,1);
-  await remove(`r:${ruleId}:2026-11-01`);
-  equal((await db.query('select count(*)::int as n from recurrence_occurrences where rule_id=$1',[ruleId])).rows[0].n,1);
+  await remove(`r:${ruleId}:2026-12-01`);
+  equal((await db.query('select count(*)::int as n from recurrence_occurrences where rule_id=$1',[ruleId])).rows[0].n,2);
   await rejects(()=>remove(`r:${ruleId}:2026-10-01`),/fora do período/);
   await rejects(()=>remove(`r:${ruleId}:2026-11-02`),/Mês inválido/);
   await rejects(()=>undo(imported.batch_id),/preservado/);

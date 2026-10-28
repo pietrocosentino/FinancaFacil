@@ -43,12 +43,13 @@ const changes = async rule => (await db.query(
 const rent = await createRule();
 
 // Confirmação mensal e correção de valor sem perder a confirmação.
-await occurrence(rent, monthKey(-1), true);
-equal(await stored(rent, monthKey(-1)), {amount: null, is_paid: true});
+// Corrigir o valor antes de confirmar; depois de paga, a conta fica bloqueada (008).
 await occurrence(rent, monthKey(-1), null, 120);
+await occurrence(rent, monthKey(-1), true);
 equal(await stored(rent, monthKey(-1)), {amount: 120, is_paid: true});
-await occurrence(rent, monthKey(-1), false);
-equal(await stored(rent, monthKey(-1)), {amount: 120, is_paid: false});
+await rejects(() => occurrence(rent, monthKey(-1), null, 130), /não pode ser alterado/);
+await rejects(() => occurrence(rent, monthKey(-1), false), /não pode ser alterado/);
+equal(await stored(rent, monthKey(-1)), {amount: 120, is_paid: true});
 await rejects(() => occurrence(rent, monthKey(-3), true), /fora do período/);
 await rejects(() => occurrence(rent, `${monthKey(0).slice(0, 8)}02`, true), /Mês inválido/);
 await rejects(() => occurrence(rent, monthKey(0), null, 0), /Valor inválido/);
@@ -77,15 +78,31 @@ await occurrence(optical, monthKey(2), true);
 await rejects(() => occurrence(optical, monthKey(3), true), /fora do período/);
 await rejects(() => futureAmount(optical, monthKey(3), 90), /fora do período/);
 
-// Encerramento: termina no fim do mês atual e só permite corrigir o histórico.
-await occurrence(rent, monthKey(1), true);
+// Encerramento: termina no fim do mês atual; meses pagos ficam bloqueados (008).
 await db.query('select public.stop_finance_plan($1::uuid)', [rent]);
 equal((await db.query('select end_date::text from recurrence_rules where id=$1', [rent])).rows[0].end_date,
   lastDay(0));
-await occurrence(rent, monthKey(1), false);
-equal(await stored(rent, monthKey(1)), {amount: null, is_paid: false});
+await rejects(() => occurrence(rent, monthKey(0), false), /não pode ser alterado/);
+equal((await stored(rent, monthKey(0))).is_paid, true);
 await rejects(() => occurrence(rent, monthKey(1), true), /encerrada/);
 await rejects(() => futureAmount(rent, monthKey(1), 300), /fora do período/);
+
+// Inativar/reativar (008): só lançamentos confirmados; sai dos totais sem sumir.
+const inactive = (id, flag) => db.query('select public.set_entry_inactive($1,$2)', [id, flag]);
+const flag = async due => (await db.query(
+  'select is_inactive from recurrence_occurrences where rule_id=$1 and due_month=$2', [rent, due])).rows[0].is_inactive;
+await inactive(`r:${rent}:${monthKey(0)}`, true);
+equal(await flag(monthKey(0)), true);
+await inactive(`r:${rent}:${monthKey(0)}`, false);
+equal(await flag(monthKey(0)), false);
+await rejects(() => inactive(`r:${rent}:${monthKey(1)}`, true), /Somente lançamentos confirmados/);
+await rejects(() => inactive(`r:${rent}:2026-01-02`, true), /Mês inválido/);
+await rejects(() => inactive(null, true), /Registro inválido/);
+await rejects(() => db.query('select public.delete_finance_entry($1)', [`r:${rent}:${monthKey(0)}`]),
+  /não pode ser (excluída|alterado)/);
+// Renda mensal: despesas não podem ser alteradas por essa função.
+await rejects(() => db.query('select public.update_income_rule($1::uuid,$2,$3,$4)',
+  [rent, 'Novo nome', category, 5]), /Somente rendas/);
 
 // Isolamento entre contas e bloqueio para anônimos.
 await account(other);

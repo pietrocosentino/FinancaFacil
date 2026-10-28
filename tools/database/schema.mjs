@@ -12,6 +12,7 @@ export const migrations = [
   '005_excluir_lancamentos.sql',
   '006_categorias_e_renda.sql',
   '007_protege_gatilho_cadastro.sql',
+  '008_bloqueio_confirmados.sql',
 ];
 
 const supabaseRoles = `

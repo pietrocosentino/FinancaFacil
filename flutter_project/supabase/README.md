@@ -13,6 +13,7 @@ Todos podem ser executados novamente sem apagar dados.
 | 5 | `005_excluir_lancamentos.sql` | `delete_finance_entry` (exclui um mês ou um lançamento) e `stop_finance_plan` (encerra recorrência). |
 | 6 | `006_categorias_e_renda.sql` | Categorias criadas pelo usuário (`create_category`) e "Não recebi" para renda mensal (`set_income_not_received`). |
 | 7 | `007_protege_gatilho_cadastro.sql` | Impede chamar pela API o gatilho que cria o perfil no cadastro e fixa o `search_path` dele. |
+| 8 | `008_bloqueio_confirmados.sql` | Contas pagas ficam bloqueadas (sem alterar nem excluir); confirmação por engano pode ser inativada/reativada (`set_entry_inactive`). Renda mensal pode ter nome, categoria e dia alterados (`update_income_rule`). |
 
 `diagnostico.sql` é somente leitura: confere tabelas, políticas, permissões e funções.
 
@@ -23,6 +24,7 @@ Se você já tinha aplicado os scripts antigos (sem número), aplique só os nov
 1. `003_editar_valores.sql` de novo: o mês atual passou a ser calculado no fuso de São Paulo.
 2. `006_categorias_e_renda.sql`.
 3. `007_protege_gatilho_cadastro.sql`.
+4. `008_bloqueio_confirmados.sql` (aplicado no projeto "Finança Fácil" depois de 23/10/2026).
 
 **No projeto "Finança Fácil" estes três já foram aplicados em 23/10/2026** e testados com uma conta real dentro de uma transação desfeita (nenhum dado ficou gravado).
 
