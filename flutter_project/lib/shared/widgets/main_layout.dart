@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/services/app_services.dart';
+import '../../core/services/device_preferences.dart';
 import '../../core/utils/finance_updates.dart';
 import '../../core/utils/single_flight.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
@@ -93,6 +94,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     }
     WidgetsBinding.instance.addObserver(this);
     financeRevision.addListener(_onFinanceChanged);
+    DevicePreferences.time.addListener(_syncReminders);
     _reminders?.openRequested.addListener(_notificationTapped);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncReminders();
@@ -113,6 +115,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     financeRevision.removeListener(_onFinanceChanged);
+    DevicePreferences.time.removeListener(_syncReminders);
     _reminders?.openRequested.removeListener(_notificationTapped);
     _synchronizer?.dispose();
     _profile.dispose();

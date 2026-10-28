@@ -160,6 +160,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _reminders() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: DevicePreferences.time.value,
+      initialEntryMode: TimePickerEntryMode.input,
+      helpText: 'Escolha o horário diário',
+      confirmText: 'Salvar',
+      cancelText: 'Cancelar',
+    );
+    if (time == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await DevicePreferences.setTime(time);
+      _message('Horário dos lembretes atualizado.');
+    } catch (error, stack) {
+      AppLog.error(error, stack, 'horário dos lembretes');
+      _message('Não foi possível salvar o horário. Tente novamente.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _setBiometricsEnabled(bool enabled) async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -276,7 +298,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 subtitle: 'Nome, e-mail e telefone',
               ),
             ]),
-            _section('Segurança', [
+            _section('Preferências', [
               ValueListenableBuilder<bool>(
                 valueListenable: DevicePreferences.biometricsEnabled,
                 builder: (_, enabled, __) => SwitchListTile(
@@ -290,6 +312,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   value: enabled,
                   onChanged: _busy ? null : _setBiometricsEnabled,
+                ),
+              ),
+              ValueListenableBuilder<TimeOfDay>(
+                valueListenable: DevicePreferences.time,
+                builder: (_, time, __) => _item(
+                  Icons.schedule_outlined,
+                  'Horário dos lembretes',
+                  _reminders,
+                  subtitle:
+                      'Todos os dias às ${time.format(context)} · contas atrasadas ou vencendo em até 3 dias',
                 ),
               ),
             ]),

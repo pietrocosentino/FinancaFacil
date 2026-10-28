@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/errors/app_log.dart';
 import '../../../../core/errors/failure_message.dart';
+import '../../../../core/services/device_preferences.dart';
 import '../../../../core/utils/dates.dart';
 import '../../../../core/utils/finance_updates.dart';
 import '../../../../core/utils/formatters.dart';
@@ -161,8 +162,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Um aviso às 9h para contas atrasadas ou que vencem nos próximos 3 dias.',
+                          ValueListenableBuilder<TimeOfDay>(
+                            valueListenable: DevicePreferences.time,
+                            builder: (_, time, __) => Text(
+                              'Um aviso às ${time.format(context)} para contas atrasadas ou que vencem nos próximos 3 dias.',
+                            ),
                           ),
                           if (!status.enabled) ...[
                             const SizedBox(height: 8),

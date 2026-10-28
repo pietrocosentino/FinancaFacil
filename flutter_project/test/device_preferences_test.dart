@@ -30,17 +30,28 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await DevicePreferences.load();
   });
-  test('remove preferências antigas de lembretes e tema', () async {
+  test('persiste horário selecionado e migra a preferência antiga', () async {
+    await DevicePreferences.setTime(const TimeOfDay(hour: 18, minute: 30));
+    expect(DevicePreferences.time.value, const TimeOfDay(hour: 18, minute: 30));
+    final saved = await SharedPreferences.getInstance();
+    expect(saved.getString('reminder_time'), '18:30');
+
     SharedPreferences.setMockInitialValues({
-      'reminder_time': '18:30',
-      'reminder_hour': 18,
+      'reminder_hour': 7,
       'theme_mode': 1,
     });
     await DevicePreferences.load();
     final preferences = await SharedPreferences.getInstance();
-    expect(preferences.containsKey('reminder_time'), false);
+    expect(preferences.getString('reminder_time'), '7:0');
     expect(preferences.containsKey('reminder_hour'), false);
     expect(preferences.containsKey('theme_mode'), false);
+    expect(DevicePreferences.time.value, const TimeOfDay(hour: 7, minute: 0));
+  });
+
+  test('horário inválido retorna ao padrão de 9h', () async {
+    SharedPreferences.setMockInitialValues({'reminder_time': '25:99'});
+    await DevicePreferences.load();
+    expect(DevicePreferences.time.value, const TimeOfDay(hour: 9, minute: 0));
   });
 
   testWidgets('biometria pode ser habilitada após confirmar identidade', (

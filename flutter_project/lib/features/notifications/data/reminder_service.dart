@@ -8,6 +8,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../../core/errors/app_log.dart';
+import '../../../core/services/device_preferences.dart';
 import '../../transactions/domain/finance_models.dart';
 import '../domain/reminder_plan.dart';
 
@@ -200,7 +201,13 @@ class LocalReminderService implements ReminderService {
         );
         return;
       }
-      final plan = planReminders(entries, DateTime.now());
+      final reminderTime = DevicePreferences.time.value;
+      final plan = planReminders(
+        entries,
+        DateTime.now(),
+        hour: reminderTime.hour,
+        minute: reminderTime.minute,
+      );
       try {
         for (final reminder in plan) {
           if (generation != _generation) return;
