@@ -54,6 +54,46 @@ void main() {
     expect(DevicePreferences.time.value, const TimeOfDay(hour: 9, minute: 0));
   });
 
+  testWidgets('seletor de lembretes permite escolher hora e minuto', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(home: ProfileScreen(repository: FakeProfileRepository())),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Horário dos lembretes'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Horário dos lembretes'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DropdownButtonFormField<int>), findsNWidgets(2));
+    expect(
+      find.text('Escolha a hora e os minutos do aviso diário.'),
+      findsOneWidget,
+    );
+    expect(find.text('Salvar'), findsOneWidget);
+
+    await tester.tap(find.byType(DropdownButtonFormField<int>).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('05').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<int>).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('03').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(DevicePreferences.time.value, const TimeOfDay(hour: 5, minute: 3));
+  });
+
   testWidgets('biometria pode ser habilitada após confirmar identidade', (
     tester,
   ) async {

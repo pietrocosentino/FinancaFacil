@@ -13,6 +13,7 @@ import '../../data/profile_photo_store.dart';
 import '../../data/profile_repository.dart';
 import '../profile_controller.dart';
 import '../profile_menu_item.dart';
+import 'reminder_time_dialog.dart';
 import 'personal_data_screen.dart';
 
 /// Menu do perfil. Recebe o [controller] compartilhado com o cabeçalho ou,
@@ -161,13 +162,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _reminders() async {
-    final time = await showTimePicker(
+    final time = await showDialog<TimeOfDay>(
       context: context,
-      initialTime: DevicePreferences.time.value,
-      initialEntryMode: TimePickerEntryMode.input,
-      helpText: 'Escolha o horário diário',
-      confirmText: 'Salvar',
-      cancelText: 'Cancelar',
+      builder: (_) => ReminderTimeDialog(
+        initialTime: DevicePreferences.time.value,
+      ),
     );
     if (time == null || !mounted) return;
     setState(() => _busy = true);
