@@ -33,10 +33,14 @@ void main() {
   ) async {
     await showApp(t);
     final nav = find.byType(NavigationBar);
-    expect(t.widget<NavigationBar>(nav).destinations.map((item) => item.label), [
-      'Início',
-      'Extrato',
-    ]);
+    expect(
+      t
+          .widget<NavigationBar>(nav)
+          .destinations
+          .whereType<NavigationDestination>()
+          .map((item) => item.label),
+      ['Início', 'Extrato'],
+    );
     expect(addButton, findsOneWidget);
     await openTab(t, 'Extrato');
     expect(t.widget<NavigationBar>(nav).selectedIndex, 1);

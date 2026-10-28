@@ -55,7 +55,6 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   static const _staleAfter = Duration(minutes: 1);
 
   static const _homeTab = 0;
-  static const _statementTab = 1;
 
   late final FinanceRepository _finance;
   late final ProfileController _profile;

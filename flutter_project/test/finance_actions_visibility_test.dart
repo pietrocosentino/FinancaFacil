@@ -44,7 +44,11 @@ void main() {
       expect(addButton, findsNothing);
       await openTab(tester, 'Início');
       expect(addButton.hitTestable(), findsOneWidget);
-      expect(tester.getSize(addButton).height, greaterThanOrEqualTo(48));
+      final addAction = find.ancestor(
+        of: addButton,
+        matching: find.byType(OutlinedButton),
+      );
+      expect(tester.getSize(addAction).height, greaterThanOrEqualTo(48));
       await tester.tap(addButton);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Despesa ou conta'));

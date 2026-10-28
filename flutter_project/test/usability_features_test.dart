@@ -140,8 +140,14 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Comece por aqui'), findsOneWidget);
-      await tester.tap(find.text('Cadastrar renda'));
-      await tester.tap(find.text('Cadastrar despesa'));
+      await tester.tap(find.text('Adicionar lançamento'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Renda'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Adicionar lançamento'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Despesa ou conta'));
+      await tester.pumpAndSettle();
       expect(added, [AddChoice.income, AddChoice.expense]);
     });
   });
