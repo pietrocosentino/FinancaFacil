@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+
+import 'package:financafacil/core/files/cloud_files.dart';
+import 'package:financafacil/features/imports/data/import_file_gateway.dart';
 import 'package:financafacil/features/imports/presentation/import_screen.dart';
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
 import 'package:financafacil/features/transactions/presentation/screens/add_transaction_screen.dart';
@@ -11,9 +15,30 @@ import 'support/fake_import_repository.dart';
 import 'support/fake_repositories.dart';
 import 'support/navigation.dart';
 
+class _Files implements ImportFileGateway {
+  int templatesSaved = 0;
+
+  @override
+  Future<ImportFile?> pick(FileLocation from) async => null;
+
+  @override
+  Future<bool> saveTemplate(FileLocation to) async {
+    templatesSaved++;
+    return true;
+  }
+
+  @override
+  Future<bool> saveFile(String name, Uint8List bytes, FileLocation to) async =>
+      true;
+}
+
 void main() {
+  late _Files files;
   setUpAll(() => initializeDateFormatting('pt_BR'));
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    files = _Files();
+  });
 
   Future<void> showApp(WidgetTester t) async {
     await t.pumpWidget(
@@ -22,6 +47,7 @@ void main() {
           financeRepository: FakeFinanceRepository(),
           profileRepository: FakeProfileRepository(),
           importRepository: FakeImportRepository(),
+          importFiles: files,
         ),
       ),
     );
@@ -70,6 +96,11 @@ void main() {
     await openTab(t, 'Início');
     expect(find.text('Planilhas'), findsOneWidget);
     expect(find.text('Baixar modelo'), findsOneWidget);
+    await t.tap(find.text('Baixar modelo'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('No celular'));
+    await t.pumpAndSettle();
+    expect(files.templatesSaved, 1);
     await t.tap(find.text('Importar'));
     await t.pumpAndSettle();
     expect(find.byType(ImportScreen), findsOneWidget);

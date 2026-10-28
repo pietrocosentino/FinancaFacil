@@ -4,18 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// Ação única de cadastro visível no Início.
 final addButton = find.text('Adicionar lançamento');
 
-/// Abre um cadastro: 'Despesa ou conta', 'Renda' ou 'Importar planilha'.
+/// Abre um cadastro: 'Despesa ou conta' ou 'Renda'.
 Future<void> openAdd(
   WidgetTester tester, [
   String option = 'Despesa ou conta',
 ]) async {
-  if (option == 'Importar planilha') {
-    await tester.tap(find.byTooltip('Importar planilha'));
-  } else {
-    await tester.tap(addButton);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(option));
-  }
+  await tester.tap(addButton);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(option));
   await tester.pumpAndSettle();
 }
 
