@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Preferências deste aparelho; não alteram valores nem recorrências.
 class DevicePreferences {
+  static int _externalFlowCount = 0;
+  static bool get externalFlowInProgress => _externalFlowCount > 0;
+
   static final time = ValueNotifier<TimeOfDay>(
     const TimeOfDay(hour: 9, minute: 0),
   );
@@ -22,6 +25,15 @@ class DevicePreferences {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool('biometrics_enabled', value);
     biometricsEnabled.value = value;
+  }
+
+  static Future<T> duringExternalFlow<T>(Future<T> Function() action) async {
+    _externalFlowCount++;
+    try {
+      return await action();
+    } finally {
+      _externalFlowCount--;
+    }
   }
 
   static Future<void> load() async {

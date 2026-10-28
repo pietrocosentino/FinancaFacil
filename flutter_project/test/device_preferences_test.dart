@@ -54,6 +54,18 @@ void main() {
     expect(DevicePreferences.time.value, const TimeOfDay(hour: 9, minute: 0));
   });
 
+  test('fluxo externo restaura o estado mesmo quando falha', () async {
+    expect(DevicePreferences.externalFlowInProgress, isFalse);
+    await expectLater(
+      DevicePreferences.duringExternalFlow(() async {
+        expect(DevicePreferences.externalFlowInProgress, isTrue);
+        throw StateError('cancelado');
+      }),
+      throwsStateError,
+    );
+    expect(DevicePreferences.externalFlowInProgress, isFalse);
+  });
+
   testWidgets('seletor de lembretes permite escolher hora e minuto', (
     tester,
   ) async {

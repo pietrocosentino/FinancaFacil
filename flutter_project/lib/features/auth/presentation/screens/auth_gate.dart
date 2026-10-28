@@ -102,7 +102,11 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!DevicePreferences.biometricsEnabled.value || _userId == null) return;
+    if (!DevicePreferences.biometricsEnabled.value ||
+        _userId == null ||
+        DevicePreferences.externalFlowInProgress) {
+      return;
+    }
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       if (!_authenticating) {
