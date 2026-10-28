@@ -163,6 +163,7 @@ void main() {
     );
     await open(tester);
     await choose(tester);
+    expect(find.text('Baixar meus lançamentos em Excel'), findsNothing);
     final import = find.text('Importar 1 lançamentos');
     expect(import, findsOneWidget);
     final button = tester.widget<FilledButton>(

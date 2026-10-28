@@ -41,7 +41,10 @@ class NativeImportFileGateway implements ImportFileGateway {
           try {
             final file = await _cloud.pick(
               CloudApp.drive,
-              mimeTypes: [XlsxExportWriter.mimeType],
+              mimeTypes: [
+                XlsxExportWriter.mimeType,
+                'application/vnd.google-apps.spreadsheet',
+              ],
               maxBytes: XlsxImportReader.maxBytes,
             );
             if (file == null) return null;

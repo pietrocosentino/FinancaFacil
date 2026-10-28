@@ -107,7 +107,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
         onNavigateToNotifications: _openNotifications,
         onAdd: _addEntry,
       ),
-      TransactionsListScreen(repository: _finance, onAdd: _addEntry),
+      TransactionsListScreen(repository: _finance),
     ];
   }
 

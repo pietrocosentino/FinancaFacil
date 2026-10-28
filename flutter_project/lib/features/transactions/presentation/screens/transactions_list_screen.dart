@@ -14,7 +14,6 @@ import '../../domain/amount_edit_scope.dart';
 import '../../domain/entry_status.dart';
 import '../../domain/finance_models.dart';
 import '../../domain/statement.dart';
-import 'add_choice_sheet.dart';
 import 'edit_amount_dialog.dart';
 import 'edit_entry_screen.dart';
 import 'finance_entry_card.dart';
@@ -35,13 +34,8 @@ class TransactionsListScreen extends StatefulWidget {
   const TransactionsListScreen({
     super.key,
     required this.repository,
-    this.onAdd,
   });
   final FinanceRepository repository;
-
-  /// Abre a importação de planilha. Despesa e renda são cadastradas só no
-  /// Início, por isso o Extrato não mostra esses botões.
-  final ValueChanged<AddChoice>? onAdd;
   @override
   State<TransactionsListScreen> createState() => _TransactionsListScreenState();
 }
@@ -729,14 +723,6 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   _updateFilter(_filter.copyWith(query: ''));
                 },
         ),
-        if (widget.onAdd != null)
-          IconButton(
-            tooltip: 'Importar planilha',
-            icon: const Icon(Icons.upload_file_outlined),
-            onPressed: _processing
-                ? null
-                : () => widget.onAdd!(AddChoice.spreadsheet),
-          ),
         IconButton(
           tooltip: 'Baixar lançamentos em Excel',
           icon: const Icon(Icons.file_download_outlined),

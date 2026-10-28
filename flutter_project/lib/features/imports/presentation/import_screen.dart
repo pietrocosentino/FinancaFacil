@@ -14,7 +14,6 @@ import '../data/import_file_gateway.dart';
 import '../data/import_repository.dart';
 import '../data/xlsx_import_reader.dart';
 import '../domain/import_models.dart';
-import 'export_entries.dart';
 import 'import_error_message.dart';
 import 'import_line_dialog.dart';
 
@@ -466,14 +465,6 @@ class _ImportScreenState extends State<ImportScreen> {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _busy
-                ? null
-                : () => exportEntries(context, _finance, files: _files),
-            icon: const Icon(Icons.table_view_outlined),
-            label: const Text('Baixar meus lançamentos em Excel'),
           ),
           if (_busy)
             const Padding(

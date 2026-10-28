@@ -2,13 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../features/notifications/domain/reminder_plan.dart';
 import '../../features/profile/presentation/profile_controller.dart';
 import '../../features/profile/presentation/widgets/profile_identity.dart';
 import '../../features/transactions/domain/finance_models.dart';
 
-/// Faixa com a cor da marca no topo; também ocupa a área da barra de status,
+/// Faixa coral/laranja no topo; também ocupa a área da barra de status,
 /// que passa a usar ícones claros.
 class BrandBar extends StatelessWidget {
   const BrandBar({super.key, required this.child});
@@ -16,7 +15,6 @@ class BrandBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
     final theme = Theme.of(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -27,23 +25,23 @@ class BrandBar extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [colors.brandDeep, colors.brand],
+            colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
           ),
         ),
         child: Theme(
           data: theme.copyWith(
             textTheme: theme.textTheme.apply(
-              bodyColor: colors.onBrand,
-              displayColor: colors.onBrand,
+              bodyColor: theme.colorScheme.onPrimary,
+              displayColor: theme.colorScheme.onPrimary,
             ),
-            iconTheme: IconThemeData(color: colors.onBrand),
+            iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
             colorScheme: theme.colorScheme.copyWith(
-              primaryContainer: colors.onBrand,
-              onPrimaryContainer: colors.brandDeep,
+              primaryContainer: theme.colorScheme.onPrimary,
+              onPrimaryContainer: theme.colorScheme.primary,
             ),
           ),
           child: IconTheme(
-            data: IconThemeData(color: colors.onBrand),
+            data: IconThemeData(color: theme.colorScheme.onPrimary),
             child: child,
           ),
         ),
@@ -113,7 +111,7 @@ class MainHeader extends StatelessWidget {
                 return IconButton(
                   tooltip: 'Notificações',
                   onPressed: onOpenNotifications,
-                  color: AppColors.of(context).onBrand,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   icon: Badge(
                     isLabelVisible: count > 0,
                     label: Text('$count'),

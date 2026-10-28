@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
 /// Tons de uma das aparências do app.
-///
-/// Paleta financeira com verde como cor de ação, neutros quentes e acento
-/// dourado discreto. O cartão de saldo previsto usa [AppColors] separado.
 @immutable
 class AppPalette {
   const AppPalette({
@@ -36,38 +33,38 @@ class AppPalette {
   final Color tertiary;
   final Color error;
 
-  /// Claro: fundo quente, superfícies claras e verde financeiro.
+  /// Claro: coral e laranja em uma base de neutros quase pretos.
   static const light = AppPalette(
     brightness: Brightness.light,
-    background: Color(0xFFF5F3ED),
-    surface: Color(0xFFFFFEFA),
-    surfaceRaised: Color(0xFFECE9DF),
-    border: Color(0xFFDEDACF),
-    text: Color(0xFF202A25),
-    textMuted: Color(0xFF66716A),
-    primary: Color(0xFF236B52),
-    onPrimary: Color(0xFFF7FBF8),
-    primarySoft: Color(0xFFDCECE2),
-    secondary: Color(0xFF52687A),
-    tertiary: Color(0xFF96713B),
-    error: Color(0xFFAF3A33),
+    background: Color(0xFFFFF8F5),
+    surface: Color(0xFFFFFEFD),
+    surfaceRaised: Color(0xFFF8EAE5),
+    border: Color(0xFFE9D5CE),
+    text: Color(0xFF211715),
+    textMuted: Color(0xFF75615C),
+    primary: Color(0xFFE85B4A),
+    onPrimary: Color(0xFFFFFFFF),
+    primarySoft: Color(0xFFFFE0D9),
+    secondary: Color(0xFFF28C28),
+    tertiary: Color(0xFFB94B3D),
+    error: Color(0xFFB3261E),
   );
 
-  /// Escuro: carvão esverdeado com verde claro para manter contraste.
+  /// Escuro: carvão com coral e laranja em alto contraste.
   static const dark = AppPalette(
     brightness: Brightness.dark,
-    background: Color(0xFF111A16),
-    surface: Color(0xFF1B2721),
-    surfaceRaised: Color(0xFF29372F),
-    border: Color(0xFF3A4A40),
-    text: Color(0xFFEEF2EB),
-    textMuted: Color(0xFFA9B6AB),
-    primary: Color(0xFF80C99F),
-    onPrimary: Color(0xFF14261D),
-    primarySoft: Color(0xFF294638),
-    secondary: Color(0xFFAEC1D0),
-    tertiary: Color(0xFFD5B477),
-    error: Color(0xFFEFA39C),
+    background: Color(0xFF151110),
+    surface: Color(0xFF211A18),
+    surfaceRaised: Color(0xFF30231F),
+    border: Color(0xFF493530),
+    text: Color(0xFFF7EEEB),
+    textMuted: Color(0xFFC1ACA5),
+    primary: Color(0xFFFF8A78),
+    onPrimary: Color(0xFF32110C),
+    primarySoft: Color(0xFF5B2C23),
+    secondary: Color(0xFFFFAB55),
+    tertiary: Color(0xFFFFB4A8),
+    error: Color(0xFFFFB4AB),
   );
 }
 
@@ -238,8 +235,7 @@ class AppTheme {
 /// Cores com significado e da marca, ajustadas a cada tema para manter
 /// contraste. Use `AppColors.of(context)`.
 ///
-/// A marca (verde-petróleo) aparece no cabeçalho e no cartão de saldo; renda
-/// é sempre verde e despesa sempre coral, nos botões e nos valores.
+/// O cartão de saldo previsto conserva sua identidade verde-petróleo.
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
@@ -261,10 +257,10 @@ class AppColors extends ThemeExtension<AppColors> {
   });
 
   static const light = AppColors(
-    positive: Color(0xFF2E7A4F),
-    warning: Color(0xFF8A5A00),
-    danger: Color(0xFFAF3A33),
-    muted: Color(0xFF56615B),
+    positive: Color(0xFFB95C19),
+    warning: Color(0xFF9A5200),
+    danger: Color(0xFFB4483A),
+    muted: Color(0xFF75615C),
     brand: Color(0xFF0E5B53),
     brandDeep: Color(0xFF0A4741),
     onBrand: Color(0xFFF2FAF7),
@@ -272,14 +268,14 @@ class AppColors extends ThemeExtension<AppColors> {
     brandPositive: Color(0xFFA8EBC4),
     brandNegative: Color(0xFFFFB8AC),
     brandWarning: Color(0xFFFFD98F),
-    income: Color(0xFF1F7A4A),
-    onIncome: Color(0xFFF4FBF6),
+    income: Color(0xFFC5681B),
+    onIncome: Color(0xFFFFF8F1),
     expense: Color(0xFFB4483A),
     onExpense: Color(0xFFFFF6F4),
   );
   static const dark = AppColors(
-    positive: Color(0xFF8ED3A8),
-    warning: Color(0xFFE9C46A),
+    positive: Color(0xFFFFB275),
+    warning: Color(0xFFFFC078),
     danger: Color(0xFFEFA39C),
     muted: Color(0xFFA3AFA8),
     brand: Color(0xFF15433D),
@@ -289,8 +285,8 @@ class AppColors extends ThemeExtension<AppColors> {
     brandPositive: Color(0xFF9FE6BC),
     brandNegative: Color(0xFFFFB4A8),
     brandWarning: Color(0xFFF5D38A),
-    income: Color(0xFF8ED3A8),
-    onIncome: Color(0xFF0E2A1B),
+    income: Color(0xFFFFB275),
+    onIncome: Color(0xFF351B09),
     expense: Color(0xFFF0A094),
     onExpense: Color(0xFF3A1410),
   );

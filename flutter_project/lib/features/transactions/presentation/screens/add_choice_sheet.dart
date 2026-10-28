@@ -13,10 +13,22 @@ class QuickAddBar extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: Padding(
         padding: const EdgeInsets.only(top: 8, bottom: 4),
-        child: OutlinedButton.icon(
-          onPressed: () => _showChoices(context),
-          icon: const Icon(Icons.add),
-          label: const Text('Adicionar lançamento'),
+        child: Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            TextButton.icon(
+              onPressed: () => onAdd(AddChoice.spreadsheet),
+              icon: const Icon(Icons.upload_file_outlined),
+              label: const Text('Importar planilha'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _showChoices(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Adicionar lançamento'),
+            ),
+          ],
         ),
       ),
     );
