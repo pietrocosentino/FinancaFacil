@@ -3,98 +3,54 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 
-import '../../../core/utils/formatters.dart';
-import '../../transactions/domain/entry_status.dart';
 import '../../transactions/domain/finance_models.dart';
-import '../../transactions/domain/statement.dart';
+import 'xlsx_columns.dart';
 
-/// Gera um Excel .xlsx com os lançamentos de um período: datas e valores em
-/// células numéricas (ordenáveis e somáveis), sem fórmulas nem macros.
+/// Gera planilhas com o mesmo esquema aceito pelo importador, sem fórmulas.
 class XlsxExportWriter {
   static const mimeType =
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-  static const headers = [
-    'Data',
-    'Descrição',
-    'Tipo',
-    'Categoria',
-    'Valor',
-    'Situação',
-    'Recorrência',
-    'Observações',
-  ];
-
   Uint8List write(
     List<FinanceEntry> entries, {
-    required DateTime from,
-    required DateTime to,
     DateTime? today,
   }) {
-    final now = today ?? DateTime.now();
     final sorted = [...entries]
       ..sort(
         (a, b) =>
             (a.dueDate ?? DateTime(0)).compareTo(b.dueDate ?? DateTime(0)),
       );
-    final totals = totalsInCents(sorted);
     final rows = <String>[
-      _row(1, [
-        _text(
-          'FinançaFácil · ${AppFormatters.monthYear.format(from)} a ${AppFormatters.monthYear.format(to)}',
-          style: 1,
-        ),
-      ]),
-      _row(3, [for (final header in headers) _text(header, style: 1)]),
+      _row(1, [for (final header in XlsxColumns.fields.keys) _text(header, style: 1)]),
     ];
-    var line = 4;
+    var line = 2;
     for (final entry in sorted) {
+      final dueDate = entry.dueDate;
       rows.add(
         _row(line++, [
-          entry.dueDate == null ? _text('') : _date(entry.dueDate!),
           _text(entry.description),
           _text(entry.kind.label),
+          _money(entry.amount),
+          dueDate == null ? _text('') : _date(dueDate),
+          _text('Não'),
+          _text(''),
           _text(entry.categoryName),
-          _money(entry.isIncome ? entry.amount : -entry.amount),
-          _text(EntryStatus.of(entry, now).label),
-          _text(entry.recurrenceDescription),
           _text(entry.notes),
+          dueDate == null ? _text('') : _number(dueDate.day),
         ]),
       );
     }
-    line++;
-    for (final (label, cents) in [
-      ('Total de receitas', totals.incomeCents),
-      ('Total de despesas', -totals.expenseCents),
-      ('Saldo', totals.incomeCents - totals.expenseCents),
-    ]) {
-      rows.add(
-        _row(line++, [
-          _text(''),
-          _text(label, style: 1),
-          _text(''),
-          _text(''),
-          _money(cents / 100, bold: true),
-        ]),
-      );
-    }
-    rows.add(
-      _row(line + 1, [
-        _text(''),
-        _text(
-          'Lançamentos inativos aparecem na lista, mas não entram nos totais.',
-        ),
-      ]),
-    );
 
     final sheet =
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        '<cols><col min="1" max="1" width="12" customWidth="1"/>'
-        '<col min="2" max="2" width="36" customWidth="1"/>'
-        '<col min="3" max="4" width="16" customWidth="1"/>'
-        '<col min="5" max="5" width="14" customWidth="1"/>'
-        '<col min="6" max="7" width="24" customWidth="1"/>'
-        '<col min="8" max="8" width="40" customWidth="1"/></cols>'
+        '<cols><col min="1" max="1" width="36" customWidth="1"/>'
+        '<col min="2" max="2" width="16" customWidth="1"/>'
+        '<col min="3" max="3" width="16" customWidth="1"/>'
+        '<col min="4" max="4" width="20" customWidth="1"/>'
+        '<col min="5" max="6" width="20" customWidth="1"/>'
+        '<col min="7" max="7" width="24" customWidth="1"/>'
+        '<col min="8" max="8" width="40" customWidth="1"/>'
+        '<col min="9" max="9" width="18" customWidth="1"/></cols>'
         '<sheetData>${rows.join()}</sheetData></worksheet>';
 
     final archive = Archive();
@@ -144,6 +100,9 @@ class XlsxExportWriter {
       (ref) =>
           '<c r="$ref" s="${bold ? 4 : 3}"><v>${value.toStringAsFixed(2)}</v></c>';
 
+  String Function(String) _number(int value) =>
+      (ref) => '<c r="$ref"><v>$value</v></c>';
+
   static String _escape(String value) => value
       .replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F]'), '')
       .replaceAll('&', '&amp;')
@@ -171,7 +130,7 @@ class XlsxExportWriter {
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
       'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-      '<sheets><sheet name="Extrato" sheetId="1" r:id="rId1"/></sheets></workbook>';
+      '<sheets><sheet name="Lançamentos" sheetId="1" r:id="rId1"/></sheets></workbook>';
 
   static const _workbookRels =
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

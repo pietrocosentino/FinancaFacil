@@ -16,7 +16,6 @@ import '../data/xlsx_import_reader.dart';
 import '../domain/import_models.dart';
 import 'export_entries.dart';
 import 'import_error_message.dart';
-import 'import_history_screen.dart';
 import 'import_line_dialog.dart';
 
 List<ImportLine> _readSheet(Uint8List bytes) => XlsxImportReader().read(bytes);
@@ -227,7 +226,7 @@ class _ImportScreenState extends State<ImportScreen> {
           ),
           content: Text(
             receipt.alreadyImported
-                ? 'Este arquivo já possui uma importação ativa. Nenhum registro foi duplicado. Consulte o histórico.'
+                  ? 'Este arquivo já possui uma importação ativa. Nenhum registro foi duplicado.'
                 : '${receipt.count} lançamentos cadastrados. Consulte o mês do primeiro vencimento no Extrato.',
           ),
           actions: [
@@ -407,21 +406,6 @@ class _ImportScreenState extends State<ImportScreen> {
     child: Scaffold(
       appBar: AppBar(
         title: const Text('Importar planilha'),
-        actions: [
-          IconButton(
-            tooltip: 'Histórico de importações',
-            onPressed: _busy
-                ? null
-                : () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ImportHistoryScreen(repository: _repository),
-                    ),
-                  ),
-            icon: const Icon(Icons.history),
-          ),
-        ],
       ),
       bottomNavigationBar: _lines.isEmpty
           ? null

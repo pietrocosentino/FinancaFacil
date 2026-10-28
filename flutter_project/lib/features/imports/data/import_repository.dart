@@ -11,8 +11,6 @@ abstract class ImportRepository {
     List<Map<String, Object?>> rows, {
     required bool allowSimilar,
   });
-  Future<List<ImportBatch>> history();
-  Future<int> undo(String batchId);
 }
 
 class SupabaseImportRepository implements ImportRepository {
@@ -62,25 +60,4 @@ class SupabaseImportRepository implements ImportRepository {
     );
   }
 
-  @override
-  Future<List<ImportBatch>> history() async {
-    final rows = await client
-        .from('finance_import_batches')
-        .select()
-        .eq('user_id', _owner)
-        .order('created_at', ascending: false)
-        .limit(100);
-    return rows.map(ImportBatch.fromMap).toList();
-  }
-
-  @override
-  Future<int> undo(String batchId) async {
-    _owner;
-    final result = await client.rpc(
-      'undo_finance_import',
-      params: {'p_batch_id': batchId},
-    );
-    notifyFinanceChanged();
-    return (result as num).toInt();
-  }
 }

@@ -71,13 +71,7 @@ class NativeImportFileGateway implements ImportFileGateway {
 
   @override
   Future<bool> saveTemplate(FileLocation to) async {
-    final asset = await rootBundle.load(
-      'assets/import/modelo_financafacil.xlsx',
-    );
-    final bytes = asset.buffer.asUint8List(
-      asset.offsetInBytes,
-      asset.lengthInBytes,
-    );
+    final bytes = XlsxExportWriter().write(const []);
     return saveFile('modelo_financafacil.xlsx', bytes, to);
   }
 

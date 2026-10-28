@@ -42,7 +42,7 @@ Future<void> exportEntries(
       message('Nenhum lançamento nesse período.');
       return;
     }
-    final bytes = XlsxExportWriter().write(entries, from: from, to: until);
+    final bytes = XlsxExportWriter().write(entries);
     final saved = await (files ?? NativeImportFileGateway()).saveFile(
       XlsxExportWriter.fileName(from, until),
       bytes,

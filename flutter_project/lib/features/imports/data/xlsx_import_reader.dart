@@ -5,22 +5,16 @@ import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
 import '../domain/import_models.dart';
+import 'xlsx_columns.dart';
 
 /// Leitor limitado ao modelo de importação. Nunca executa fórmulas ou macros.
 class XlsxImportReader {
   static const maxBytes = 5 * 1024 * 1024;
   static const maxRows = 500;
   static const _maxExpandedBytes = 20 * 1024 * 1024;
-  static const headers = {
-    'descricao': 'description',
-    'tipo': 'type',
-    'valor mensal': 'amount',
-    'primeiro vencimento': 'due_date',
-    'recorrente': 'recurring',
-    'quantidade de meses': 'months',
-    'categoria': 'category',
-    'observacoes': 'notes',
-    'dia de vencimento': 'due_day',
+  static final headers = {
+    for (final entry in XlsxColumns.fields.entries)
+      normalizeImportText(entry.key): entry.value,
   };
 
   List<ImportLine> read(Uint8List bytes) {

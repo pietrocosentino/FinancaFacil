@@ -146,28 +146,6 @@ class ImportLine {
       '${kind?.databaseValue}|${normalizeImportText(text('description'))}|$amount|${due == null ? '' : isoDate(due!)}|$recurring|$months|$day|$categoryId';
 }
 
-class ImportBatch {
-  const ImportBatch({
-    required this.id,
-    required this.name,
-    required this.count,
-    required this.createdAt,
-    required this.active,
-  });
-  final String id;
-  final String name;
-  final int count;
-  final DateTime createdAt;
-  final bool active;
-  factory ImportBatch.fromMap(Map<String, dynamic> map) => ImportBatch(
-    id: map['id'].toString(),
-    name: map['file_name'].toString(),
-    count: (map['row_count'] as num).toInt(),
-    createdAt: DateTime.parse(map['created_at'].toString()),
-    active: map['status'] == 'active',
-  );
-}
-
 class ImportReceipt {
   const ImportReceipt(this.batchId, this.count, this.alreadyImported);
   final String batchId;
