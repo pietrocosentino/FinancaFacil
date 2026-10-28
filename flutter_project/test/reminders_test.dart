@@ -184,7 +184,7 @@ void main() {
     await tester.tap(find.byTooltip('Notificações'));
     await tester.pumpAndSettle();
     expect(find.text('Confirmar pagamento'), findsOneWidget);
-    expect(find.text('Perfil'), findsOneWidget);
+    expect(find.text('Perfil'), findsNothing);
     expect(find.text('Extrato'), findsOneWidget);
     await tester.tap(find.text('Confirmar pagamento'));
     await tester.pumpAndSettle();

@@ -28,15 +28,17 @@ void main() {
       find.widgetWithText(TextFormField, 'Valor da conta'),
       '90,60',
     );
-    await tester.tap(find.text('Perfil'));
+    await tester.tap(find.text('Extrato'));
     await tester.pumpAndSettle();
     expect(find.text('Descartar cadastro?'), findsOneWidget);
     await tester.tap(find.text('Continuar preenchendo'));
     await tester.pumpAndSettle();
     expect(find.text('90,60'), findsOneWidget);
-    await tester.tap(find.text('Perfil'));
+    await tester.tap(find.text('Extrato'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Descartar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Abrir perfil'));
     await tester.pumpAndSettle();
     expect(find.text('Dados pessoais'), findsOneWidget);
     expect(find.text('pietro@example.com'), findsNothing);

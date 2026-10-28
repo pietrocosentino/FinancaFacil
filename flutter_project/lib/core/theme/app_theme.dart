@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 /// Tons de uma das aparências do app.
 ///
-/// A paleta própria foi pensada para uso prolongado: sem branco nem preto
-/// puros, verde-azulado de baixa saturação como cor principal e texto com
-/// contraste confortável (acima de 4,5:1, sem o brilho máximo de 21:1).
+/// Paleta financeira com verde como cor de ação, neutros quentes e acento
+/// dourado discreto. O cartão de saldo previsto usa [AppColors] separado.
 @immutable
 class AppPalette {
   const AppPalette({
@@ -37,37 +36,37 @@ class AppPalette {
   final Color tertiary;
   final Color error;
 
-  /// Claro: papel levemente acinzentado, cartões um tom acima e verde-azulado.
+  /// Claro: fundo quente, superfícies claras e verde financeiro.
   static const light = AppPalette(
     brightness: Brightness.light,
-    background: Color(0xFFF2F4F1),
-    surface: Color(0xFFFAFBF8),
-    surfaceRaised: Color(0xFFE8ECE7),
-    border: Color(0xFFD9DED7),
-    text: Color(0xFF1E2622),
-    textMuted: Color(0xFF56615B),
-    primary: Color(0xFF2B6B62),
-    onPrimary: Color(0xFFF7FBF9),
-    primarySoft: Color(0xFFD3E7E1),
-    secondary: Color(0xFF52627F),
-    tertiary: Color(0xFF8A6526),
+    background: Color(0xFFF5F3ED),
+    surface: Color(0xFFFFFEFA),
+    surfaceRaised: Color(0xFFECE9DF),
+    border: Color(0xFFDEDACF),
+    text: Color(0xFF202A25),
+    textMuted: Color(0xFF66716A),
+    primary: Color(0xFF236B52),
+    onPrimary: Color(0xFFF7FBF8),
+    primarySoft: Color(0xFFDCECE2),
+    secondary: Color(0xFF52687A),
+    tertiary: Color(0xFF96713B),
     error: Color(0xFFAF3A33),
   );
 
-  /// Escuro: grafite esverdeado (não preto) e texto cinza-claro (não branco).
+  /// Escuro: carvão esverdeado com verde claro para manter contraste.
   static const dark = AppPalette(
     brightness: Brightness.dark,
-    background: Color(0xFF131917),
-    surface: Color(0xFF1B2320),
-    surfaceRaised: Color(0xFF24302B),
-    border: Color(0xFF303D37),
-    text: Color(0xFFE1E7E3),
-    textMuted: Color(0xFFA3AFA8),
-    primary: Color(0xFF86CBBB),
-    onPrimary: Color(0xFF0F2924),
-    primarySoft: Color(0xFF244640),
-    secondary: Color(0xFFAEBBD6),
-    tertiary: Color(0xFFE2C27E),
+    background: Color(0xFF111A16),
+    surface: Color(0xFF1B2721),
+    surfaceRaised: Color(0xFF29372F),
+    border: Color(0xFF3A4A40),
+    text: Color(0xFFEEF2EB),
+    textMuted: Color(0xFFA9B6AB),
+    primary: Color(0xFF80C99F),
+    onPrimary: Color(0xFF14261D),
+    primarySoft: Color(0xFF294638),
+    secondary: Color(0xFFAEC1D0),
+    tertiary: Color(0xFFD5B477),
     error: Color(0xFFEFA39C),
   );
 }
@@ -139,7 +138,8 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: palette.surface,
         surfaceTintColor: Colors.transparent,
-        elevation: 0,
+        elevation: 1,
+        shadowColor: palette.text.withValues(alpha: dark ? 0.12 : 0.05),
         margin: const EdgeInsets.symmetric(vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -171,19 +171,14 @@ class AppTheme {
         selectedColor: palette.primarySoft,
         side: BorderSide(color: palette.border),
       ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: palette.surface,
-        selectedItemColor: palette.primary,
-        unselectedItemColor: palette.textMuted,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        elevation: 0,
-      ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: palette.surface,
         surfaceTintColor: Colors.transparent,
         indicatorColor: palette.primarySoft,
+        elevation: 0,
+        labelTextStyle: WidgetStatePropertyAll(
+          textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

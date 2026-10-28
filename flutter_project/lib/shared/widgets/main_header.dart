@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -51,7 +52,7 @@ class BrandBar extends StatelessWidget {
   }
 }
 
-/// Cabeçalho fixo: identidade do usuário, marca e sino com as pendências.
+/// Cabeçalho fixo: foto do usuário, marca e sino com as pendências.
 class MainHeader extends StatelessWidget {
   const MainHeader({
     super.key,

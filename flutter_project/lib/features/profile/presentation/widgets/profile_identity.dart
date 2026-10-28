@@ -11,48 +11,51 @@ class ProfileIdentity extends StatelessWidget {
     listenable: controller,
     builder: (_, __) {
       final data = controller.profile;
-      return Semantics(
-        button: onTap != null,
-        label: 'Abrir perfil',
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer,
-                  child: controller.photo == null
-                      ? Text(data?.initials ?? '?')
-                      : ClipOval(
-                          child: Image.memory(
-                            controller.photo!,
-                            width: 40,
-                            height: 40,
-                            cacheWidth: 80,
-                            cacheHeight: 80,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                Text(data?.initials ?? '?'),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Tooltip(
+              message: 'Abrir perfil',
+              child: Semantics(
+                button: onTap != null,
+                label: 'Abrir perfil',
+                child: InkWell(
+                  onTap: onTap,
+                  customBorder: const CircleBorder(),
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
+                    child: controller.photo == null
+                        ? Text(data?.initials ?? '?')
+                        : ClipOval(
+                            child: Image.memory(
+                              controller.photo!,
+                              width: 48,
+                              height: 48,
+                              cacheWidth: 96,
+                              cacheHeight: 96,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  Text(data?.initials ?? '?'),
+                            ),
                           ),
-                        ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    data?.name.isNotEmpty == true ? data!.name : 'Minha conta',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                data?.name.isNotEmpty == true ? data!.name : 'Minha conta',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+          ],
         ),
       );
     },

@@ -1,4 +1,4 @@
-limport 'dart:async';
+import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +41,9 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     _userId = _session.userId;
     _locked = _userId != null && DevicePreferences.biometricsEnabled.value;
     WidgetsBinding.instance.addObserver(this);
-    DevicePreferences.biometricsEnabled.addListener(_biometricPreferenceChanged);
+    DevicePreferences.biometricsEnabled.addListener(
+      _biometricPreferenceChanged,
+    );
     if (_locked) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _authenticate();
@@ -137,8 +139,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _locked = true;
-          _unlockError =
-              'Não foi possível autenticar. Tente novamente ou use o bloqueio do aparelho.';
+          _unlockError = 'Não foi possível autenticar. Tente novamente ou use o bloqueio do aparelho.';
         });
       }
     } finally {

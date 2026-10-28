@@ -15,7 +15,7 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  /// Nome e foto ficam no cabeçalho do aplicativo; o menu fica na aba Perfil.
+  /// Abre o Perfil pela foto no cabeçalho.
   Future<void> showApp(WidgetTester t, FakeProfileRepository r) async {
     await t.pumpWidget(
       MaterialApp(
@@ -26,8 +26,7 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
-    final nav = find.byType(BottomNavigationBar);
-    await t.tap(find.descendant(of: nav, matching: find.text('Perfil')));
+    await t.tap(find.byTooltip('Abrir perfil'));
     await t.pumpAndSettle();
   }
 

@@ -21,7 +21,6 @@ class DashboardScreen extends StatefulWidget {
     required this.repository,
     this.onNavigateToNotifications,
     this.onAdd,
-    this.onOpenStatement,
     this.reminders,
   });
   final FinanceRepository repository;
@@ -29,7 +28,6 @@ class DashboardScreen extends StatefulWidget {
 
   /// Abre o cadastro de despesa ou de renda; sem ele os botões não aparecem.
   final ValueChanged<AddChoice>? onAdd;
-  final VoidCallback? onOpenStatement;
   final ReminderService? reminders;
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -189,27 +187,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Cadastre sua renda e suas contas do mês. Depois, ative os lembretes para ser avisado antes dos vencimentos.',
+            'Use “Adicionar lançamento” para cadastrar sua renda ou suas contas do mês. Depois, ative os lembretes para ser avisado antes dos vencimentos.',
           ),
-          if (widget.onAdd != null) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  onPressed: () => widget.onAdd!(AddChoice.income),
-                  icon: const Icon(Icons.add_circle_outline),
-                  label: const Text('Cadastrar renda'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => widget.onAdd!(AddChoice.expense),
-                  icon: const Icon(Icons.remove_circle_outline),
-                  label: const Text('Cadastrar despesa'),
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     ),
@@ -218,15 +197,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
-      child: Column(
-        children: [
-          // Fixa no topo, acima do saldo: não rola com a lista.
-          if (widget.onAdd != null) QuickAddBar(onAdd: widget.onAdd!),
-          Expanded(child: _content()),
-        ],
+        child: _content(),
       ),
-    ),
-  );
+    );
 
   Widget _content() => AsyncPanel<List<FinanceEntry>>(
     future: _future,
@@ -251,6 +224,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ..._attention(pendingBills(entries, DateTime.now())),
             const SizedBox(height: 8),
             _monthNavigation(),
+            if (widget.onAdd != null) QuickAddBar(onAdd: widget.onAdd!),
             _MonthSummaryCard(summary: summary),
             if (summary.expenses > 0 || previous.expenses > 0)
               Padding(
@@ -261,12 +235,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             _CategoriesCard(summary: summary),
-            if (widget.onOpenStatement != null && !empty)
-              TextButton.icon(
-                onPressed: widget.onOpenStatement,
-                icon: const Icon(Icons.receipt_long_outlined),
-                label: const Text('Ver lançamentos no Extrato'),
-              ),
           ],
         ),
       );

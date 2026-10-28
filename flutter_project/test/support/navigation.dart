@@ -1,31 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Botão "Despesa" visível na aba atual (Início ou Extrato).
-final addButton = find.byTooltip('Adicionar despesa');
+/// Ação única de cadastro visível no Início.
+final addButton = find.text('Adicionar lançamento');
 
-/// Botão "Renda" visível na aba atual (Início ou Extrato).
-final addIncomeButton = find.byTooltip('Adicionar renda');
-
-/// Abre um cadastro: 'Conta ou despesa', 'Renda' ou 'Importar planilha'
-/// (este último fica no topo do Extrato).
+/// Abre um cadastro: 'Despesa ou conta', 'Renda' ou 'Importar planilha'.
 Future<void> openAdd(
   WidgetTester tester, [
-  String option = 'Conta ou despesa',
+  String option = 'Despesa ou conta',
 ]) async {
-  await tester.tap(switch (option) {
-    'Renda' => addIncomeButton,
-    'Importar planilha' => find.byTooltip('Importar planilha'),
-    _ => addButton,
-  });
+  if (option == 'Importar planilha') {
+    await tester.tap(find.byTooltip('Importar planilha'));
+  } else {
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(option));
+  }
   await tester.pumpAndSettle();
 }
 
-/// Toca em uma aba da barra inferior: 'Início', 'Extrato' ou 'Perfil'.
+/// Toca em uma aba da barra inferior: 'Início' ou 'Extrato'.
 Future<void> openTab(WidgetTester tester, String label) async {
   await tester.tap(
     find.descendant(
-      of: find.byType(BottomNavigationBar),
+      of: find.byType(NavigationBar),
       matching: find.text(label),
     ),
   );

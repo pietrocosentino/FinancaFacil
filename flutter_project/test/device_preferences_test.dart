@@ -1,4 +1,4 @@
-çamentoimport 'package:financafacil/core/services/device_biometrics.dart';
+import 'package:financafacil/core/services/device_biometrics.dart';
 import 'package:financafacil/core/services/device_preferences.dart';
 import 'package:financafacil/features/profile/presentation/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
@@ -112,7 +112,36 @@ void main() {
 
     expect(DevicePreferences.biometricsEnabled.value, isFalse);
     expect(
-      find.text('Configure uma biometria no aparelho antes de ativar o bloqueio.'),
+      find.text(
+        'Configure uma biometria no aparelho antes de ativar o bloqueio.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('cancelar confirmação biométrica mantém bloqueio desativado', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileScreen(
+          repository: FakeProfileRepository(),
+          biometrics: _Biometrics(authenticated: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Bloqueio biométrico'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Bloqueio biométrico'));
+    await tester.pumpAndSettle();
+
+    expect(DevicePreferences.biometricsEnabled.value, isFalse);
+    expect(
+      find.text('Biometria não confirmada. O bloqueio não foi ativado.'),
       findsOneWidget,
     );
   });

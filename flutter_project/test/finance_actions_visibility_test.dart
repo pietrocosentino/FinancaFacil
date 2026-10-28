@@ -25,7 +25,7 @@ void main() {
   for (final dark in [false, true]) {
     final theme = dark ? 'escuro' : 'claro';
 
-    testWidgets('botões Despesa e Renda acessíveis no tema $theme', (
+    testWidgets('ação compacta de cadastro acessível no tema $theme', (
       tester,
     ) async {
       phoneScreen(tester);
@@ -39,16 +39,15 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // Cadastro só no Início; o Extrato não mostra os botões.
+      // Cadastro só no Início; o Extrato não mostra a ação.
       await openTab(tester, 'Extrato');
       expect(addButton, findsNothing);
-      expect(addIncomeButton, findsNothing);
       await openTab(tester, 'Início');
-      for (final button in [addButton, addIncomeButton]) {
-        expect(button.hitTestable(), findsOneWidget);
-        expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
-      }
+      expect(addButton.hitTestable(), findsOneWidget);
+      expect(tester.getSize(addButton).height, greaterThanOrEqualTo(48));
       await tester.tap(addButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Despesa ou conta'));
       await tester.pumpAndSettle();
       expect(
         tester

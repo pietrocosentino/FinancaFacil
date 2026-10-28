@@ -51,7 +51,7 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
-  testWidgets('menu permanece no novo lançamento e permite abrir perfil', (
+  testWidgets('barra mantém duas abas e foto abre o perfil', (
     tester,
   ) async {
     final finance = FakeFinanceRepository();
@@ -67,9 +67,9 @@ void main() {
     await tester.pumpAndSettle();
     await openAdd(tester);
     expect(find.text('Nova conta'), findsOneWidget);
-    expect(find.text('Perfil'), findsOneWidget);
+    expect(find.text('Perfil'), findsNothing);
     expect(find.text('Extrato'), findsOneWidget);
-    await tester.tap(find.text('Perfil'));
+    await tester.tap(find.byTooltip('Abrir perfil'));
     await tester.pumpAndSettle();
     expect(find.text('Dados pessoais'), findsOneWidget);
     expect(find.text('pietro@example.com'), findsNothing);

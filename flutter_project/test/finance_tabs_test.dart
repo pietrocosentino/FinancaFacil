@@ -28,21 +28,24 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  testWidgets('três abas e cadastro somente no Início', (t) async {
+  testWidgets('duas abas e cadastro somente no Início; perfil pela foto', (
+    t,
+  ) async {
     await showApp(t);
-    final nav = find.byType(BottomNavigationBar);
-    expect(t.widget<BottomNavigationBar>(nav).items.map((item) => item.label), [
+    final nav = find.byType(NavigationBar);
+    expect(t.widget<NavigationBar>(nav).destinations.map((item) => item.label), [
       'Início',
       'Extrato',
-      'Perfil',
     ]);
     expect(addButton, findsOneWidget);
     await openTab(t, 'Extrato');
-    expect(t.widget<BottomNavigationBar>(nav).currentIndex, 1);
+    expect(t.widget<NavigationBar>(nav).selectedIndex, 1);
     expect(addButton, findsNothing);
-    expect(addIncomeButton, findsNothing);
     expect(find.byTooltip('Importar planilha'), findsOneWidget);
-    await openTab(t, 'Perfil');
+    await t.tap(find.byTooltip('Abrir perfil'));
+    await t.pumpAndSettle();
+    expect(find.text('Dados pessoais'), findsOneWidget);
+    expect(t.widget<NavigationBar>(nav).selectedIndex, 1);
     expect(addButton, findsNothing);
     expect(t.takeException(), isNull);
   });
@@ -66,7 +69,7 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('Despesa abre direto o cadastro de conta, sem menu', (t) async {
+  testWidgets('despesa ou conta abre o cadastro de conta', (t) async {
     await showApp(t);
     await openAdd(t);
     expect(find.text('Nova conta'), findsOneWidget);

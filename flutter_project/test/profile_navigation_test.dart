@@ -49,7 +49,7 @@ void main() {
     expect(tapped, true);
     expect(find.text('Dados pessoais'), findsOneWidget);
   });
-  testWidgets('nome no cabeçalho leva à aba Perfil e preserva o sino', (
+  testWidgets('somente a foto abre o Perfil e preserva o sino', (
     t,
   ) async {
     await t.pumpWidget(
@@ -61,10 +61,13 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
-    final nav = find.byType(BottomNavigationBar);
     await t.tap(find.text('Pietro'));
     await t.pumpAndSettle();
-    expect(t.widget<BottomNavigationBar>(nav).currentIndex, 2);
+    expect(find.text('Dados pessoais'), findsNothing);
+    await t.tap(find.byTooltip('Abrir perfil'));
+    await t.pumpAndSettle();
+    final nav = find.byType(NavigationBar);
+    expect(t.widget<NavigationBar>(nav).selectedIndex, 0);
     expect(find.text('FinançaFácil'), findsOneWidget);
     expect(find.text('Dados pessoais'), findsOneWidget);
     expect(find.byTooltip('Notificações'), findsOneWidget);
@@ -80,7 +83,7 @@ void main() {
     // Cabeçalho e formulário atualizados juntos.
     expect(find.text('Pietro Ferreira'), findsNWidgets(2));
     await openTab(t, 'Início');
-    expect(t.widget<BottomNavigationBar>(nav).currentIndex, 0);
+    expect(t.widget<NavigationBar>(nav).selectedIndex, 0);
     expect(find.text('Pietro Ferreira'), findsOneWidget);
     expect(t.takeException(), isNull);
   });

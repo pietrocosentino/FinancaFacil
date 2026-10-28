@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 import '../../core/services/app_services.dart';
@@ -55,7 +56,6 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
 
   static const _homeTab = 0;
   static const _statementTab = 1;
-  static const _profileTab = 2;
 
   late final FinanceRepository _finance;
   late final ProfileController _profile;
@@ -65,6 +65,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   final _addKey = GlobalKey<AddTransactionScreenState>();
   final _tab = ValueNotifier<int>(_homeTab);
   final _choosing = SingleFlight();
+  final _openingProfile = SingleFlight();
   final _openingNotifications = SingleFlight();
   final _openingForm = SingleFlight();
   late final List<Widget> _screens;
@@ -106,10 +107,8 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
         reminders: _reminders,
         onNavigateToNotifications: _openNotifications,
         onAdd: _addEntry,
-        onOpenStatement: () => _onTabTapped(_statementTab),
       ),
       TransactionsListScreen(repository: _finance, onAdd: _addEntry),
-      ProfileScreen(controller: _profile),
     ];
   }
 
@@ -191,7 +190,16 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _openProfile() => _onTabTapped(_profileTab);
+  Future<void> _openProfile() => _openingProfile.run(() async {
+    final form = _addKey.currentState;
+    if (form != null && !await form.requestLeave()) return;
+    if (!mounted) return;
+    await _navigator.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(controller: _profile),
+      ),
+    );
+  });
 
   void _addEntry(AddChoice choice) => _choosing.run(() async {
     if (!mounted) return;
@@ -280,25 +288,19 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           ? null
           : ValueListenableBuilder<int>(
               valueListenable: _tab,
-              builder: (_, index, __) => BottomNavigationBar(
-                type: BottomNavigationBarType.fixed,
-                currentIndex: index,
-                onTap: _onTabTapped,
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.home_outlined),
-                    activeIcon: Icon(Icons.home),
+              builder: (_, index, __) => NavigationBar(
+                selectedIndex: index,
+                onDestinationSelected: _onTabTapped,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.account_balance_wallet_outlined),
+                    selectedIcon: Icon(Icons.account_balance_wallet),
                     label: 'Início',
                   ),
-                  BottomNavigationBarItem(
+                  NavigationDestination(
                     icon: Icon(Icons.receipt_long_outlined),
-                    activeIcon: Icon(Icons.receipt_long),
+                    selectedIcon: Icon(Icons.receipt_long),
                     label: 'Extrato',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.person_outline),
-                    activeIcon: Icon(Icons.person),
-                    label: 'Perfil',
                   ),
                 ],
               ),

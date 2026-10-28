@@ -1,56 +1,58 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_theme.dart';
-
 enum AddChoice { expense, income, spreadsheet }
 
-/// Barra discreta fixa no topo do Início e do Extrato: despesa e renda
-/// separadas, cada uma abrindo o próprio formulário, sem menu intermediário.
+/// Ação compacta do Início que mantém os tipos de lançamento agrupados.
 class QuickAddBar extends StatelessWidget {
   const QuickAddBar({super.key, required this.onAdd});
   final ValueChanged<AddChoice> onAdd;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    Widget button(AddChoice choice, String label, IconData icon, Color color) =>
-        Expanded(
-          child: Tooltip(
-            message: choice == AddChoice.income
-                ? 'Adicionar renda'
-                : 'Adicionar despesa',
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: color,
-                side: BorderSide(color: color.withValues(alpha: 0.45)),
-                backgroundColor: color.withValues(alpha: 0.06),
-                textStyle: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              onPressed: () => onAdd(choice),
-              icon: Icon(icon, size: 20),
-              label: Text(label),
-            ),
-          ),
-        );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Row(
-        children: [
-          button(
-            AddChoice.expense,
-            'Despesa',
-            Icons.remove_circle_outline,
-            colors.expense,
-          ),
-          const SizedBox(width: 12),
-          button(
-            AddChoice.income,
-            'Renda',
-            Icons.add_circle_outline,
-            colors.income,
-          ),
-        ],
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 4),
+        child: OutlinedButton.icon(
+          onPressed: () => _showChoices(context),
+          icon: const Icon(Icons.add),
+          label: const Text('Adicionar lançamento'),
+        ),
       ),
     );
+  }
+
+  Future<void> _showChoices(BuildContext context) async {
+    final choice = await showModalBottomSheet<AddChoice>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+              child: Text(
+                'Novo lançamento',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.remove_circle_outline),
+              title: const Text('Despesa ou conta'),
+              onTap: () => Navigator.pop(context, AddChoice.expense),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_circle_outline),
+              title: const Text('Renda'),
+              onTap: () => Navigator.pop(context, AddChoice.income),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+    if (choice != null) onAdd(choice);
   }
 }

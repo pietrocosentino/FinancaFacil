@@ -48,7 +48,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Cadastrar conta ou renda'), findsNothing);
     await tester.tap(addButton);
-    await tester.tap(addButton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Despesa ou conta'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('Nova conta'), findsOneWidget);
@@ -106,7 +107,7 @@ void main() {
     await openAdd(tester);
     await tester.tap(find.text('Todo mês'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Perfil'));
+    await tester.tap(find.text('Extrato'));
     await tester.pumpAndSettle();
     expect(find.text('Descartar cadastro?'), findsOneWidget);
     await tester.tap(find.text('Continuar preenchendo'));
@@ -239,7 +240,7 @@ void main() {
         expect(tester.takeException(), isNull);
         await tester.drag(find.byType(CustomScrollView), const Offset(0, 600));
         await tester.pumpAndSettle();
-        expect(find.text('Todas'), findsOneWidget);
+        expect(find.text('Filtro'), findsOneWidget);
         expect(find.text('Buscar pelo nome da conta'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
@@ -322,10 +323,10 @@ void _keyboardTests() {
     );
     await tester.pumpWidget(app(0));
     await tester.pumpAndSettle();
-    expect(find.byType(BottomNavigationBar), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
     await tester.pumpWidget(app(300));
     await tester.pump();
-    expect(find.byType(BottomNavigationBar), findsNothing);
+    expect(find.byType(NavigationBar), findsNothing);
     expect(find.byType(MainHeader), findsNothing);
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
     expect(scaffold.resizeToAvoidBottomInset, false);
