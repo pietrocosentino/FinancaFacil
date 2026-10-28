@@ -46,6 +46,7 @@ void main() {
     expect(t.widget<NavigationBar>(nav).selectedIndex, 1);
     expect(addButton, findsNothing);
     expect(find.byTooltip('Importar planilha'), findsNothing);
+    expect(find.text('Baixar modelo'), findsNothing);
     expect(find.byTooltip('Baixar lançamentos em Excel'), findsOneWidget);
     await t.tap(find.byTooltip('Abrir perfil'));
     await t.pumpAndSettle();
@@ -55,9 +56,7 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('Renda abre direto; importar planilha fica no Início', (
-    t,
-  ) async {
+  testWidgets('Renda abre direto; importar planilha fica no Início', (t) async {
     await showApp(t);
     await openAdd(t, 'Renda');
     expect(
@@ -69,10 +68,12 @@ void main() {
     await t.pageBack();
     await t.pumpAndSettle();
     await openTab(t, 'Início');
-    await t.tap(find.text('Importar planilha'));
+    expect(find.text('Planilhas'), findsOneWidget);
+    expect(find.text('Baixar modelo'), findsOneWidget);
+    await t.tap(find.text('Importar'));
     await t.pumpAndSettle();
     expect(find.byType(ImportScreen), findsOneWidget);
-    expect(find.text('Baixar modelo Excel'), findsOneWidget);
+    expect(find.text('Baixar modelo'), findsNothing);
     expect(find.text('Baixar meus lançamentos em Excel'), findsNothing);
     expect(t.takeException(), isNull);
   });

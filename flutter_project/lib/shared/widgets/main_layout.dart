@@ -1,11 +1,14 @@
 
 import 'package:flutter/material.dart';
 
+import '../../core/errors/app_log.dart';
+import '../../core/files/cloud_files.dart';
 import '../../core/services/app_services.dart';
 import '../../core/services/device_preferences.dart';
 import '../../core/utils/finance_updates.dart';
 import '../../core/utils/single_flight.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
+import '../../features/imports/data/import_file_gateway.dart';
 import '../../features/imports/data/import_repository.dart';
 import '../../features/imports/presentation/import_screen.dart';
 import '../../features/notifications/application/reminder_synchronizer.dart';
@@ -19,6 +22,7 @@ import '../../features/transactions/domain/finance_models.dart';
 import '../../features/transactions/presentation/screens/add_choice_sheet.dart';
 import '../../features/transactions/presentation/screens/add_transaction_screen.dart';
 import '../../features/transactions/presentation/screens/transactions_list_screen.dart';
+import 'file_location_sheet.dart';
 import 'main_header.dart';
 
 /// Raiz da área autenticada e ponto de composição das dependências das telas.
@@ -31,12 +35,14 @@ class MainLayout extends StatefulWidget {
     this.financeRepository,
     this.profileRepository,
     this.importRepository,
+    this.importFiles,
     this.reminderService,
     this.userId,
   });
   final FinanceRepository? financeRepository;
   final ProfileRepository? profileRepository;
   final ImportRepository? importRepository;
+  final ImportFileGateway? importFiles;
   final ReminderService? reminderService;
   final String? userId;
   @override
@@ -57,6 +63,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   static const _homeTab = 0;
 
   late final FinanceRepository _finance;
+  late final ImportFileGateway _importFiles;
   late final ProfileController _profile;
   ReminderService? _reminders;
   ReminderSynchronizer? _synchronizer;
@@ -67,6 +74,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   final _openingProfile = SingleFlight();
   final _openingNotifications = SingleFlight();
   final _openingForm = SingleFlight();
+  final _downloadingTemplate = SingleFlight();
   late final List<Widget> _screens;
   late Future<List<FinanceEntry>> _headerEntries;
   DateTime? _leftAt;
@@ -75,6 +83,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     _finance = widget.financeRepository ?? AppServices.finance;
+    _importFiles = widget.importFiles ?? NativeImportFileGateway();
     _profile = ProfileController(
       widget.profileRepository ?? AppServices.profile,
     )..loadPhoto();
@@ -106,6 +115,8 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
         reminders: _reminders,
         onNavigateToNotifications: _openNotifications,
         onAdd: _addEntry,
+        onImportSpreadsheet: () => _addEntry(AddChoice.spreadsheet),
+        onDownloadTemplate: _downloadTemplate,
       ),
       TransactionsListScreen(repository: _finance),
     ];
@@ -188,6 +199,39 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
       ),
     );
   }
+
+  Future<void> _downloadTemplate(BuildContext context) =>
+      _downloadingTemplate.run(() async {
+        final to = await showSaveLocationSheet(
+          context,
+          title: 'Onde salvar o modelo?',
+        );
+        if (to == null || !mounted) return;
+        try {
+          if (await _importFiles.saveTemplate(to) && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  to == FileLocation.drive
+                      ? 'Confirme o envio no Google Drive. Depois, preencha a aba Lançamentos.'
+                      : 'Modelo salvo. Preencha a aba Lançamentos.',
+                ),
+              ),
+            );
+          }
+        } catch (error, stack) {
+          AppLog.error(error, stack, 'salvar modelo');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Não foi possível salvar o modelo. Escolha uma pasta acessível no aparelho.',
+                ),
+              ),
+            );
+          }
+        }
+      });
 
   Future<void> _openProfile() => _openingProfile.run(() async {
     final form = _addKey.currentState;

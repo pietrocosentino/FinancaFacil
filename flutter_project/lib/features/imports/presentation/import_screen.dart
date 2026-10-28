@@ -2,11 +2,9 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/errors/app_log.dart';
 import '../../../core/files/cloud_files.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
-import '../../../shared/widgets/file_location_sheet.dart';
 import '../../transactions/data/finance_repository.dart';
 import '../../transactions/domain/finance_models.dart';
 import '../../transactions/presentation/screens/new_category_dialog.dart';
@@ -148,41 +146,6 @@ class _ImportScreenState extends State<ImportScreen> {
       _checked = false;
     });
     await _reviewAgain();
-  }
-
-  Future<void> _template() async {
-    if (_busy) return;
-    final to = await showSaveLocationSheet(
-      context,
-      title: 'Onde salvar o modelo?',
-    );
-    if (to == null || !mounted) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      if (await _files.saveTemplate(to) && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              to == FileLocation.drive
-                  ? 'Confirme o envio no Google Drive. Depois, preencha a aba Lançamentos.'
-                  : 'Modelo salvo. Preencha a aba Lançamentos.',
-            ),
-          ),
-        );
-      }
-    } catch (error, stack) {
-      AppLog.error(error, stack, 'salvar modelo');
-      if (mounted) {
-        setState(
-          () => _error = 'Não foi possível salvar o modelo. Escolha uma pasta acessível no aparelho.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
   }
 
   Future<void> _submit() async {
@@ -431,13 +394,7 @@ class _ImportScreenState extends State<ImportScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Preencha o modelo e confira cada linha antes de cadastrar. Excel .xlsx, até 5 MB e 500 linhas.',
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _busy ? null : _template,
-            icon: const Icon(Icons.download_outlined),
-            label: const Text('Baixar modelo Excel'),
+            'Baixe o modelo pelo Início, preencha-o e confira cada linha antes de cadastrar. Excel .xlsx, até 5 MB e 500 linhas.',
           ),
           const SizedBox(height: 12),
           Text(

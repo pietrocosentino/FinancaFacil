@@ -103,13 +103,12 @@ void main() {
     expect(imports.saves, 0);
     expect(find.text('contas.xlsx'), findsNothing);
   });
-  testWidgets('baixar modelo não importa dados', (tester) async {
+  testWidgets('modelo e exportação ficam fora da tela de importação', (
+    tester,
+  ) async {
     await open(tester);
-    await tester.tap(find.text('Baixar modelo Excel'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('No celular'));
-    await tester.pumpAndSettle();
-    expect(files.downloads, 1);
+    expect(find.text('Baixar modelo Excel'), findsNothing);
+    expect(find.text('Baixar meus lançamentos em Excel'), findsNothing);
     expect(imports.saves, 0);
   });
 

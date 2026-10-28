@@ -21,6 +21,8 @@ class DashboardScreen extends StatefulWidget {
     required this.repository,
     this.onNavigateToNotifications,
     this.onAdd,
+    this.onImportSpreadsheet,
+    this.onDownloadTemplate,
     this.reminders,
   });
   final FinanceRepository repository;
@@ -28,6 +30,8 @@ class DashboardScreen extends StatefulWidget {
 
   /// Abre o cadastro de despesa ou de renda; sem ele os botões não aparecem.
   final ValueChanged<AddChoice>? onAdd;
+  final VoidCallback? onImportSpreadsheet;
+  final ValueChanged<BuildContext>? onDownloadTemplate;
   final ReminderService? reminders;
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -225,6 +229,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 8),
             _monthNavigation(),
             if (widget.onAdd != null) QuickAddBar(onAdd: widget.onAdd!),
+            if (widget.onImportSpreadsheet != null &&
+                widget.onDownloadTemplate != null)
+              _SpreadsheetActions(
+                onImport: widget.onImportSpreadsheet!,
+                onDownloadTemplate: () =>
+                    widget.onDownloadTemplate!(context),
+              ),
             _MonthSummaryCard(summary: summary),
             if (summary.expenses > 0 || previous.expenses > 0)
               Padding(
@@ -239,6 +250,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       );
     },
+  );
+}
+
+class _SpreadsheetActions extends StatelessWidget {
+  const _SpreadsheetActions({
+    required this.onImport,
+    required this.onDownloadTemplate,
+  });
+
+  final VoidCallback onImport;
+  final VoidCallback onDownloadTemplate;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Planilhas', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onImport,
+                  icon: const Icon(Icons.upload_file_outlined),
+                  label: const Text('Importar'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onDownloadTemplate,
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text('Baixar modelo'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
   );
 }
 
