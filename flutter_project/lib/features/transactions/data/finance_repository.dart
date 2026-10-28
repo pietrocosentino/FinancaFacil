@@ -46,10 +46,14 @@ abstract class FinanceRepository {
 }
 
 class SupabaseFinanceRepository implements FinanceRepository {
-  SupabaseFinanceRepository(this._client, {DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+  SupabaseFinanceRepository(
+    this._client, {
+    DateTime Function()? now,
+    this._snapshotTimeout = const Duration(seconds: 20),
+  }) : _now = now ?? DateTime.now;
   final SupabaseClient _client;
   final DateTime Function() _now;
+  final Duration _snapshotTimeout;
   static const _pageSize = 500;
   Future<_FinanceSnapshot>? _snapshotFuture;
   int _snapshotRevision = -1;
@@ -73,7 +77,7 @@ class SupabaseFinanceRepository implements FinanceRepository {
     }
     final pending = _snapshotFuture!;
     try {
-      return await pending;
+      return await pending.timeout(_snapshotTimeout);
     } catch (_) {
       if (identical(_snapshotFuture, pending)) _snapshotFuture = null;
       rethrow;

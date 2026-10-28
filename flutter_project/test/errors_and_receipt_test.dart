@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:financafacil/core/errors/app_failure.dart';
@@ -48,6 +49,7 @@ void main() {
         message(Exception('ClientException: Failed host lookup')),
         connectionFailure,
       );
+      expect(message(TimeoutException('snapshot')), connectionFailure);
       expect(
         message(StateError('Sua sessão terminou. Entre novamente.')),
         'Sua sessão terminou. Entre novamente.',
@@ -55,6 +57,10 @@ void main() {
       expect(
         message(const AuthException('JWT expired')),
         'Sua sessão terminou. Entre novamente.',
+      );
+      expect(
+        message(const AuthException('Failed host lookup')),
+        connectionFailure,
       );
     });
 

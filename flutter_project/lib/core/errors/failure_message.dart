@@ -35,7 +35,6 @@ String failureMessage(Object error, {required String fallback}) {
     }
     return fallback;
   }
-  if (error is AuthException) return 'Sua sessão terminou. Entre novamente.';
   if (error is TimeoutException) return connectionFailure;
   final text = error.toString();
   if (const [
@@ -47,6 +46,7 @@ String failureMessage(Object error, {required String fallback}) {
   ].any(text.contains)) {
     return connectionFailure;
   }
+  if (error is AuthException) return 'Sua sessão terminou. Entre novamente.';
   if (error is StateError && error.message.contains('sessão')) {
     return error.message;
   }

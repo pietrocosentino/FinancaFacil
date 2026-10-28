@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -16,7 +17,7 @@ class FakeSupabaseBackend {
       ),
       httpClient: MockClient((request) async {
         requests.add(request);
-        final response = respond(request);
+        final response = await respond(request);
         return http.Response.bytes(
           response.bodyBytes,
           response.statusCode,
@@ -29,7 +30,8 @@ class FakeSupabaseBackend {
 
   late final SupabaseClient client;
   final requests = <http.Request>[];
-  http.Response Function(http.Request) respond = (_) => jsonResponse([]);
+  FutureOr<http.Response> Function(http.Request) respond =
+      (_) => jsonResponse([]);
 
   static Map<String, Object> get user => {
     'id': 'owner',

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:financafacil/core/utils/finance_updates.dart';
@@ -178,6 +179,24 @@ void main() {
       );
     },
   );
+  test('consulta inicial termina com timeout e permite nova tentativa', () async {
+    final response = Completer<http.Response>();
+    backend.respond = (_) => response.future;
+    repository = SupabaseFinanceRepository(
+      backend.client,
+      snapshotTimeout: const Duration(milliseconds: 20),
+    );
+
+    await expectLater(
+      repository.transactions(DateTime(2027, 1)),
+      throwsA(isA<TimeoutException>()),
+    );
+
+    response.complete(FakeSupabaseBackend.jsonResponse([]));
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    backend.respond = (_) => FakeSupabaseBackend.jsonResponse([]);
+    expect(await repository.transactions(DateTime(2027, 1)), isEmpty);
+  });
   test('sem sessão não envia transações nem gravações ao backend', () async {
     final anonymous = FakeSupabaseBackend();
     anonymous.respond = (_) => throw StateError('HTTP inesperado');

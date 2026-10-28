@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/errors/app_log.dart';
+import '../../../../core/errors/failure_message.dart';
 import '../../../../core/services/app_services.dart';
 import '../../../../core/services/device_biometrics.dart';
 import '../../../../core/services/device_preferences.dart';
@@ -69,11 +70,14 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
         });
         if (_locked) _authenticate();
       },
-      onError: (Object error) {
+      onError: (Object error, StackTrace stack) {
+        AppLog.error(error, stack, 'atualizar sessão de autenticação');
         if (mounted) {
           setState(() {
-            _recovery = false;
-            _error = 'Não foi possível validar o link. Solicite um novo e tente novamente.';
+            _error = failureMessage(
+              error,
+              fallback: 'Não foi possível validar sua sessão. Tente novamente.',
+            );
           });
         }
       },
