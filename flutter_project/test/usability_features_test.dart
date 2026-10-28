@@ -81,6 +81,13 @@ void main() {
     testWidgets('resume o mês, compara com o anterior e troca de mês', (
       tester,
     ) async {
+      // Tela alta: o ListView só monta o que cabe, e a comparação com o mês
+      // anterior fica abaixo do resumo e das fontes de renda.
+      tester.view.physicalSize = Size(
+        800 * tester.view.devicePixelRatio,
+        2000 * tester.view.devicePixelRatio,
+      );
+      addTearDown(tester.view.reset);
       final now = DateTime.now();
       final previous = DateTime(now.year, now.month - 1, 10);
       final repository = FakeFinanceRepository()
