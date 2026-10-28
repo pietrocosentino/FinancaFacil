@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:financafacil/core/files/cloud_files.dart';
 import 'package:financafacil/features/imports/data/import_file_gateway.dart';
 import 'package:financafacil/features/imports/data/import_repository.dart';
+import 'package:financafacil/features/imports/data/xlsx_export_writer.dart';
 import 'package:financafacil/features/imports/data/xlsx_import_reader.dart';
 import 'package:financafacil/features/imports/domain/import_models.dart';
 import 'package:financafacil/features/imports/presentation/import_screen.dart';
@@ -63,11 +64,6 @@ class _Imports implements ImportRepository {
     if (fail) throw const FormatException('Falha simulada.');
     return ImportReceipt('batch', rows.length, false);
   }
-
-  @override
-  Future<List<ImportBatch>> history() async => [];
-  @override
-  Future<int> undo(String id) async => 0;
 }
 
 void main() {
@@ -114,6 +110,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(files.downloads, 1);
     expect(imports.saves, 0);
+  });
+  testWidgets('planilha exportada pelo app ativa a importação', (tester) async {
+    files.file = ImportFile(
+      'financafacil.xlsx',
+      XlsxExportWriter().write([
+        FinanceEntry(
+          id: 'one',
+          kind: TransactionKind.expense,
+          amount: 90.6,
+          description: 'Ótica',
+          dueDate: DateTime(2026, 11, 8),
+          categoryName: 'Saúde',
+          isPaid: false,
+        ),
+      ]),
+    );
+    await open(tester);
+    await choose(tester);
+    final import = find.text('Importar 1 lançamentos');
+    expect(import, findsOneWidget);
+    final button = tester.widget<FilledButton>(
+      find.ancestor(
+        of: import,
+        matching: find.byWidgetPredicate((widget) => widget is FilledButton),
+      ),
+    );
+    expect(button.onPressed, isNotNull);
+    expect(find.byTooltip('Histórico de importações'), findsNothing);
   });
   testWidgets('prévia permite voltar da confirmação sem gravar', (
     tester,

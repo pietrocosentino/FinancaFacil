@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:financafacil/features/imports/data/xlsx_import_reader.dart';
@@ -90,19 +89,5 @@ void main() {
   test('recusa mais de 500 linhas', () {
     final rows = [header, for (var i = 2; i <= 502; i++) validRow(i)].join();
     expect(() => reader.read(workbook(rows)), throwsFormatException);
-  });
-  test('modelo entregue não importa exemplos da aba de instruções', () {
-    final bytes = File('assets/import/modelo_financafacil.xlsx')
-        .readAsBytesSync();
-    expect(
-      () => reader.read(bytes),
-      throwsA(
-        isA<FormatException>().having(
-          (e) => e.message,
-          'message',
-          contains('vazia'),
-        ),
-      ),
-    );
   });
 }

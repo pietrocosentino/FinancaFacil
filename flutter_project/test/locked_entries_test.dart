@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:financafacil/features/dashboard/domain/finance_summary.dart';
 import 'package:financafacil/features/imports/data/xlsx_export_writer.dart';
+import 'package:financafacil/features/imports/data/xlsx_import_reader.dart';
 import 'package:financafacil/features/transactions/data/finance_repository.dart';
 import 'package:financafacil/features/transactions/domain/entry_status.dart';
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
@@ -235,12 +236,11 @@ void main() {
 
   group('exportação para Excel', () {
     test(
-      'gera planilha válida com valores, situação e totais sem inativos',
+      'gera planilha preenchida no esquema aceito pelo importador',
       () {
         final bytes = XlsxExportWriter().write(
           [
             _entry('a', amount: 1200, description: 'Aluguel & condomínio'),
-            _entry('b', amount: 300, inactive: true, description: 'Engano'),
             _entry(
               'c',
               kind: TransactionKind.income,
@@ -248,9 +248,6 @@ void main() {
               description: 'Salário',
             ),
           ],
-          from: DateTime(2026, 10),
-          to: DateTime(2026, 10),
-          today: DateTime(2026, 10, 20),
         );
         final files = {
           for (final file in ZipDecoder().decodeBytes(bytes)) file.name: file,
@@ -268,14 +265,41 @@ void main() {
           files['xl/worksheets/sheet1.xml']!.content as List<int>,
         );
         expect(sheet, contains('Aluguel &amp; condomínio'));
-        expect(sheet, contains('Inativo · fora dos totais'));
-        expect(sheet, contains('<v>-1200.00</v>'));
+        expect(sheet, contains('<sheet name="Lançamentos"'));
+        expect(sheet, contains('<v>1200.00</v>'));
         expect(sheet, contains('<v>5000.00</v>'));
-        // Saldo ignora o lançamento inativado: 5000 - 1200.
-        expect(sheet, contains('<v>3800.00</v>'));
         expect(sheet, isNot(contains('<f>')));
+        final lines = XlsxImportReader().read(bytes);
+        expect(lines, hasLength(2));
+        expect(lines.first.text('description'), 'Aluguel & condomínio');
+        expect(lines.first.recurring, false);
+        expect(lines.first.due?.day, 5);
       },
     );
+
+    test('modelo vazio tem o mesmo cabeçalho e não cria linhas', () {
+      final bytes = XlsxExportWriter().write(const []);
+      final files = {
+        for (final file in ZipDecoder().decodeBytes(bytes)) file.name: file,
+      };
+      final sheet = utf8.decode(
+        files['xl/worksheets/sheet1.xml']!.content as List<int>,
+      );
+      expect(sheet, contains('Descrição'));
+      expect(sheet, contains('Valor mensal'));
+      expect(sheet, contains('Primeiro vencimento'));
+      expect(sheet, contains('Dia de vencimento'));
+      expect(
+        () => XlsxImportReader().read(bytes),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            contains('vazia'),
+          ),
+        ),
+      );
+    });
 
     test('nome do arquivo indica o período', () {
       expect(

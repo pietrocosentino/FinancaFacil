@@ -9,6 +9,7 @@
         android:label="FinançaFácil"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
         android:enableOnBackInvokedCallback="true">
 
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />

@@ -10,16 +10,16 @@ import 'xlsx_columns.dart';
 class XlsxExportWriter {
   static const mimeType =
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-  Uint8List write(
-    List<FinanceEntry> entries, {
-  }) {
+  Uint8List write(List<FinanceEntry> entries) {
     final sorted = [...entries]
       ..sort(
         (a, b) =>
             (a.dueDate ?? DateTime(0)).compareTo(b.dueDate ?? DateTime(0)),
       );
     final rows = <String>[
-      _row(1, [for (final header in XlsxColumns.fields.keys) _text(header, style: 1)]),
+      _row(1, [
+        for (final header in XlsxColumns.fields.keys) _text(header, style: 1),
+      ]),
     ];
     var line = 2;
     for (final entry in sorted) {

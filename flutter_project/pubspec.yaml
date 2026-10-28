@@ -53,6 +53,4 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/import/modelo_financafacil.xlsx
     - assets/icon/icon.png
-

@@ -48,20 +48,6 @@ void main() {
       '/rest/v1/rpc/preview_finance_import',
     );
   });
-  test('histórico filtra a conta autenticada', () async {
-    await repository.history();
-    expect(backend.requests.single.url.queryParameters['user_id'], 'eq.owner');
-    expect(backend.requests.single.url.queryParameters['limit'], '100');
-  });
-  test('desfazer usa RPC sem DELETE direto nas tabelas', () async {
-    backend.respond = (_) => FakeSupabaseBackend.jsonResponse(1);
-    expect(await repository.undo('b'), 1);
-    expect(
-      backend.requests.single.url.path,
-      '/rest/v1/rpc/undo_finance_import',
-    );
-    expect(backend.requests.single.method, 'POST');
-  });
   test('sessão ausente impede importação antes de fazer HTTP', () async {
     await backend.client.auth.signOut();
     backend.requests.clear();
