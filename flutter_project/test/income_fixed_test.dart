@@ -1,7 +1,7 @@
 import 'package:financafacil/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
-import 'package:financafacil/features/transactions/presentation/screens/transactions_list_screen.dart';
 import 'package:financafacil/features/transactions/presentation/screens/recurrence_rules_screen.dart';
+import 'package:financafacil/features/transactions/presentation/screens/transactions_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';

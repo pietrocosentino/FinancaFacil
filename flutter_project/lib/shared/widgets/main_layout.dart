@@ -200,7 +200,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _downloadTemplate(BuildContext context) =>
+  Future<void> _downloadTemplate() =>
       _downloadingTemplate.run(() async {
         final to = await showSaveLocationSheet(
           context,

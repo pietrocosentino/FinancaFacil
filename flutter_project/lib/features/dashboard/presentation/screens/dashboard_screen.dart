@@ -31,7 +31,7 @@ class DashboardScreen extends StatefulWidget {
   /// Abre o cadastro de despesa ou de renda; sem ele os botões não aparecem.
   final ValueChanged<AddChoice>? onAdd;
   final VoidCallback? onImportSpreadsheet;
-  final ValueChanged<BuildContext>? onDownloadTemplate;
+  final VoidCallback? onDownloadTemplate;
   final ReminderService? reminders;
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -233,8 +233,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 widget.onDownloadTemplate != null)
               _SpreadsheetActions(
                 onImport: widget.onImportSpreadsheet!,
-                onDownloadTemplate: () =>
-                    widget.onDownloadTemplate!(context),
+                onDownloadTemplate: widget.onDownloadTemplate!,
               ),
             _MonthSummaryCard(summary: summary),
             if (summary.expenses > 0 || previous.expenses > 0)

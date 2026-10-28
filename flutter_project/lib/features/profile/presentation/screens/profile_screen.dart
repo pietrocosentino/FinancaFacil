@@ -13,8 +13,8 @@ import '../../data/profile_photo_store.dart';
 import '../../data/profile_repository.dart';
 import '../profile_controller.dart';
 import '../profile_menu_item.dart';
-import 'reminder_time_dialog.dart';
 import 'personal_data_screen.dart';
+import 'reminder_time_dialog.dart';
 
 /// Menu do perfil. Recebe o [controller] compartilhado com o cabeçalho ou,
 /// isoladamente, um [repository] para criar o próprio controlador.
