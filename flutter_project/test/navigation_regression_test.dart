@@ -4,13 +4,16 @@ import 'package:financafacil/features/notifications/presentation/screens/notific
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
 import 'package:financafacil/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:financafacil/features/transactions/presentation/screens/transactions_list_screen.dart';
+import 'package:financafacil/shared/widgets/main_header.dart';
 import 'package:financafacil/shared/widgets/main_layout.dart';
 import 'package:financafacil/shared/widgets/month_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'support/fake_repositories.dart';
+import 'support/navigation.dart';
 
 class _TwoCategoriesRepository extends FakeFinanceRepository {
   @override
@@ -29,42 +32,51 @@ class _OfflineRepository extends FakeFinanceRepository {
 
 void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
+  _keyboardTests();
 
-  testWidgets('toques rápidos no cadastro abrem somente um formulário',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
+  testWidgets('toques rápidos no cadastro abrem somente um formulário', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
         home: MainLayout(
-            financeRepository: FakeFinanceRepository(),
-            profileRepository: FakeProfileRepository())));
+          financeRepository: FakeFinanceRepository(),
+          profileRepository: FakeProfileRepository(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Cadastrar conta ou renda'), findsNothing);
-    await tester.tap(find.text('Finanças'));
+    await tester.tap(addButton);
     await tester.pumpAndSettle();
-    final add = find.text('Adicionar conta');
-    await tester.tap(add);
-    await tester.tap(add);
+    await tester.tap(find.text('Despesa ou conta'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text('Novo lançamento'), findsOneWidget);
+    expect(find.text('Nova conta'), findsOneWidget);
+    expect(find.byType(AddTransactionScreen), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.text('Novo lançamento'), findsNothing);
-    expect(find.text('Adicionar conta'), findsOneWidget);
+    expect(find.text('Nova conta'), findsNothing);
+    expect(addButton, findsOneWidget);
   });
 
-  testWidgets('voltar do Android respeita o formulário não salvo',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
+  testWidgets('voltar do Android respeita o formulário não salvo', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
         home: MainLayout(
-            financeRepository: FakeFinanceRepository(),
-            profileRepository: FakeProfileRepository())));
+          financeRepository: FakeFinanceRepository(),
+          profileRepository: FakeProfileRepository(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Finanças'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Adicionar conta'));
-    await tester.pumpAndSettle();
+    await openAdd(tester);
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Valor'), '90,60');
+      find.widgetWithText(TextFormField, 'Valor da conta'),
+      '90,60',
+    );
     await tester.pump();
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -76,88 +88,109 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Descartar'));
     await tester.pumpAndSettle();
-    expect(find.text('Novo lançamento'), findsNothing);
-    expect(find.text('Adicionar conta'), findsOneWidget);
+    expect(find.text('Nova conta'), findsNothing);
+    expect(addButton, findsOneWidget);
   });
 
-  testWidgets('mudança apenas do tipo também protege o cadastro',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
+  testWidgets('mudança apenas da frequência também protege o cadastro', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
         home: MainLayout(
-            financeRepository: FakeFinanceRepository(),
-            profileRepository: FakeProfileRepository())));
+          financeRepository: FakeFinanceRepository(),
+          profileRepository: FakeProfileRepository(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Finanças'));
+    await openAdd(tester);
+    await tester.tap(find.text('Todo mês'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Adicionar conta'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Receita'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Perfil'));
+    await tester.tap(find.text('Extrato'));
     await tester.pumpAndSettle();
     expect(find.text('Descartar cadastro?'), findsOneWidget);
     await tester.tap(find.text('Continuar preenchendo'));
     await tester.pumpAndSettle();
-    expect(find.text('Novo lançamento'), findsOneWidget);
+    expect(find.text('Nova conta'), findsOneWidget);
   });
 
-  testWidgets('categoria é obrigatória e volta vazia no cadastro seguinte',
-      (tester) async {
+  testWidgets('categoria é opcional, aceita a lista ou texto e volta vazia', (
+    tester,
+  ) async {
     final repository = _TwoCategoriesRepository();
     await tester.pumpWidget(
-        MaterialApp(home: AddTransactionScreen(repository: repository)));
+      MaterialApp(home: AddTransactionScreen(repository: repository)),
+    );
     await tester.pumpAndSettle();
+    final category = find.descendant(
+      of: find.byType(DropdownMenu<String>),
+      matching: find.byType(TextField),
+    );
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Valor'), '90,60');
+      find.widgetWithText(TextFormField, 'Valor da conta'),
+      '90,60',
+    );
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Nome da conta ou renda'), 'Ótica');
-    await tester.tap(find.text('Salvar lançamento'));
+      find.widgetWithText(TextFormField, 'Nome da conta'),
+      'Ótica',
+    );
+    await tester.tap(find.text('Salvar conta'));
     await tester.pumpAndSettle();
-    expect(repository.saved, isNull);
-    expect(find.text('Escolha uma categoria.'), findsOneWidget);
-    final dropdown = find.byType(DropdownButtonFormField<String>);
-    await tester.ensureVisible(dropdown);
-    await tester.tap(dropdown);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Saúde').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Salvar lançamento'));
-    await tester.pumpAndSettle();
-    expect(repository.saved?.categoryId, '2');
-    await tester.tap(find.text('Cadastrar outra'));
-    await tester.pumpAndSettle();
-    expect(
-        tester.widget<DropdownButtonFormField<String>>(dropdown).initialValue,
-        isNull);
-    await tester.ensureVisible(find.widgetWithText(TextFormField, 'Valor'));
-    await tester.enterText(find.widgetWithText(TextFormField, 'Valor'), '100');
-    await tester.enterText(
-        find.widgetWithText(TextFormField, 'Nome da conta ou renda'),
-        'Outra conta');
-    await tester.tap(find.text('Salvar lançamento'));
-    await tester.pumpAndSettle();
-    expect(find.text('Escolha uma categoria.'), findsOneWidget);
+    // Sem categoria: vai para a padrão, criada quando ainda não existe.
     expect(repository.saved?.description, 'Ótica');
+    expect(repository.saved?.categoryId, 'new-Outras despesas');
+    await tester.tap(find.text('Cadastrar outra conta'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(category).controller?.text, isEmpty);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor da conta'),
+      '100',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nome da conta'),
+      'Consulta',
+    );
+    await tester.ensureVisible(category);
+    await tester.enterText(category, 'saúde');
+    // Fecha a lista de sugestões, como o primeiro toque fora dela no app.
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar conta'));
+    await tester.pumpAndSettle();
+    // Nome existente (sem diferenciar maiúsculas) usa a categoria da lista.
+    expect(repository.saved?.categoryId, '2');
+    expect(repository.createdCategories.map((c) => c.name), [
+      'Outras despesas',
+    ]);
   });
 
-  testWidgets('mudar o primeiro mês conserva o dia mensal escolhido',
-      (tester) async {
+  testWidgets('mudar o primeiro mês conserva o dia mensal escolhido', (
+    tester,
+  ) async {
     final repository = FakeFinanceRepository();
     await tester.pumpWidget(
-        MaterialApp(home: AddTransactionScreen(repository: repository)));
+      MaterialApp(home: AddTransactionScreen(repository: repository)),
+    );
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextFormField, 'Valor'), '500');
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Nome da conta ou renda'),
-        'Aluguel');
+      find.widgetWithText(TextFormField, 'Valor da conta'),
+      '500',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nome da conta'),
+      'Aluguel',
+    );
     await tester.tap(find.text('Todo mês'));
     await tester.pumpAndSettle();
     final day = find.byType(DropdownButtonFormField<int>);
     await tester.ensureVisible(day);
     await tester.tap(day);
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Dia 31'), 150,
-        scrollable: find.byType(Scrollable).last);
+    // O menu abre centralizado no dia atual; ensureVisible rola até o dia 31
+    // em qualquer data, sem depender da posição inicial da lista.
+    await tester.ensureVisible(find.text('Dia 31').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dia 31').last);
     await tester.pumpAndSettle();
     final first = find.textContaining('Primeiro vencimento:');
@@ -170,74 +203,132 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.saved?.dueDay, 31);
     expect(repository.saved?.dueDate.month, 2);
-    expect(repository.saved?.dueDate.day,
-        DateTime(repository.saved!.dueDate.year, 3, 0).day);
+    expect(
+      repository.saved?.dueDate.day,
+      DateTime(repository.saved!.dueDate.year, 3, 0).day,
+    );
   });
 
   for (final brightness in Brightness.values) {
     testWidgets(
-        'finanças rola com teclado e fonte grande no tema ${brightness.name}',
-        (tester) async {
-      tester.view.physicalSize = const Size(320, 560);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(MaterialApp(
-          theme: brightness == Brightness.dark
-              ? AppTheme.darkTheme
-              : AppTheme.lightTheme,
-          builder: (context, child) => MediaQuery(
+      'finanças rola com teclado e fonte grande no tema ${brightness.name}',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 560);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: brightness == Brightness.dark
+                ? AppTheme.darkTheme
+                : AppTheme.lightTheme,
+            builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
-                  textScaler: const TextScaler.linear(2),
-                  viewInsets: const EdgeInsets.only(bottom: 240)),
-              child: child!),
-          home: TransactionsListScreen(repository: FakeFinanceRepository())));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Buscar contas'));
-      await tester.pumpAndSettle();
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.text('Todas'), findsOneWidget);
-    });
+                textScaler: const TextScaler.linear(2),
+                viewInsets: const EdgeInsets.only(bottom: 240),
+              ),
+              child: child!,
+            ),
+            home: TransactionsListScreen(repository: FakeFinanceRepository()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Buscar contas'));
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, 600));
+        await tester.pumpAndSettle();
+        expect(find.text('Filtro'), findsOneWidget);
+        expect(find.text('Buscar pelo nome da conta'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
-  testWidgets('permissão dos lembretes continua acessível sem conexão',
-      (tester) async {
+  testWidgets('permissão dos lembretes continua acessível sem conexão', (
+    tester,
+  ) async {
     final service = FakeReminderService();
     service.status.value = const ReminderStatus();
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(
+      MaterialApp(
         home: NotificationsScreen(
-            repository: _OfflineRepository(), reminders: service)));
+          repository: _OfflineRepository(),
+          reminders: service,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
-    expect(find.text('Ativar lembretes no aparelho'), findsOneWidget);
+    expect(find.text('Ativar notificações'), findsOneWidget);
     expect(find.text('Tentar novamente'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('seletor mensal permite dezembro do último ano', (tester) async {
     DateTime? selected;
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(
+      MaterialApp(
         home: Builder(
-            builder: (context) => Scaffold(
-                body: TextButton(
-                    onPressed: () async {
-                      selected = await showMonthPicker(
-                          context: context, initialMonth: DateTime(2100, 12));
-                    },
-                    child: const Text('Escolher'))))));
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                selected = await showMonthPicker(
+                  context: context,
+                  initialMonth: DateTime(2100, 12),
+                );
+              },
+              child: const Text('Escolher'),
+            ),
+          ),
+        ),
+      ),
+    );
     await tester.tap(find.text('Escolher'));
     await tester.pumpAndSettle();
     expect(
-        tester
-            .widget<IconButton>(find.ancestor(
-                of: find.byTooltip('Próximo ano'),
-                matching: find.byType(IconButton)))
-            .onPressed,
-        isNull);
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip('Próximo ano'),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
     await tester.tap(find.text('dez.'));
     await tester.pumpAndSettle();
     expect(selected, DateTime(2100, 12));
     expect(tester.takeException(), isNull);
+  });
+}
+
+void _keyboardTests() {
+  testWidgets('teclado aberto esconde o menu inferior e não encolhe a base', (
+    tester,
+  ) async {
+    Widget app(double keyboard) => MaterialApp(
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(viewInsets: EdgeInsets.only(bottom: keyboard)),
+          child: MainLayout(
+            financeRepository: FakeFinanceRepository(),
+            profileRepository: FakeProfileRepository(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(app(0));
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    await tester.pumpWidget(app(300));
+    await tester.pump();
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(MainHeader), findsNothing);
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+    expect(scaffold.resizeToAvoidBottomInset, false);
   });
 }

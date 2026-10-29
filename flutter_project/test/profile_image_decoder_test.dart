@@ -26,11 +26,15 @@ void main() {
   });
   test('imagem vazia e imagem acima de 5 MB são rejeitadas', () async {
     await expectLater(prepareProfileImage(Uint8List(0)), throwsFormatException);
-    await expectLater(prepareProfileImage(Uint8List(5 * 1024 * 1024 + 1)),
-        throwsFormatException);
+    await expectLater(
+      prepareProfileImage(Uint8List(5 * 1024 * 1024 + 1)),
+      throwsFormatException,
+    );
   });
   test('conteúdo não reconhecido como imagem é rejeitado', () async {
-    await expectLater(prepareProfileImage(Uint8List.fromList([1, 2, 3])),
-        throwsException);
+    await expectLater(
+      prepareProfileImage(Uint8List.fromList([1, 2, 3])),
+      throwsException,
+    );
   });
 }

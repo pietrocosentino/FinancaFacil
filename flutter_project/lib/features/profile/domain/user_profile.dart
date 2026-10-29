@@ -2,15 +2,21 @@ class UserProfileData {
   final String name;
   final String email;
   final String phone;
-  const UserProfileData(
-      {required this.name, required this.email, required this.phone});
+  const UserProfileData({
+    required this.name,
+    required this.email,
+    required this.phone,
+  });
 
   factory UserProfileData.fromMetadata(
-      String? email, Map<String, dynamic>? metadata) {
+    String? email,
+    Map<String, dynamic>? metadata,
+  ) {
     final data = metadata ?? {};
     final address = email ?? '';
-    final storedName =
-        (data['full_name'] ?? data['name'] ?? '').toString().trim();
+    final storedName = (data['full_name'] ?? data['name'] ?? '')
+        .toString()
+        .trim();
     return UserProfileData(
       name: storedName.isNotEmpty ? storedName : address.split('@').first,
       email: address,

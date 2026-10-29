@@ -1,18 +1,37 @@
 import 'package:financafacil/features/profile/presentation/screens/profile_screen.dart';
+import 'package:financafacil/shared/widgets/main_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'support/fake_repositories.dart';
 
 void main() {
+  setUpAll(() => initializeDateFormatting('pt_BR'));
   setUp(() => SharedPreferences.setMockInitialValues({}));
   Future<void> show(WidgetTester t, FakeProfileRepository r) async {
     await t.pumpWidget(MaterialApp(home: ProfileScreen(repository: r)));
     await t.pumpAndSettle();
   }
 
+  /// Abre o Perfil pela foto no cabeçalho.
+  Future<void> showApp(WidgetTester t, FakeProfileRepository r) async {
+    await t.pumpWidget(
+      MaterialApp(
+        home: MainLayout(
+          financeRepository: FakeFinanceRepository(),
+          profileRepository: r,
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Abrir perfil'));
+    await t.pumpAndSettle();
+  }
+
   testWidgets('contato fica na tela de dados pessoais', (t) async {
-    await show(t, FakeProfileRepository());
+    await showApp(t, FakeProfileRepository());
     expect(find.text('Pietro'), findsOneWidget);
     expect(find.text('pietro@example.com'), findsNothing);
     await t.tap(find.text('Dados pessoais'));
@@ -21,7 +40,7 @@ void main() {
   });
   testWidgets('salvar atualiza nome no cabeçalho', (t) async {
     final r = FakeProfileRepository();
-    await show(t, r);
+    await showApp(t, r);
     await t.tap(find.text('Dados pessoais'));
     await t.pumpAndSettle();
     await t.tap(find.text('Alterar'));
@@ -51,8 +70,13 @@ void main() {
   testWidgets('cancelar saída mantém sessão', (t) async {
     final r = FakeProfileRepository();
     await show(t, r);
-    await t.scrollUntilVisible(find.text('Sair da conta'), 250,
-        scrollable: find.byType(Scrollable).first);
+    await t.scrollUntilVisible(
+      find.text('Sair da conta'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await t.ensureVisible(find.text('Sair da conta'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Sair da conta'));
     await t.pumpAndSettle();
     await t.tap(find.text('Cancelar'));

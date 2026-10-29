@@ -2,6 +2,10 @@
   "name": "financafacil-database-tests",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node import_database.test.mjs" },
-  "dependencies": { "@electric-sql/pglite": "0.3.14" }
+  "scripts": {
+    "test": "node import_database.test.mjs && node recurrence_database.test.mjs && node categories_income_database.test.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.3.14"
+  }
 }

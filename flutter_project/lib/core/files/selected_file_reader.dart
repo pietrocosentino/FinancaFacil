@@ -15,7 +15,8 @@ Future<Uint8List> readSelectedFile(PlatformFile file, int maxBytes) async {
     }
     return data;
   }
-  final stream = file.readStream ??
+  final stream =
+      file.readStream ??
       (file.path == null ? null : File(file.path!).openRead());
   if (stream == null) {
     throw const FormatException('Não foi possível abrir o arquivo escolhido.');

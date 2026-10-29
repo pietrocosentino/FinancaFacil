@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../core/config/supabase_config.dart';
 import '../../../core/errors/app_failure.dart';
 
@@ -22,7 +23,11 @@ class SupabaseAuthGateway implements AuthGateway {
 
   @override
   Future<bool> signUp(
-      String name, String email, String phone, String password) async {
+    String name,
+    String email,
+    String phone,
+    String password,
+  ) async {
     return _perform(() async {
       final result = await client.auth.signUp(
         email: email,
@@ -35,11 +40,12 @@ class SupabaseAuthGateway implements AuthGateway {
   }
 
   @override
-  Future<void> requestPasswordReset(String email) =>
-      _perform(() => client.auth.resetPasswordForEmail(
-            email,
-            redirectTo: SupabaseConfig.recoveryRedirect,
-          ));
+  Future<void> requestPasswordReset(String email) => _perform(
+    () => client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: SupabaseConfig.recoveryRedirect,
+    ),
+  );
 
   @override
   Future<void> updatePassword(String password) async {

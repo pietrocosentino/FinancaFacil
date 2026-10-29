@@ -1,75 +1,64 @@
-# FinançaFácil — MVP2 (2.0.7+16)
+# FinançaFácil
 
-Projeto completo com todas as alterações solicitadas: importação de Excel, ações compactas, foto e nome fixos no cabeçalho, menu extensível, dados pessoais separados com edição via Alterar, exclusão de lançamentos, edição de valores e recorrências.
+Aplicativo Flutter de finanças pessoais com Supabase: contas e rendas avulsas, mensais e parceladas, confirmação de pagamentos, lembretes no aparelho e importação de planilha Excel. Versão 2.1.0+17.
 
-Rendas recorrentes são consideradas recebidas automaticamente na data cadastrada, sem integração bancária. Rendas futuras permanecem previstas. Despesas e rendas avulsas mantêm confirmação manual. Excluir somente este mês impede que o lançamento reapareça; encerrar a recorrência preserva o histórico. O cadastro concluído oferece Sair e Cadastrar outra.
+## Funcionalidades
 
-O repositório financeiro compartilha consultas em memória por conta/revisão por até dois minutos, invalidando dados após alterações, atualização manual, retomada do app ou troca de conta. A foto é carregada uma vez e decodificada em tamanho reduzido. E-mail permanece identificação da autenticação; Nome e Telefone são editáveis.
+- **Adicionar** (botão no Início e no Extrato): conta ou despesa, renda ou importação de planilha. Categorias próprias podem ser criadas no cadastro.
+- **Início:** pendências próximas, resumo de qualquer mês (saldo previsto e confirmado, rendas, contas pagas e a pagar), comparação com o mês anterior e despesas por categoria.
+- **Extrato:** lançamentos do mês com filtros por situação e tipo, busca, confirmação individual ou em lote, edição de valor, "Não recebi" para renda mensal, exclusão e encerramento de recorrências.
+- **Perfil:** foto (salva só no aparelho), nome e telefone, horário dos lembretes, tema (segue o sistema por padrão) e saída.
+- **Sino:** contas atrasadas e dos próximos 3 dias, com confirmação de pagamento.
 
-Validação: 191 testes Flutter passaram na cópia adaptada ao SDK 3.24.5 disponível, com 98 verificações PostgreSQL para IDs UUID e inteiro. Build Android/iOS no Flutter 3.47.6 e medição de desempenho real ainda precisam ser validados no seu ambiente.
+Regras principais: recorrências são regras projetadas mês a mês, sem parcelas antecipadas; o dia de vencimento é mantido (dia 31 vira o último dia em meses curtos); rendas recorrentes contam como recebidas na data cadastrada, a menos que o mês seja marcado como "Não recebi"; despesas exigem confirmação manual; reajustes valem do mês escolhido em diante e preservam meses já pagos.
 
-## Atualizar no Windows
+## Estrutura
 
-1. Faça backup da sua pasta FinancaFacil.
-2. Extraia o pacote em uma pasta temporária. Copie o conteúdo para C:\Users\pietr\Downloads\FinancaFacil, substituindo arquivos. Preserve .git e flutter_project/android/local.properties. Não crie flutter_project dentro de flutter_project.
-3. Se ainda existirem build-apk.yml e build-ios.yml em .github/workflows, remova somente esses workflows antigos; o pacote usa build.yml.
-4. No Supabase SQL Editor, execute flutter_project/supabase/excluir_lancamentos.sql. Esse é o novo script para exclusão e encerramento. Se os anteriores ainda não foram aplicados, execute primeiro recorrencia.sql, editar_valores.sql e importacao_mvp2.sql, nessa ordem. Os scripts não foram executados no seu Supabase automaticamente.
-5. Abra FinancaFacil no VS Code. Com o emulador ligado, no terminal PowerShell:
+```
+flutter_project/
+  lib/core          configuração, utilitários de data/dinheiro, tema, composição de serviços
+  lib/features      auth, dashboard, transactions, imports, notifications, profile
+                    (cada uma com data / domain / presentation)
+  lib/shared        layout principal, cabeçalho, diálogos e painéis reutilizáveis
+  supabase/         scripts SQL (ordem em supabase/README.md)
+  test/             testes Flutter
+tools/database      testes do SQL em PostgreSQL local (PGlite)
+tools/validation    contratos de API e script de validação para Windows
+docs/               análise técnica e de UX, testes, importação, endpoints
+```
+
+As telas recebem repositórios pelo construtor; as implementações Supabase são criadas apenas em `main.dart`, `AuthGate` e `MainLayout`.
+
+## Rodar no Windows
 
 ```powershell
 cd C:\Users\pietr\Downloads\FinancaFacil\flutter_project
 C:\dev\flutter\bin\flutter.bat pub get
-C:\dev\flutter\bin\dart.bat format lib test
-C:\dev\flutter\bin\flutter.bat analyze --no-fatal-infos
-C:\dev\flutter\bin\flutter.bat test
 C:\dev\flutter\bin\flutter.bat run --debug -d emulator-5554
 ```
 
+Plugins nativos novos exigem parar e rodar de novo (hot reload não instala plugins). Se o emulador tiver outro ID, veja `flutter devices`.
 
-Pare a execução anterior antes de iniciar novamente. Hot reload não instala o plugin file_picker. Se o emulador tiver outro ID, use o ID listado por flutter devices.
+Para validar tudo antes de enviar: `powershell -ExecutionPolicy Bypass -File .\tools\validation\run-tests.ps1` na raiz. Detalhes em `docs/TESTES-REGRESSAO.md`.
 
-## Usar a importação
+## Banco de dados
 
-Em Finanças, toque em Importar planilha Excel. Baixe o modelo, preencha a aba Lançamentos e escolha o arquivo. Os exemplos ficam na aba Como preencher e não são importados. Corrija as linhas sinalizadas e associe categorias existentes. Confira o resumo e confirme somente os registros desejados.
+Execute os scripts numerados de `flutter_project/supabase` no SQL Editor, na ordem de `flutter_project/supabase/README.md`. Um projeto novo é criado do zero a partir de `000_esquema_base.sql`; em um banco existente, aplique de novo `003` e depois `006`.
 
-Todos entram pendentes. Uma conta de 90,60 reais por dez meses cria uma única regra mensal, com lembretes e confirmação a cada mês. Aluguel, água e luz podem ficar com a quantidade de meses vazia, sem data final. O histórico permite desfazer somente lotes inteiramente intactos.
+## Importar planilha
 
-O modelo também acompanha o pacote em flutter_project/assets/import/modelo_financafacil.xlsx. O leitor não executa fórmulas e aceita .xlsx de até 5 MB, com até 500 lançamentos. Categorias novas não são criadas automaticamente.
-
-## Enviar ao GitHub
-
-Depois de validar, envie os arquivos extraídos, não o ZIP. O pubspec.lock anterior não acompanha este pacote; pub get atualiza ou gera o lockfile local, que deve ser incluído no commit.
-
-```powershell
-cd C:\Users\pietr\Downloads\FinancaFacil
-git status
-git add .
-git commit -m "Implementa importacao de Excel no MVP2"
-git push origin main
-```
-
-
-Se houver erro de Git, pare e leia a mensagem. Não use force push como tentativa de resolver. O workflow verifica Flutter e SQL antes dos builds. Os testes de banco usam Node 22 e PGlite; não conectam ao Supabase remoto.
+Adicionar → Importar planilha: baixe o modelo, preencha a aba Lançamentos e escolha o arquivo (.xlsx, até 5 MB e 500 linhas). Corrija as linhas sinalizadas, associe ou crie as categorias e confirme. Tudo entra pendente; uma conta de dez meses vira uma única regra mensal. Regras completas em `docs/MVP2.md`.
 
 ## Ambiente
 
-Código direcionado a Flutter 3.47.6, Dart 3.13.5 e Java 17. Android: Gradle 8.14.3, AGP 8.11.1, Kotlin 2.2.20, compileSdk 36. iOS mínimo 15 e ciclo UIScene. O APK release ainda usa assinatura de debug para testes; publicação exige assinatura própria. Um build iOS sem assinatura não instala em iPhone físico.
+Flutter 3.47.6, Dart 3.13, Java 17. Android: compileSdk e targetSdk 36 (exigência atual da Google Play), minSdk 23. iOS mínimo 15.
 
-A foto de perfil fica neste aparelho e não é sincronizada com o Supabase. A URL e chave pública anon existentes foram preservadas. A proteção dos dados depende das políticas RLS.
+**Publicar na Play Store:** gere uma chave (`keytool -genkey -v -keystore financafacil.jks -keyalg RSA -keysize 2048 -validity 10000 -alias financafacil`) e crie `flutter_project/android/key.properties` com `storeFile`, `storePassword`, `keyAlias` e `keyPassword`. Os dois ficam fora do Git. Sem eles, o APK de release usa a chave de depuração e serve só para testes. O build iOS do CI não é assinado. URL e chave do Supabase não ficam no código: rode sempre com `--dart-define-from-file=env.local.json` (modelo em `env.example.json`); no CI elas vêm dos Secrets `SUPABASE_URL` e `SUPABASE_ANON_KEY`.
 
-Consulte docs/MVP2.md para regras, resultado dos testes e limites da validação. Os documentos em docs/historico referem-se a versões anteriores.
+## Documentação
 
-## Correção 2.0.5
-
-O clique na foto abre um menu modal sobre a tela atual, com botão Fechar menu. Os dados pessoais abrem dentro do menu, sem substituir a aba principal. Cinco testes de navegação e perfil passaram na cópia de compatibilidade; build nativo não executado neste ambiente.
-
-## Ajuste visual 2.0.6
-
-Nome FinançaFácil visível no cabeçalho e botão Adicionar centralizado com largura conforme o texto, mantendo área de toque de 48 pixels. Sete testes de perfil e ações visíveis passaram na cópia de compatibilidade. Build nativo não executado.
-
-## Navegação 2.0.7
-
-Quatro abas: Início, Finanças (cadastro de conta, renda e importação), Extrato (consulta, filtros, confirmação, edição e exclusão) e Perfil. Cadastro de renda abre com o tipo Receita selecionado. As regras financeiras e de recorrência continuam iguais. A suíte completa passou com 193 testes na cópia de compatibilidade; build nativo não executado.
-
-## Testes ampliados e ambiente
-Consulte `docs/TESTES-REGRESSAO.md` e `docs/endpoints.openapi.json`.
+- `docs/ANALISE.md` — análise técnica e de UX, gargalos e próximos passos.
+- `docs/TESTES-REGRESSAO.md` — suíte, cobertura e como executar.
+- `docs/MVP2.md` — regras da importação de Excel.
+- `docs/ARQUIVOS-E-DRIVE.md` — seleção de arquivos e Google Drive no emulador.
+- `docs/endpoints.openapi.json` — RPCs usadas pelo app.

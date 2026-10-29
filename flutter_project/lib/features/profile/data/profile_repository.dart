@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../domain/user_profile.dart';
 
 abstract class ProfileRepository {
@@ -22,11 +23,15 @@ class SupabaseProfileRepository implements ProfileRepository {
   Future<void> update(String name, String phone) async {
     final user = _client.auth.currentUser;
     if (user == null) throw StateError('Sua sessão terminou. Entre novamente.');
-    await _client.auth.updateUser(UserAttributes(data: {
-      ...?user.userMetadata,
-      'full_name': name.trim(),
-      'phone': phone.trim(),
-    }));
+    await _client.auth.updateUser(
+      UserAttributes(
+        data: {
+          ...?user.userMetadata,
+          'full_name': name.trim(),
+          'phone': phone.trim(),
+        },
+      ),
+    );
   }
 
   @override

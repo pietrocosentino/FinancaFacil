@@ -1,52 +1,12 @@
-import {PGlite} from '@electric-sql/pglite';
-import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import {createDatabase, other, owner, readMigration} from './schema.mjs';
 
-const scripts = new URL('../../flutter_project/supabase/', import.meta.url);
 let checks = 0;
 async function scenario(integerIds) {
-  const db = new PGlite();
-  const owner = '11111111-1111-4111-8111-111111111111';
-  const other = '22222222-2222-4222-8222-222222222222';
-  const category = integerIds ? '1' : '33333333-3333-4333-8333-333333333333';
-  const privateCategory = integerIds ? '2' : '44444444-4444-4444-8444-444444444444';
-  const categoryType = integerIds ? 'bigint' : 'uuid';
-  const idColumn = integerIds ? 'bigserial' : 'uuid default gen_random_uuid()';
-  await db.exec(`
-    create role anon; create role authenticated;
-    create schema auth;
-    create table auth.users(id uuid primary key);
-    insert into auth.users values('${owner}'),('${other}');
-    create function auth.uid() returns uuid language sql stable as
-      $$ select nullif(current_setting('request.jwt.claim.sub', true),'')::uuid $$;
-    grant usage on schema auth to authenticated;
-    create table public.categories(id ${categoryType} primary key,name text not null,
-      transaction_type text not null,user_id uuid);
-    insert into categories values('${category}','Moradia','EXPENSE',null),
-      ('${privateCategory}','Privada','EXPENSE','${other}');
-    create table public.transactions(id ${idColumn} primary key,
-      user_id uuid not null references auth.users(id), type text not null,
-      amount numeric not null check(amount > 0),description text not null,notes text,
-      category_id ${categoryType} not null references categories(id),due_date date not null,
-      is_recurrent boolean not null default false,is_paid boolean not null default false,
-      created_at timestamptz not null default now());
-    alter table categories enable row level security;
-    create policy category_visible on categories for select to authenticated
-      using(user_id is null or user_id=auth.uid());
-    alter table transactions enable row level security;
-    create policy transaction_owner on transactions for all to authenticated
-      using(user_id=auth.uid()) with check(user_id=auth.uid());
-    grant select on categories to authenticated;
-    grant select,insert,update on transactions to authenticated;
-    grant usage,select on all sequences in schema public to authenticated;
-  `);
-  for (const file of ['recorrencia.sql','editar_valores.sql','importacao_mvp2.sql','excluir_lancamentos.sql']) {
-    await db.exec(await fs.readFile(new URL(file,scripts),'utf8'));
-  }
+  const {db, category, privateCategory, account} = await createDatabase(integerIds);
   // Idempotência da própria migração.
-  await db.exec(await fs.readFile(new URL('importacao_mvp2.sql',scripts),'utf8'));
+  await db.exec(await readMigration('004_importacao_mvp2.sql'));
   await db.exec('set role authenticated');
-  const account = (id) => db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);
   await account(owner);
   const row = (line, overrides={}) => ({line,description:'Aluguel',type:'despesa',amount:1500,
     due_date:'2026-11-10',due_day:10,recurring:true,months:null,category_id:category,notes:'',...overrides});
@@ -110,7 +70,11 @@ async function scenario(integerIds) {
   await db.exec("update transactions set is_paid=true where description='Conta avulsa'");
   await rejects(()=>undo(imported.batch_id),/preservado/);
   equal((await counts()).rules,before.rules);
-  await db.exec("update transactions set is_paid=false where description='Conta avulsa'");
+  // Conta paga fica bloqueada para o usuário (008); a reversão do cenário é
+  // feita sem sessão, como uma correção administrativa.
+  await rejects(()=>db.exec("update transactions set is_paid=false where description='Conta avulsa'"),/Conta paga/);
+  await db.exec("reset role; select set_config('request.jwt.claim.sub','',false); update transactions set is_paid=false where description='Conta avulsa'; set role authenticated");
+  await account(owner);
   const ruleId=(await db.query("select id from recurrence_rules where template->>'description'='Aluguel'")).rows[0].id;
   await db.query('select public.set_recurrence_occurrence($1::uuid,$2::date,true,null)',[ruleId,'2026-11-01']);
   await rejects(()=>undo(imported.batch_id),/preservado/);
@@ -128,11 +92,13 @@ async function scenario(integerIds) {
   await remove(disposableId);
   equal((await db.query('select count(*)::int as n from transactions where id::text=$1',[disposableId])).rows[0].n,0);
   await rejects(()=>remove(disposableId),/não encontrado/);
-  await remove(`r:${ruleId}:2026-11-01`);
-  equal((await db.query('select is_deleted,is_paid from recurrence_occurrences where rule_id=$1',[ruleId])).rows[0],{is_deleted:true,is_paid:false});
+  // Mês pago não pode ser excluído (008); um mês em aberto pode.
+  await rejects(()=>remove(`r:${ruleId}:2026-11-01`),/não pode ser (excluída|alterado)/);
+  await remove(`r:${ruleId}:2026-12-01`);
+  equal((await db.query("select is_deleted,is_paid from recurrence_occurrences where rule_id=$1 and due_month='2026-12-01'",[ruleId])).rows[0],{is_deleted:true,is_paid:false});
   equal((await db.query('select count(*)::int as n from recurrence_rules where id=$1',[ruleId])).rows[0].n,1);
-  await remove(`r:${ruleId}:2026-11-01`);
-  equal((await db.query('select count(*)::int as n from recurrence_occurrences where rule_id=$1',[ruleId])).rows[0].n,1);
+  await remove(`r:${ruleId}:2026-12-01`);
+  equal((await db.query('select count(*)::int as n from recurrence_occurrences where rule_id=$1',[ruleId])).rows[0].n,2);
   await rejects(()=>remove(`r:${ruleId}:2026-10-01`),/fora do período/);
   await rejects(()=>remove(`r:${ruleId}:2026-11-02`),/Mês inválido/);
   await rejects(()=>undo(imported.batch_id),/preservado/);

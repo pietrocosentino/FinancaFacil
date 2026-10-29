@@ -1,34 +1,48 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/errors/app_log.dart';
+import '../../core/files/cloud_files.dart';
 import '../../core/services/app_services.dart';
+import '../../core/services/device_preferences.dart';
 import '../../core/utils/finance_updates.dart';
+import '../../core/utils/single_flight.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
+import '../../features/imports/data/import_file_gateway.dart';
+import '../../features/imports/data/import_repository.dart';
 import '../../features/imports/presentation/import_screen.dart';
+import '../../features/notifications/application/reminder_synchronizer.dart';
 import '../../features/notifications/data/reminder_service.dart';
-import '../../features/notifications/domain/reminder_plan.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/profile/presentation/profile_controller.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
-import '../../features/profile/presentation/widgets/profile_identity.dart';
 import '../../features/transactions/data/finance_repository.dart';
 import '../../features/transactions/domain/finance_models.dart';
+import '../../features/transactions/presentation/screens/add_choice_sheet.dart';
 import '../../features/transactions/presentation/screens/add_transaction_screen.dart';
-import '../../features/transactions/presentation/screens/finance_registration_screen.dart';
 import '../../features/transactions/presentation/screens/transactions_list_screen.dart';
+import 'file_location_sheet.dart';
+import 'main_header.dart';
 
-/// As rotas internas ficam dentro do corpo; o menu permanece fora delas.
+/// Raiz da área autenticada e ponto de composição das dependências das telas.
+///
+/// As rotas internas ficam dentro do corpo; o cabeçalho e o menu permanecem
+/// fora delas. Repositórios omitidos usam as implementações de produção.
 class MainLayout extends StatefulWidget {
-  const MainLayout(
-      {super.key,
-      this.financeRepository,
-      this.profileRepository,
-      this.reminderService,
-      this.userId});
+  const MainLayout({
+    super.key,
+    this.financeRepository,
+    this.profileRepository,
+    this.importRepository,
+    this.importFiles,
+    this.reminderService,
+    this.userId,
+  });
   final FinanceRepository? financeRepository;
   final ProfileRepository? profileRepository;
+  final ImportRepository? importRepository;
+  final ImportFileGateway? importFiles;
   final ReminderService? reminderService;
   final String? userId;
   @override
@@ -36,31 +50,60 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
+  /// Pendências exibidas no sino: atrasadas e próximas do vencimento.
+  static const _headerHorizon = Duration(days: 3);
+
+  /// Período coberto pelos lembretes agendados no aparelho.
+  static const _remindersHorizon = Duration(days: 90);
+
+  /// Ao voltar ao app depois deste tempo (ou em outro dia), os dados são
+  /// recarregados. Trocas rápidas de app não baixam o histórico de novo.
+  static const _staleAfter = Duration(minutes: 1);
+
+  static const _homeTab = 0;
+
+  late final FinanceRepository _finance;
+  late final ImportFileGateway _importFiles;
+  late final ProfileController _profile;
   ReminderService? _reminders;
-  bool _syncing = false;
-  bool _syncAgain = false;
-  bool _notificationsOpen = false;
-  bool _adding = false;
-  bool _profileOpen = false;
+  ReminderSynchronizer? _synchronizer;
   final _navigator = GlobalKey<NavigatorState>();
   final _addKey = GlobalKey<AddTransactionScreenState>();
-  final _tab = ValueNotifier<int>(0);
+  final _tab = ValueNotifier<int>(_homeTab);
+  final _choosing = SingleFlight();
+  final _openingProfile = SingleFlight();
+  final _openingNotifications = SingleFlight();
+  final _openingForm = SingleFlight();
+  final _downloadingTemplate = SingleFlight();
   late final List<Widget> _screens;
-  late final ProfileController _profile;
   late Future<List<FinanceEntry>> _headerEntries;
+  DateTime? _leftAt;
+
   @override
   void initState() {
     super.initState();
-    _profile =
-        ProfileController(widget.profileRepository ?? AppServices.profile);
-    _profile.loadPhoto();
-    _headerEntries = (widget.financeRepository ?? AppServices.finance)
-        .transactions(DateTime.now().add(const Duration(days: 3)));
-    financeRevision.addListener(_reloadHeader);
-    _reminders = widget.reminderService ??
+    _finance = widget.financeRepository ?? AppServices.finance;
+    _importFiles = widget.importFiles ?? NativeImportFileGateway();
+    _profile = ProfileController(
+      widget.profileRepository ?? AppServices.profile,
+    )..loadPhoto();
+    _headerEntries = _loadHeaderEntries();
+    // Testes com repositório simulado não agendam lembretes reais.
+    _reminders =
+        widget.reminderService ??
         (widget.financeRepository == null ? AppServices.reminders : null);
+    final owner = widget.userId;
+    if (_reminders != null && owner != null) {
+      _synchronizer = ReminderSynchronizer(
+        reminders: _reminders!,
+        owner: owner,
+        loadEntries: () =>
+            _finance.transactions(DateTime.now().add(_remindersHorizon)),
+      );
+    }
     WidgetsBinding.instance.addObserver(this);
-    financeRevision.addListener(_syncReminders);
+    financeRevision.addListener(_onFinanceChanged);
+    DevicePreferences.time.addListener(_syncReminders);
     _reminders?.openRequested.addListener(_notificationTapped);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncReminders();
@@ -68,118 +111,63 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     });
     _screens = [
       DashboardScreen(
-          showHeader: false,
-          repository: widget.financeRepository,
-          reminders: _reminders,
-          onNavigateToNotifications: _openNotifications),
-      FinanceRegistrationScreen(
-          onAddExpense: () => _add(),
-          onAddIncome: () => _add(kind: TransactionKind.income),
-          onImport: () => _navigator.currentState?.push(MaterialPageRoute(
-              builder: (_) =>
-                  ImportScreen(finance: widget.financeRepository)))),
-      TransactionsListScreen(
-          showRegistration: false,
-          repository: widget.financeRepository,
-          addKey: _addKey,
-          onEnableReminders: _openNotifications),
-      ProfileScreen(
-          controller: _profile,
-          showIdentity: false,
-          repository: widget.profileRepository,
-          onNavigateToNotifications: _openNotifications),
+        repository: _finance,
+        reminders: _reminders,
+        onNavigateToNotifications: _openNotifications,
+        onAdd: _addEntry,
+        onImportSpreadsheet: () => _addEntry(AddChoice.spreadsheet),
+        onDownloadTemplate: _downloadTemplate,
+      ),
+      TransactionsListScreen(repository: _finance),
     ];
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    financeRevision.removeListener(_syncReminders);
+    financeRevision.removeListener(_onFinanceChanged);
+    DevicePreferences.time.removeListener(_syncReminders);
     _reminders?.openRequested.removeListener(_notificationTapped);
-    financeRevision.removeListener(_reloadHeader);
+    _synchronizer?.dispose();
     _profile.dispose();
     _tab.dispose();
     super.dispose();
   }
 
-  void _reloadHeader() {
-    if (!mounted) return;
-    final future = (widget.financeRepository ?? AppServices.finance)
-        .transactions(DateTime.now().add(const Duration(days: 3)));
-    setState(() {
-      _headerEntries = future;
-    });
-  }
-
-  Future<void> _openProfile() async {
-    if (_profileOpen || !mounted) return;
-    _profileOpen = true;
-    try {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        clipBehavior: Clip.antiAlias,
-        shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-        builder: (sheetContext) => SizedBox(
-          height: MediaQuery.sizeOf(sheetContext).height * 0.78,
-          child: Navigator(
-            onGenerateRoute: (_) => MaterialPageRoute<void>(
-              builder: (_) => ProfileScreen(
-                controller: _profile,
-                showIdentity: false,
-                onClose: () => Navigator.of(sheetContext).pop(),
-                onNavigateToNotifications: () {
-                  Navigator.of(sheetContext).pop();
-                  _openNotifications();
-                },
-              ),
-            ),
-          ),
-        ),
-      );
-    } finally {
-      _profileOpen = false;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final now = DateTime.now();
+    switch (state) {
+      case AppLifecycleState.resumed:
+        final leftAt = _leftAt;
+        _leftAt = null;
+        if (leftAt == null ||
+            now.difference(leftAt) >= _staleAfter ||
+            now.day != leftAt.day) {
+          notifyFinanceChanged();
+        }
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        _leftAt ??= now;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        break;
     }
   }
 
-  Widget _header() => SafeArea(
-      bottom: false,
-      child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(children: [
-            Expanded(
-                child:
-                    ProfileIdentity(controller: _profile, onTap: _openProfile)),
-            const SizedBox(width: 8),
-            Tooltip(
-                message: 'FinançaFácil',
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Image.asset('assets/icon/icon.png',
-                      width: 24, height: 24, cacheWidth: 48),
-                  const SizedBox(height: 2),
-                  Text('FinançaFácil',
-                      style: Theme.of(context).textTheme.labelMedium),
-                ])),
-            FutureBuilder<List<FinanceEntry>>(
-                future: _headerEntries,
-                builder: (_, snapshot) {
-                  final count =
-                      pendingBills(snapshot.data ?? [], DateTime.now()).length;
-                  return IconButton(
-                      tooltip: 'Notificações',
-                      onPressed: _openNotifications,
-                      icon: Badge(
-                          isLabelVisible: count > 0,
-                          label: Text('$count'),
-                          child: const Icon(Icons.notifications_outlined)));
-                }),
-          ])));
+  Future<List<FinanceEntry>> _loadHeaderEntries() =>
+      _finance.transactions(DateTime.now().add(_headerHorizon));
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) notifyFinanceChanged();
+  void _onFinanceChanged() {
+    if (!mounted) return;
+    setState(() {
+      _headerEntries = _loadHeaderEntries();
+    });
+    _syncReminders();
+  }
+
+  void _syncReminders() {
+    if (mounted) _synchronizer?.run();
   }
 
   void _notificationTapped() {
@@ -188,118 +176,178 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     _openNotifications();
   }
 
-  Future<void> _openNotifications() async {
-    if (_notificationsOpen || !mounted) return;
-    _notificationsOpen = true;
-    try {
-      await _navigator.currentState?.push(MaterialPageRoute(
-          builder: (_) => NotificationsScreen(
-                repository: widget.financeRepository ?? AppServices.finance,
-                reminders: _reminders,
-                owner: widget.userId,
-              )));
-    } finally {
-      _notificationsOpen = false;
-    }
+  Future<void> _openNotifications() => _openingNotifications.run(() async {
+    if (!mounted) return;
+    await _navigator.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => NotificationsScreen(
+          repository: _finance,
+          reminders: _reminders,
+          owner: widget.userId,
+        ),
+      ),
+    );
+  });
+
+  Future<void> _openImport() async {
+    await _navigator.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => ImportScreen(
+          finance: _finance,
+          repository: widget.importRepository ?? AppServices.imports,
+        ),
+      ),
+    );
   }
 
-  Future<void> _syncReminders() async {
-    final reminders = _reminders;
-    final owner = widget.userId;
-    if (reminders == null || owner == null || !mounted) return;
-    if (_syncing) {
-      _syncAgain = true;
-      return;
-    }
-    _syncing = true;
-    do {
-      _syncAgain = false;
-      try {
-        await reminders.activateOwner(owner);
-        final entries = await (widget.financeRepository ?? AppServices.finance)
-            .transactions(DateTime.now().add(const Duration(days: 90)));
-        if (mounted) await reminders.sync(owner, entries);
-      } catch (_) {
-        if (mounted) {
-          final previous = reminders.status.value;
-          reminders.status.value = ReminderStatus(
-              enabled: previous.enabled,
-              coveredUntil: previous.coveredUntil,
-              scheduledDays: previous.scheduledDays,
-              message:
-                  'Não foi possível atualizar os lembretes. Confira a conexão e as permissões do aparelho.');
+  Future<void> _downloadTemplate() =>
+      _downloadingTemplate.run(() async {
+        final to = await showSaveLocationSheet(
+          context,
+          title: 'Onde salvar o modelo?',
+        );
+        if (to == null || !mounted) return;
+        try {
+          if (await _importFiles.saveTemplate(to) && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  to == FileLocation.drive
+                      ? 'Confirme o envio no Google Drive. Depois, preencha a aba Lançamentos.'
+                      : 'Modelo salvo. Preencha a aba Lançamentos.',
+                ),
+              ),
+            );
+          }
+        } catch (error, stack) {
+          AppLog.error(error, stack, 'salvar modelo');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Não foi possível salvar o modelo. Escolha uma pasta acessível no aparelho.',
+                ),
+              ),
+            );
+          }
         }
-      }
-    } while (_syncAgain && mounted);
-    _syncing = false;
-  }
+      });
+
+  Future<void> _openProfile() => _openingProfile.run(() async {
+    final form = _addKey.currentState;
+    if (form != null && !await form.requestLeave()) return;
+    if (!mounted) return;
+    await _navigator.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(controller: _profile),
+      ),
+    );
+  });
+
+  void _addEntry(AddChoice choice) => _choosing.run(() async {
+    if (!mounted) return;
+    switch (choice) {
+      case AddChoice.expense:
+        await _add();
+      case AddChoice.income:
+        await _add(kind: TransactionKind.income);
+      case AddChoice.spreadsheet:
+        await _openImport();
+    }
+  });
+
+  Future<void> _add({TransactionKind kind = TransactionKind.expense}) =>
+      _openingForm.run(() async {
+        if (!mounted) return;
+        await _navigator.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => AddTransactionScreen(
+              key: _addKey,
+              initialKind: kind,
+              repository: _finance,
+              onEnableReminders: _openNotifications,
+            ),
+          ),
+        );
+      });
 
   Future<void> _onTabTapped(int index) async {
-    final add = _addKey.currentState;
-    if (add != null && !await add.requestLeave()) return;
+    final form = _addKey.currentState;
+    if (form != null && !await form.requestLeave()) return;
     if (!mounted) return;
     _navigator.currentState?.popUntil((route) => route.isFirst);
     _tab.value = index;
   }
 
-  Future<void> _add({TransactionKind kind = TransactionKind.expense}) async {
-    if (_adding || !mounted) return;
-    _adding = true;
-    try {
-      await _navigator.currentState?.push(MaterialPageRoute(
-          builder: (_) => AddTransactionScreen(
-              key: _addKey,
-              initialKind: kind,
-              repository: widget.financeRepository,
-              onEnableReminders: _openNotifications)));
-    } finally {
-      _adding = false;
-    }
-  }
-
   @override
   Widget build(BuildContext context) => NavigatorPopHandler(
-        onPopWithResult: (result) => _navigator.currentState?.maybePop(result),
-        child: Scaffold(
-          body: Column(children: [
-            _header(),
-            Expanded(
-              child: Navigator(
-                  key: _navigator,
-                  onGenerateRoute: (settings) => MaterialPageRoute(
-                        settings: settings,
-                        builder: (_) => ValueListenableBuilder<int>(
-                            valueListenable: _tab,
-                            builder: (_, index, __) =>
-                                IndexedStack(index: index, children: _screens)),
-                      )),
+    onPopWithResult: (result) => _navigator.currentState?.maybePop(result),
+    child: Scaffold(
+      // Cada tela interna já se ajusta ao teclado; ajustar aqui também
+      // descontaria o espaço duas vezes e esconderia o formulário.
+      resizeToAvoidBottomInset: false,
+      body: Column(
+        children: [
+          // Com o teclado aberto o cabeçalho sai para o formulário ter espaço
+          // em telas pequenas; fica só a área da barra de status.
+          if (MediaQuery.viewInsetsOf(context).bottom > 0)
+            BrandBar(
+              child: SizedBox(
+                height: MediaQuery.paddingOf(context).top,
+                width: double.infinity,
+              ),
+            )
+          else
+            MainHeader(
+              profile: _profile,
+              entries: _headerEntries,
+              onOpenProfile: _openProfile,
+              onOpenNotifications: _openNotifications,
             ),
-          ]),
-          bottomNavigationBar: ValueListenableBuilder<int>(
+          // O cabeçalho já reserva a barra de status; sem isso cada tela
+          // interna somaria o mesmo espaço de novo acima da própria AppBar.
+          Expanded(
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: true,
+              child: Navigator(
+                key: _navigator,
+                onGenerateRoute: (settings) => MaterialPageRoute(
+                  settings: settings,
+                  builder: (_) => ValueListenableBuilder<int>(
+                    valueListenable: _tab,
+                    builder: (_, index, __) =>
+                        IndexedStack(index: index, children: _screens),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      // Com o teclado aberto, o menu inferior sai de cena para o formulário
+      // ocupar a tela até o teclado.
+      bottomNavigationBar: MediaQuery.viewInsetsOf(context).bottom > 0
+          ? null
+          : ValueListenableBuilder<int>(
               valueListenable: _tab,
-              builder: (_, index, __) => BottomNavigationBar(
-                    type: BottomNavigationBarType.fixed,
-                    currentIndex: index,
-                    onTap: _onTabTapped,
-                    items: const [
-                      BottomNavigationBarItem(
-                          icon: Icon(Icons.home_outlined),
-                          activeIcon: Icon(Icons.home),
-                          label: 'Início'),
-                      BottomNavigationBarItem(
-                          icon: Icon(Icons.add_circle_outline),
-                          activeIcon: Icon(Icons.add_circle),
-                          label: 'Finanças'),
-                      BottomNavigationBarItem(
-                          icon: Icon(Icons.receipt_long_outlined),
-                          activeIcon: Icon(Icons.receipt_long),
-                          label: 'Extrato'),
-                      BottomNavigationBarItem(
-                          icon: Icon(Icons.person_outline),
-                          activeIcon: Icon(Icons.person),
-                          label: 'Perfil'),
-                    ],
-                  )),
-        ),
-      );
+              builder: (_, index, __) => NavigationBar(
+                selectedIndex: index,
+                onDestinationSelected: _onTabTapped,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.account_balance_wallet_outlined),
+                    selectedIcon: Icon(Icons.account_balance_wallet),
+                    label: 'Início',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.receipt_long_outlined),
+                    selectedIcon: Icon(Icons.receipt_long),
+                    label: 'Extrato',
+                  ),
+                ],
+              ),
+            ),
+    ),
+  );
 }

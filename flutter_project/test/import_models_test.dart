@@ -4,19 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const categories = [FinanceCategory(id: 'home', name: 'Moradia')];
-  ImportLine row([Map<String, Object?> change = const {}]) => ImportLine(
-      2,
-      {
-        'description': 'Aluguel',
-        'type': 'Despesa',
-        'amount': '1.500,00',
-        'due_date': '10/11/2026',
-        'recurring': 'Sim',
-        'months': '',
-        'category': 'Moradia',
-        ...change,
-      },
-      categoryId: 'home');
+  ImportLine row([Map<String, Object?> change = const {}]) => ImportLine(2, {
+    'description': 'Aluguel',
+    'type': 'Despesa',
+    'amount': '1.500,00',
+    'due_date': '10/11/2026',
+    'recurring': 'Sim',
+    'months': '',
+    'category': 'Moradia',
+    ...change,
+  }, categoryId: 'home');
 
   test('aluguel sem data final usa o dia e fica pendente no contrato', () {
     final line = row();
@@ -35,7 +32,9 @@ void main() {
   test('avulso aceita meses vazios e recusa parcelamento', () {
     expect(row({'recurring': 'Não'}).errors(categories), isEmpty);
     expect(
-        row({'recurring': 'Não', 'months': 10}).errors(categories), isNotEmpty);
+      row({'recurring': 'Não', 'months': 10}).errors(categories),
+      isNotEmpty,
+    );
   });
   test('valor numérico preserva centavos; valores inválidos são recusados', () {
     expect(row({'amount': 90.60}).amount, 90.60);
@@ -46,7 +45,7 @@ void main() {
       double.nan,
       'abc',
       '90,601',
-      0.001
+      0.001,
     ]) {
       expect(row({'amount': value}).amount, isNull, reason: '$value');
     }
@@ -77,19 +76,22 @@ void main() {
     expect(row({'recurring': 'NAO'}).recurring, isFalse);
   });
   test(
-      'categoria desconhecida exige associação; correspondência ignora acentos',
-      () {
-    final line = row({'category': ' MORÁDIA '})..matchCategory(categories);
-    expect(line.categoryId, 'home');
-    line.values['category'] = 'Outra';
-    line.matchCategory(categories);
-    expect(line.categoryId, isNull);
-    expect(line.errors(categories), isNotEmpty);
-  });
+    'categoria desconhecida exige associação; correspondência ignora acentos',
+    () {
+      final line = row({'category': ' MORÁDIA '})..matchCategory(categories);
+      expect(line.categoryId, 'home');
+      line.values['category'] = 'Outra';
+      line.matchCategory(categories);
+      expect(line.categoryId, isNull);
+      expect(line.errors(categories), isNotEmpty);
+    },
+  );
   test('duas categorias de mesmo nome não são escolhidas automaticamente', () {
     final line = row()
-      ..matchCategory(
-          [...categories, const FinanceCategory(id: 'other', name: 'Moradia')]);
+      ..matchCategory([
+        ...categories,
+        const FinanceCategory(id: 'other', name: 'Moradia'),
+      ]);
     expect(line.categoryId, isNull);
   });
   test('fórmula e descrição vazia bloqueiam a linha', () {

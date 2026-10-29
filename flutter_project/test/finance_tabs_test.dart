@@ -1,3 +1,8 @@
+import 'dart:typed_data';
+
+import 'package:financafacil/core/files/cloud_files.dart';
+import 'package:financafacil/features/imports/data/import_file_gateway.dart';
+import 'package:financafacil/features/imports/presentation/import_screen.dart';
 import 'package:financafacil/features/transactions/domain/finance_models.dart';
 import 'package:financafacil/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:financafacil/shared/widgets/main_layout.dart';
@@ -5,38 +10,109 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/fake_import_repository.dart';
 import 'support/fake_repositories.dart';
+import 'support/navigation.dart';
+
+class _Files implements ImportFileGateway {
+  int templatesSaved = 0;
+
+  @override
+  Future<ImportFile?> pick(FileLocation from) async => null;
+
+  @override
+  Future<bool> saveTemplate(FileLocation to) async {
+    templatesSaved++;
+    return true;
+  }
+
+  @override
+  Future<bool> saveFile(String name, Uint8List bytes, FileLocation to) async =>
+      true;
+}
 
 void main() {
+  late _Files files;
   setUpAll(() => initializeDateFormatting('pt_BR'));
-  setUp(() => SharedPreferences.setMockInitialValues({}));
-  testWidgets('Finanças cadastra e Extrato consulta sem ações de cadastro',
-      (t) async {
-    await t.pumpWidget(MaterialApp(
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    files = _Files();
+  });
+
+  Future<void> showApp(WidgetTester t) async {
+    await t.pumpWidget(
+      MaterialApp(
         home: MainLayout(
-            financeRepository: FakeFinanceRepository(),
-            profileRepository: FakeProfileRepository())));
+          financeRepository: FakeFinanceRepository(),
+          profileRepository: FakeProfileRepository(),
+          importRepository: FakeImportRepository(),
+          importFiles: files,
+        ),
+      ),
+    );
     await t.pumpAndSettle();
-    final nav = find.byType(BottomNavigationBar);
-    expect(t.widget<BottomNavigationBar>(nav).items.length, 4);
-    await t.tap(find.descendant(of: nav, matching: find.text('Finanças')));
-    await t.pumpAndSettle();
-    expect(find.text('Adicionar conta'), findsOneWidget);
-    expect(find.text('Adicionar renda'), findsOneWidget);
-    expect(find.text('Importar planilha'), findsOneWidget);
-    await t.tap(find.text('Adicionar renda'));
-    await t.pumpAndSettle();
+  }
+
+  testWidgets('duas abas e cadastro somente no Início; perfil pela foto', (
+    t,
+  ) async {
+    await showApp(t);
+    final nav = find.byType(NavigationBar);
     expect(
-        t
-            .widget<AddTransactionScreen>(find.byType(AddTransactionScreen))
-            .initialKind,
-        TransactionKind.income);
-    await t.tap(find.descendant(of: nav, matching: find.text('Extrato')));
+      t
+          .widget<NavigationBar>(nav)
+          .destinations
+          .whereType<NavigationDestination>()
+          .map((item) => item.label),
+      ['Início', 'Extrato'],
+    );
+    expect(addButton, findsOneWidget);
+    await openTab(t, 'Extrato');
+    expect(t.widget<NavigationBar>(nav).selectedIndex, 1);
+    expect(addButton, findsNothing);
+    expect(find.byTooltip('Importar planilha'), findsNothing);
+    expect(find.text('Baixar modelo'), findsNothing);
+    expect(find.byTooltip('Baixar lançamentos em Excel'), findsOneWidget);
+    await t.tap(find.byTooltip('Abrir perfil'));
     await t.pumpAndSettle();
-    expect(find.text('Adicionar conta'), findsNothing);
-    expect(find.text('Importar planilha'), findsNothing);
-    expect(find.text('Adicionar'), findsNothing);
-    expect(t.widget<BottomNavigationBar>(nav).currentIndex, 2);
+    expect(find.text('Dados pessoais'), findsOneWidget);
+    expect(t.widget<NavigationBar>(nav).selectedIndex, 1);
+    expect(addButton, findsNothing);
     expect(t.takeException(), isNull);
+  });
+
+  testWidgets('Renda abre direto; importar planilha fica no Início', (t) async {
+    await showApp(t);
+    await openAdd(t, 'Renda');
+    expect(
+      t
+          .widget<AddTransactionScreen>(find.byType(AddTransactionScreen))
+          .initialKind,
+      TransactionKind.income,
+    );
+    await t.pageBack();
+    await t.pumpAndSettle();
+    await openTab(t, 'Início');
+    expect(find.text('Planilhas'), findsOneWidget);
+    expect(find.text('Baixar modelo'), findsOneWidget);
+    await t.tap(find.text('Baixar modelo'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('No celular'));
+    await t.pumpAndSettle();
+    expect(files.templatesSaved, 1);
+    await t.tap(find.text('Importar'));
+    await t.pumpAndSettle();
+    expect(find.byType(ImportScreen), findsOneWidget);
+    expect(find.text('Baixar modelo'), findsNothing);
+    expect(find.text('Baixar meus lançamentos em Excel'), findsNothing);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('despesa ou conta abre o cadastro de conta', (t) async {
+    await showApp(t);
+    await openAdd(t);
+    expect(find.text('Nova conta'), findsOneWidget);
+    expect(find.text('Nome da renda'), findsNothing);
   });
 }

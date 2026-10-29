@@ -23,9 +23,9 @@ jobs:
         working-directory: flutter_project
     steps:
       - name: Baixar repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Configurar Node para testes do banco
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
@@ -44,12 +44,39 @@ jobs:
           cache: true
       - name: Instalar dependências
         run: flutter pub get
+      - name: Verificar formatação
+        run: dart format --output=none --set-exit-if-changed lib test
       - name: Analisar código
-        run: flutter analyze --no-fatal-infos
+        # O formato "machine" vira anotações no PR, sem depender do download do log.
+        run: |
+          set -o pipefail
+          dart analyze --format=machine 2>&1 | tee analysis.txt | awk -F'|' '
+            NF >= 8 {
+              level = ($1 == "ERROR") ? "error" : ($1 == "WARNING") ? "warning" : "notice"
+              file = $4; sub(".*/flutter_project/", "flutter_project/", file)
+              printf "::%s file=%s,line=%s,col=%s::%s %s\n", level, file, $5, $6, $3, $8
+            }'
       - name: Executar testes com cobertura
-        run: flutter test --coverage
+        run: flutter test --coverage --reporter github --file-reporter json:test-results.json
+      - name: Resumir testes e cobertura
+        if: always()
+        run: |
+          if [ -f test-results.json ]; then
+            jq -s '[.[] | select(.type == "testDone" and .hidden == false)] |
+              "::notice title=Testes Flutter::\(map(select(.result == "success" and .skipped == false)) | length) aprovados, \(map(select(.result != "success")) | length) com falha, \(map(select(.skipped)) | length) ignorados"' \
+              -r test-results.json
+            jq -s -r '
+              (map(select(.type == "testStart")) | map({key: (.test.id | tostring), value: .test.name}) | from_entries) as $names
+              | (map(select(.type == "error" or .type == "print")) | group_by(.testID) | map({key: (.[0].testID | tostring), value: (map(.error // .message) | join(" ") | gsub("[═╡╞]+"; "") | gsub("\n"; " ⏎ ") | .[0:3500])}) | from_entries) as $errors
+              | .[] | select(.type == "testDone" and .hidden == false and .result != "success")
+              | "::error title=Teste com falha::\($names[.testID | tostring]) — \($errors[.testID | tostring] // "")"' \
+              test-results.json
+          fi
+          if [ -f coverage/lcov.info ]; then
+            awk -F: '/^LF:/{f+=$2} /^LH:/{h+=$2} END{if(f>0) printf "::notice title=Cobertura::%.1f%% (%d de %d linhas)\n", 100*h/f, h, f}' coverage/lcov.info
+          fi
       - name: Disponibilizar cobertura
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: financafacil-test-coverage
           path: flutter_project/coverage/lcov.info
@@ -64,9 +91,9 @@ jobs:
         working-directory: flutter_project
     steps:
       - name: Baixar repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Configurar Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -83,9 +110,17 @@ jobs:
       - name: Preparar execução do Gradle
         run: chmod +x android/gradlew
       - name: Gerar APK
-        run: flutter build apk --release
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Cadastre os Secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          flutter build apk --release --dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - name: Disponibilizar APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: financafacil-android-apk
           path: flutter_project/build/app/outputs/flutter-apk/app-release.apk
@@ -100,7 +135,7 @@ jobs:
         working-directory: flutter_project
     steps:
       - name: Baixar repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -115,23 +150,39 @@ jobs:
         working-directory: flutter_project/ios
         run: pod install
       - name: Gerar iOS para dispositivo sem assinatura
-        run: flutter build ios --release --no-codesign
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Cadastre os Secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          flutter build ios --release --no-codesign --dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - name: Compactar iOS para dispositivo
         working-directory: flutter_project/build/ios/iphoneos
         run: zip -r FinancaFacil-iOS.zip Runner.app
       - name: Disponibilizar iOS para dispositivo
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: financafacil-ios-dispositivo
           path: flutter_project/build/ios/iphoneos/FinancaFacil-iOS.zip
           if-no-files-found: error
       - name: Gerar iOS para simulador
-        run: flutter build ios --simulator --debug
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Cadastre os Secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          flutter build ios --simulator --debug --dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - name: Compactar iOS para simulador
         working-directory: flutter_project/build/ios/iphonesimulator
         run: zip -r FinancaFacil-iOS-Simulador.zip Runner.app
       - name: Disponibilizar iOS para simulador
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: financafacil-ios-simulador
           path: flutter_project/build/ios/iphonesimulator/FinancaFacil-iOS-Simulador.zip

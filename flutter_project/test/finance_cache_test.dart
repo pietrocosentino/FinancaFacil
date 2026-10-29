@@ -1,7 +1,9 @@
 import 'dart:convert';
+
 import 'package:financafacil/core/utils/finance_updates.dart';
 import 'package:financafacil/features/transactions/data/finance_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'support/fake_supabase_backend.dart';
 
 void main() {
@@ -17,7 +19,7 @@ void main() {
     await Future.wait([
       r.transactions(DateTime(2026, 10)),
       r.transactions(DateTime(2026, 11)),
-      r.transactions(DateTime(2026, 12))
+      r.transactions(DateTime(2026, 12)),
     ]);
     expect(b.requests.length, 5);
     await r.transactions(DateTime(2026, 9));
@@ -31,16 +33,21 @@ void main() {
   });
   test('trocar conta invalida cache e filtra pelo novo usuário', () async {
     await r.transactions(DateTime(2026, 10));
-    await b.client.auth.setInitialSession(jsonEncode({
-      ...FakeSupabaseBackend.session,
-      'user': {...FakeSupabaseBackend.user, 'id': 'other'}
-    }));
+    await b.client.auth.setInitialSession(
+      jsonEncode({
+        ...FakeSupabaseBackend.session,
+        'user': {...FakeSupabaseBackend.user, 'id': 'other'},
+      }),
+    );
     await r.transactions(DateTime(2026, 10));
     expect(b.requests.length, 10);
-    final owned =
-        b.requests.skip(5).where((q) => !q.url.path.endsWith('/categories'));
-    expect(owned.every((q) => q.url.queryParameters['user_id'] == 'eq.other'),
-        true);
+    final owned = b.requests
+        .skip(5)
+        .where((q) => !q.url.path.endsWith('/categories'));
+    expect(
+      owned.every((q) => q.url.queryParameters['user_id'] == 'eq.other'),
+      true,
+    );
   });
   test('dados expiram após dois minutos sem timer ou espera real', () async {
     var clock = DateTime(2026, 10, 8, 12);

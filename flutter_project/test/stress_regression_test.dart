@@ -16,14 +16,24 @@ void main() {
     final parsed = reader.read(workbook(header + rows));
     expect(parsed.length, 500);
     expect(parsed.every((r) => r.amount == 90.6 && r.months == 10), true);
-    expect(() => reader.read(workbook(header + rows + validRow(502))),
-        throwsFormatException);
+    expect(
+      () => reader.read(workbook(header + rows + validRow(502))),
+      throwsFormatException,
+    );
   });
   test('100 mil lançamentos somam centavos sem perder precisão', () {
-    final entries = List.generate(100000, (i) => FinanceEntry(
-      id: '$i', kind: i.isEven ? TransactionKind.income : TransactionKind.expense,
-      amount: 0.01, description: 'Massa $i', dueDate: DateTime(2026, 10, 8),
-      categoryName: 'Teste', isPaid: true));
+    final entries = List.generate(
+      100000,
+      (i) => FinanceEntry(
+        id: '$i',
+        kind: i.isEven ? TransactionKind.income : TransactionKind.expense,
+        amount: 0.01,
+        description: 'Massa $i',
+        dueDate: DateTime(2026, 10, 8),
+        categoryName: 'Teste',
+        isPaid: true,
+      ),
+    );
     final result = FinanceSummary.forMonth(entries, DateTime(2026, 10));
     expect(result.income, 500);
     expect(result.expenses, 500);
@@ -35,29 +45,44 @@ void main() {
     try {
       await backend.authenticate();
       final repository = SupabaseFinanceRepository(backend.client);
-      await Future.wait(List.generate(100,
-          (i) => repository.transactions(DateTime(2026, 10))));
+      await Future.wait(
+        List.generate(100, (i) => repository.transactions(DateTime(2026, 10))),
+      );
       expect(backend.requests.length, 5);
-    } finally { await backend.dispose(); }
+    } finally {
+      await backend.dispose();
+    }
   });
   test('recorrência de 1200 parcelas tem IDs únicos e datas válidas', () {
-    final rules = [<String, dynamic>{
-      'id': 'volume', 'user_id': 'owner', 'first_due': '2020-01-31',
-      'due_day': 31, 'total_installments': 1200,
-      'template': {'amount': 90.6, 'type': 'receita'},
-    }];
+    final rules = [
+      <String, dynamic>{
+        'id': 'volume',
+        'user_id': 'owner',
+        'first_due': '2020-01-31',
+        'due_day': 31,
+        'total_installments': 1200,
+        'template': {'amount': 90.6, 'type': 'receita'},
+      },
+    ];
     final result = projectRecurrences(rules, [], DateTime(2119, 12));
     expect(result.length, 1200);
     expect(result.map((r) => r['id']).toSet().length, 1200);
-    expect(result.every((r) => DateTime.parse(r['due_date'] as String).day >= 28), true);
-    expect(() => projectRecurrences(rules, [], DateTime(2121, 1)), throwsStateError);
+    expect(
+      result.every((r) => DateTime.parse(r['due_date'] as String).day >= 28),
+      true,
+    );
+    expect(
+      () => projectRecurrences(rules, [], DateTime(2121, 1)),
+      throwsStateError,
+    );
   });
   test('calendário completo 2020–2100 rejeita dia além do mês', () {
     for (var year = 2020; year <= 2100; year++) {
       for (var month = 1; month <= 12; month++) {
         final last = DateTime(year, month + 1, 0).day;
         for (var day = 1; day <= last; day++) {
-          final text = '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
+          final text =
+              '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
           expect(parseImportDate(text), DateTime(year, month, day));
         }
         final invalid = '$year-${month.toString().padLeft(2, '0')}-${last + 1}';
@@ -66,10 +91,23 @@ void main() {
     }
   });
   test('valores não finitos e zero nunca viram lançamentos', () {
-    for (final amount in [double.nan, double.infinity, double.negativeInfinity, 0.0, -0.01]) {
-      expect(() => TransactionDraft(kind: TransactionKind.income,
-        amount: amount, description: 'Inválido', dueDate: DateTime(2026, 10),
-        categoryId: 'test'), throwsFormatException);
+    for (final amount in [
+      double.nan,
+      double.infinity,
+      double.negativeInfinity,
+      0.0,
+      -0.01,
+    ]) {
+      expect(
+        () => TransactionDraft(
+          kind: TransactionKind.income,
+          amount: amount,
+          description: 'Inválido',
+          dueDate: DateTime(2026, 10),
+          categoryId: 'test',
+        ),
+        throwsFormatException,
+      );
     }
   });
 }
