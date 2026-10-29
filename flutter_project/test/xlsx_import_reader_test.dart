@@ -138,7 +138,13 @@ void main() {
   test('recusa arquivo corrompido, vazio e acima de 5 MB', () {
     expect(
       () => reader.read(Uint8List.fromList([1, 2, 3])),
-      throwsFormatException,
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('Selecione o Google Sheets pelo Drive'),
+        ),
+      ),
     );
     expect(() => reader.read(Uint8List(0)), throwsFormatException);
     expect(

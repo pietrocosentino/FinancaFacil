@@ -395,7 +395,7 @@ class _ImportScreenState extends State<ImportScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Aceitamos nomes de coluna comuns em planilhas financeiras. Revise os dados antes de importar; forma de pagamento e outras colunas são preservadas em Observações. Excel .xlsx, até 5 MB e 500 linhas.',
+            'Aceitamos Excel .xlsx e planilhas do Google Sheets selecionadas pelo Drive. Revise os dados antes de importar; forma de pagamento e outras colunas são preservadas em Observações. Até 5 MB e 500 linhas.',
           ),
           const SizedBox(height: 12),
           Text(

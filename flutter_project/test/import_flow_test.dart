@@ -109,6 +109,10 @@ void main() {
     await open(tester);
     expect(find.text('Baixar modelo Excel'), findsNothing);
     expect(find.text('Baixar meus lançamentos em Excel'), findsNothing);
+    expect(
+      find.textContaining('planilhas do Google Sheets selecionadas pelo Drive'),
+      findsOneWidget,
+    );
     expect(imports.saves, 0);
   });
 

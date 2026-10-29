@@ -37,6 +37,11 @@ class MainActivity : FlutterFragmentActivity() {
                         call.argument<Number>("maxBytes")?.toLong() ?: 0L,
                         result,
                     )
+                    "pickFromDocuments" -> pickFromDocuments(
+                        call.argument<List<String>>("mimeTypes") ?: listOf("*/*"),
+                        call.argument<Number>("maxBytes")?.toLong() ?: 0L,
+                        result,
+                    )
                     "sendToApp" -> sendToApp(
                         call.argument<String>("package") ?: "",
                         call.argument<String>("name") ?: "arquivo",
@@ -80,6 +85,36 @@ class MainActivity : FlutterFragmentActivity() {
         } catch (_: ActivityNotFoundException) {
             pendingPick = null
             result.error("APP_NOT_FOUND", "Aplicativo não encontrado.", null)
+        }
+    }
+
+    private fun pickFromDocuments(
+        mimeTypes: List<String>,
+        maxBytes: Long,
+        result: MethodChannel.Result,
+    ) {
+        if (pendingPick != null) {
+            result.error("BUSY", "Já existe uma escolha de arquivo aberta.", null)
+            return
+        }
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            type = if (mimeTypes.size == 1) mimeTypes.first() else "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes.toTypedArray())
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
+            addCategory(Intent.CATEGORY_OPENABLE)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            pendingPick = result
+            pickLimit = maxBytes
+            startActivityForResult(intent, REQUEST_PICK)
+        } catch (_: ActivityNotFoundException) {
+            pendingPick = null
+            result.error(
+                "APP_NOT_FOUND",
+                "Nenhum seletor de arquivos está disponível.",
+                null,
+            )
         }
     }
 

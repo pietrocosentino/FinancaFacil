@@ -26,9 +26,9 @@ abstract class ImportFileGateway {
   Future<bool> saveFile(String name, Uint8List bytes, FileLocation to);
 }
 
-/// No celular usa o seletor de documentos do sistema. No Google Drive abre o
-/// próprio app do Drive; sem ele instalado, volta ao seletor do sistema, que
-/// também lista o Drive quando disponível.
+/// No celular usa o seletor de documentos do sistema. Para o Drive, o seletor
+/// padrão mantém o acesso ao provedor e permite converter planilhas Google em
+/// Excel antes de entregar o arquivo ao leitor.
 class NativeImportFileGateway implements ImportFileGateway {
   NativeImportFileGateway({CloudFiles? cloud})
     : _cloud = cloud ?? const CloudFiles();

@@ -325,6 +325,15 @@ class XlsxImportReader {
 
   /// Limita o tamanho descompactado antes de o decoder acessar qualquer conteúdo.
   void _checkZipDirectory(Uint8List bytes) {
+    if (bytes.length < 4 ||
+        bytes[0] != 0x50 ||
+        bytes[1] != 0x4b ||
+        !const {0x03, 0x05, 0x07}.contains(bytes[2]) ||
+        !const {0x04, 0x06, 0x08}.contains(bytes[3])) {
+      throw const FormatException(
+        'O Drive não entregou a planilha como Excel aberto. Selecione o Google Sheets pelo Drive para converter; arquivos Excel protegidos por senha não são aceitos.',
+      );
+    }
     final data = ByteData.sublistView(bytes);
     int? end;
     for (var i = bytes.length - 22; i >= 0 && i >= bytes.length - 65557; i--) {

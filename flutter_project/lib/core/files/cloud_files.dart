@@ -65,7 +65,7 @@ class CloudFiles {
     final clock = Stopwatch()..start();
     try {
       final result = await _channel.invokeMapMethod<String, Object?>(
-        'pickFromApp',
+        app == CloudApp.drive ? 'pickFromDocuments' : 'pickFromApp',
         {
           'package': app.packageName,
           'mimeTypes': mimeTypes,
@@ -75,7 +75,9 @@ class CloudFiles {
       if (result == null) {
         // Ninguém escolhe e cancela em menos de um segundo e meio: o app
         // recusou abrir (normalmente por falta de conta Google).
-        if (clock.elapsed < instantCancel) throw CloudAppNotReady(app);
+        if (app != CloudApp.drive && clock.elapsed < instantCancel) {
+          throw CloudAppNotReady(app);
+        }
         return null;
       }
       final bytes = result['bytes'] as Uint8List?;
